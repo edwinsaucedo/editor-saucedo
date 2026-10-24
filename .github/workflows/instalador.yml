@@ -1,0 +1,70 @@
+name: Instalador para Windows
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: instalador
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
+      - name: Descargar FFmpeg para Windows (compilación de BtbN)
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $headers = @{ Authorization = "Bearer $env:GH_TOKEN"; 'User-Agent' = 'editor-saucedo' }
+          $rel = Invoke-RestMethod -Headers $headers -Uri 'https://api.github.com/repos/BtbN/FFmpeg-Builds/releases/latest'
+          $asset = $rel.assets | Where-Object { $_.name -match '^ffmpeg-n[\d.]+-latest-win64-gpl-[\d.]+\.zip$' } | Sort-Object name -Descending | Select-Object -First 1
+          if (-not $asset) { $asset = $rel.assets | Where-Object { $_.name -eq 'ffmpeg-master-latest-win64-gpl.zip' } | Select-Object -First 1 }
+          if (-not $asset) { throw 'No se encontró FFmpeg para Windows en BtbN/FFmpeg-Builds' }
+          Write-Host "Usando $($asset.name)"
+          Invoke-WebRequest -Uri $asset.browser_download_url -OutFile ffmpeg.zip
+          Expand-Archive ffmpeg.zip -DestinationPath ffmpeg-tmp
+          $bin = Get-ChildItem ffmpeg-tmp -Recurse -Filter ffmpeg.exe | Select-Object -First 1
+          New-Item -ItemType Directory -Force src-tauri/binaries | Out-Null
+          Copy-Item $bin.FullName src-tauri/binaries/ffmpeg-x86_64-pc-windows-msvc.exe
+          Copy-Item (Join-Path $bin.DirectoryName 'ffprobe.exe') src-tauri/binaries/ffprobe-x86_64-pc-windows-msvc.exe
+          & src-tauri/binaries/ffmpeg-x86_64-pc-windows-msvc.exe -hide_banner -version | Select-Object -First 1
+
+      - name: Instalar herramientas de Node
+        run: npm ci
+
+      - name: Probar el motor de video
+        run: node tools/test-engine.mjs .prueba-motor --solo-plan
+
+      - name: Compilar y publicar el instalador
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: v__VERSION__-r${{ github.run_number }}
+          releaseName: 'Editor Saucedo __VERSION__ (versión ${{ github.run_number }})'
+          releaseBody: |
+            **Para instalar:** descarga el archivo que termina en `-setup.exe`, ábrelo y sigue los pasos.
+            Si Windows muestra "Windows protegió su PC", da clic en **Más información** y luego en **Ejecutar de todas formas**.
+          releaseDraft: false
+          prerelease: false
+          args: --bundles nsis

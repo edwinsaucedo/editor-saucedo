@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Editor Saucedo</title>
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <span class="script">Saucedo</span>
+      <span class="kicker">Video y Fotografía · Editor</span>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="Qué vas a hacer">
+      <button class="tab" type="button" role="tab" data-tab="fotos" aria-selected="true">Fotos</button>
+      <button class="tab" type="button" role="tab" data-tab="std" aria-selected="false">Save the Date</button>
+      <button class="tab" type="button" role="tab" data-tab="xv" aria-selected="false">Videoclip XV</button>
+    </nav>
+  </header>
+
+  <main class="views">
+    <!-- ================= FOTOS ================= -->
+    <section class="view work" id="view-fotos" role="tabpanel">
+      <aside class="steps" aria-label="Pasos para fotos">
+        <section class="step">
+          <h2><span class="num">1</span>Fotos</h2>
+          <button class="drop" type="button" id="phAdd"><strong>Agregar fotos</strong><span>o arrástralas a esta ventana</span></button>
+          <div class="links">
+            <button class="link" type="button" id="phFolder">Elegir una carpeta completa</button>
+            <button class="link danger" type="button" id="phClear" hidden>Quitar todas</button>
+          </div>
+          <p class="count" id="phCount" aria-live="polite"></p>
+        </section>
+
+        <section class="step">
+          <h2><span class="num">2</span>Color</h2>
+          <button class="big" type="button" id="phAuto" aria-pressed="true"><span class="t">Mejorar colores</span><span class="pill" id="phAutoState">Activado</span></button>
+          <p class="hint">Ajusta brillo, contraste y color de cada foto por separado.</p>
+          <h3>Estilo</h3>
+          <div class="styles" id="phStyles" role="radiogroup" aria-label="Estilo"></div>
+        </section>
+
+        <section class="step">
+          <h2><span class="num">3</span>Marca de agua</h2>
+          <div class="sw-row"><button class="switch" type="button" role="switch" id="wmSwitch" aria-checked="true" aria-labelledby="wmState"></button><span class="sw-state" id="wmState">Encendida</span></div>
+          <fieldset id="wmFields">
+            <div class="logo">
+              <div class="logo-prev" id="logoPrev"><span class="txt">Saucedo</span></div>
+              <div class="logo-actions">
+                <button class="btn" type="button" id="btnLogo">Subir logo (PNG)</button>
+                <button class="link" type="button" id="btnLogoOff" hidden>Usar el nombre en letra</button>
+              </div>
+            </div>
+            <p class="hint" id="logoHint">Mientras no subas el logo, se pone el nombre en letra.</p>
+            <div class="wm-grid">
+              <div class="field">
+                <span class="lbl" id="lblPos">Lugar</span>
+                <div class="pos" id="wmPos" role="radiogroup" aria-labelledby="lblPos"></div>
+              </div>
+              <div class="field">
+                <span class="lbl" id="lblSize">Tamaño</span>
+                <div class="seg" id="wmSize" role="radiogroup" aria-labelledby="lblSize">
+                  <button type="button" data-v="s">Chica</button><button type="button" data-v="m">Mediana</button><button type="button" data-v="l">Grande</button>
+                </div>
+              </div>
+            </div>
+            <div class="field">
+              <span class="lbl" id="lblAlpha">Qué tanto se nota</span>
+              <div class="seg" id="wmAlpha" role="radiogroup" aria-labelledby="lblAlpha">
+                <button type="button" data-v="suave">Poco</button><button type="button" data-v="normal">Normal</button><button type="button" data-v="fuerte">Mucho</button>
+              </div>
+            </div>
+            <p class="hint">Esta misma marca se usa en los videos, un poco más chica.</p>
+          </fieldset>
+        </section>
+
+        <section class="step">
+          <h2><span class="num">4</span>Guardar</h2>
+          <label class="field" for="phEvent"><span class="lbl">Nombre del evento</span>
+            <input class="input" id="phEvent" type="text" placeholder="Por ejemplo: XV Ana Sofía" autocomplete="off"></label>
+          <p class="dest">Se guardan en <strong id="phDest"></strong> <button class="link" type="button" id="phChange">Cambiar</button></p>
+          <button class="primary" type="button" id="phSave" disabled>Agrega fotos para guardar</button>
+          <div class="progress" id="phProgress" hidden>
+            <div class="prog-row"><span id="phProgText">Guardando…</span><button class="link" type="button" id="phCancel">Cancelar</button></div>
+            <div class="bar"><i id="phBar"></i></div>
+          </div>
+          <div class="done-row" id="phDone" hidden><button class="btn" type="button" id="phOpen">Abrir la carpeta</button></div>
+          <p class="hint">En JPG, al tamaño original, con “-saucedo” al final del nombre. Tus fotos originales no se modifican.</p>
+        </section>
+      </aside>
+
+      <section class="mesa" aria-label="Vista previa">
+        <div class="stage" id="phStage">
+          <div class="frame" id="phFrame">
+            <canvas id="phAfter" role="img" aria-label="Foto con los cambios"></canvas>
+            <canvas id="phBefore" aria-hidden="true"></canvas>
+            <span class="tag l">Antes</span><span class="tag r">Después</span>
+            <span class="split-line"></span><span class="knob" aria-hidden="true">‹›</span>
+            <input type="range" id="phSplit" min="0" max="100" value="50" aria-label="Comparar antes y después">
+          </div>
+          <div class="busy" id="phBusy" hidden>Abriendo la foto…</div>
+          <div class="empty" id="phEmpty" hidden>
+            <p class="t">Arrastra aquí las fotos de la sesión</p>
+            <p>También puedes soltar una carpeta completa, por ejemplo la de la memoria de la cámara.</p>
+            <button class="btn-light" type="button" id="phAdd2">Agregar fotos</button>
+          </div>
+        </div>
+        <div class="info" id="phInfo">
+          <button class="navbtn" type="button" id="phPrev">‹ Anterior</button>
+          <div class="meta"><span class="name" id="phName"></span><span class="sub" id="phSub"></span></div>
+          <button class="navbtn" type="button" id="phRemove">Quitar esta foto</button>
+          <button class="navbtn" type="button" id="phNext">Siguiente ›</button>
+        </div>
+        <div class="film-wrap" id="phFilmWrap"><div class="film" id="phFilm" aria-label="Fotos cargadas"></div></div>
+      </section>
+    </section>
+
+    <!-- ================= VIDEOS (se arman en video.js) ================= -->
+    <section class="view work" id="view-std" role="tabpanel" hidden></section>
+    <section class="view work" id="view-xv" role="tabpanel" hidden></section>
+  </main>
+</div>
+
+<div class="overlay" id="overlay" hidden><div>Suelta aquí tus archivos</div></div>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<div class="modal" id="errModal" hidden role="dialog" aria-modal="true" aria-labelledby="errTitle">
+  <div class="modal-card">
+    <h2 id="errTitle">No se pudo terminar</h2>
+    <p id="errMsg"></p>
+    <details><summary>Detalles para Karen</summary><pre id="errDetail"></pre></details>
+    <div class="modal-actions"><button class="btn" type="button" id="errCopy">Copiar detalles</button><button class="primary small" type="button" id="errClose">Entendido</button></div>
+  </div>
+</div>
+
+<script src="js/engine.js"></script>
+<script src="js/bridge.js"></script>
+<script src="js/color.js"></script>
+<script src="js/brand.js"></script>
+<script src="js/cards.js"></script>
+<script src="js/photos.js"></script>
+<script src="js/video.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

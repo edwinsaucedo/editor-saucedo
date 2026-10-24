@@ -1,0 +1,15 @@
+{
+  "name": "editor-saucedo",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Editor de fotos y video para Saucedo Video y Fotografía",
+  "scripts": {
+    "tauri": "tauri",
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "test:engine": "node tools/test-engine.mjs ./.prueba-motor"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "2.12.4"
+  }
+}

@@ -1,0 +1,7 @@
+node_modules/
+src-tauri/target/
+src-tauri/gen/schemas/
+src-tauri/binaries/ffmpeg-*
+src-tauri/binaries/ffprobe-*
+.prueba-motor/
+*.log
