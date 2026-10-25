@@ -22,7 +22,7 @@
     }).join(sep);
   };
   B.baseName = p => String(p).split(/[\\/]/).pop();
-  B.safeName = s => String(s || '').replace(/&/g, 'y').replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80);
+  B.safeName = s => String(s || '').replace(/&/g, 'y').replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80).replace(/[. ]+$/, '');
 
   B.readBlob = async (path, type) => {
     const buf = await invoke('read_file', { path });

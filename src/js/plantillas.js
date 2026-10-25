@@ -459,7 +459,7 @@
     outDir() {
       const d = this.st.values.date || SA.ui.todayISO();
       const who = B.safeName(this.st.values.title || this.st.values.subtitle || '') || 'video';
-      return B.join(B.paths.documents, 'Saucedo', `${d} ${this.tpl.name} ${who}`);
+      return B.join(B.paths.documents, 'Saucedo', B.safeName(`${d} ${this.tpl.name} ${who}`));
     }
     summary() {
       const el = this.q('summary'); if (!el || !this.tpl) return;
@@ -729,7 +729,7 @@
         }
         // 4. FFmpeg
         const look = (this.st.enhance ? ',eq=contrast=1.05:saturation=1.10' : '') + (t.look ? ',' + t.look : '');
-        const base = `${t.name} ${B.safeName(this.st.values.title || this.st.values.subtitle || '')} ${fname}`.replace(/\s+/g, ' ').trim();
+        const base = B.safeName(`${t.name} ${this.st.values.title || this.st.values.subtitle || ''} ${fname}`).replace(/\s+/g, ' ').trim();
         const out = await B.freeName(dir, base, 'mp4');
         const job = E.tplJob({ plan, media: list, tmp, sep, W, H, look, fit: t.fit || 'auto', zoom: t.zoom, hwaccel: true, wmFor, layers, post: t.post,
           audio: this.song ? { path: this.song.path, start: this.st.songStart } : null, encoderArgs: E.ENCODERS[this.encoder], out });
