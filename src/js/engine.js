@@ -289,17 +289,42 @@
   const PCM = ['-c:a', 'pcm_s16le', '-ar', '48000', '-ac', '2'];
   const AFMT = 'aresample=48000,aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo';
 
+  /* Ajustes avanzados de una toma (edición avanzada de la película). */
+  E.SPEEDS = [0.5, 0.75, 1, 1.5, 2];
+  const spd = s => { const v = +s.speed || 1; return v < 0.5 ? 0.5 : v > 2 ? 2 : v; };
+  // Girar y acercar (recorte al centro), antes de acomodar al formato.
+  E.clipPre = s => {
+    const parts = [], rot = (((+s.rot || 0) % 360) + 360) % 360, z = +s.zoom || 1;
+    if (rot === 90) parts.push('transpose=1'); else if (rot === 180) parts.push('hflip,vflip'); else if (rot === 270) parts.push('transpose=2');
+    if (z > 1.001) parts.push(`crop='trunc(iw/${r3(z)}/2)*2':'trunc(ih/${r3(z)}/2)*2'`);
+    return parts.length ? ',' + parts.join(',') : '';
+  };
+  // Estabilizar: ya al tamaño de la película (más rápido que en 4K) y con un acercamiento leve para esconder las orillas.
+  E.clipStab = (s, W, H) => s.stab ? `,deshake=rx=32:ry=32:edge=mirror,crop='trunc(iw/1.08/2)*2':'trunc(ih/1.08/2)*2',scale=${W}:${H},setsar=1` : '';
+  // Color propio de la toma: b brillo, c contraste, s saturación, w calidez (de -100 a 100).
+  E.clipColor = col => {
+    if (!col) return '';
+    const b = (+col.b || 0) / 100, c = (+col.c || 0) / 100, sa = (+col.s || 0) / 100, w = (+col.w || 0) / 100, p = [];
+    if (b || c || sa) p.push(`eq=brightness=${r3(b * .2)}:contrast=${r3(1 + c * .4)}:saturation=${r3(Math.max(0, 1 + sa))}`);
+    if (w) p.push(`colorbalance=rm=${r3(w * .12)}:gm=${r3(w * .02)}:bm=${r3(-w * .12)}`);
+    return p.length ? ',' + p.join(',') : '';
+  };
+  // Cuánto se lee del archivo para una toma de L segundos en pantalla.
+  E.srcLen = (s, L) => L * spd(s);
+
   // Una toma: video (o foto, o tarjeta de título) + su sonido, al formato de la película.
   E.filmSegmentArgs = (s, o, out) => {
     const { W, H } = o, L = q(s.len);
     const args = [...BASE];
     let v;
     if (s.kind === 'video') {
-      args.push(...(o.hwaccel ? ['-hwaccel', 'auto'] : []), '-ss', r3(s.in || 0), '-t', r3(L + 0.3), '-i', s.path);
-      const portraitSrc = s.h > s.w, portraitOut = H > W;
-      const pre = `scale='trunc(iw*sar/2)*2':ih,setsar=1,bwdif=mode=send_frame:parity=auto:deint=interlaced,fps=${FPS}`;
-      const color = E.videoColor(o.enhance, o.style);
-      const tail = `,format=yuv420p${color},tpad=stop_mode=clone:stop_duration=4,trim=duration=${r3(L)},setpts=PTS-STARTPTS[v]`;
+      const sp = spd(s), rot = (((+s.rot || 0) % 360) + 360) % 360;
+      args.push(...(o.hwaccel ? ['-hwaccel', 'auto'] : []), '-ss', r3(s.in || 0), '-t', r3(L * sp + 0.3), '-i', s.path);
+      const sw = rot === 90 || rot === 270 ? s.h : s.w, sh = rot === 90 || rot === 270 ? s.w : s.h;
+      const portraitSrc = sh > sw, portraitOut = H > W;
+      const pre = `scale='trunc(iw*sar/2)*2':ih,setsar=1,bwdif=mode=send_frame:parity=auto:deint=interlaced${sp !== 1 ? `,setpts=(PTS-STARTPTS)/${r3(sp)}` : ''},fps=${FPS}${E.clipPre(s)}`;
+      const color = E.videoColor(o.enhance, o.style) + E.clipColor(s.color);
+      const tail = `${E.clipStab(s, W, H)},format=yuv420p${color},tpad=stop_mode=clone:stop_duration=4,trim=duration=${r3(L)},setpts=PTS-STARTPTS[v]`;
       if (portraitSrc === portraitOut || !s.w) {
         v = `[0:v]${pre},scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},setsar=1${tail}`;
       } else {
@@ -321,36 +346,51 @@
     let a, next = 1;
     const vol = Math.max(0, Math.min(2, s.vol == null ? 1 : s.vol));
     if (s.kind === 'video' && s.hasAudio && vol > 0.001) {
-      a = `[0:a]${AFMT},volume=${r3(vol)}${o.denoise ? ',afftdn=nf=-28' : ''},apad,atrim=duration=${r3(L)},asetpts=PTS-STARTPTS[a]`;
+      const sp = spd(s);
+      a = `[0:a]${AFMT}${sp !== 1 ? `,atempo=${r3(sp)}` : ''},volume=${r3(vol)}${o.denoise ? ',afftdn=nf=-28' : ''},apad,atrim=duration=${r3(L)},asetpts=PTS-STARTPTS[a]`;
     } else {
       args.push('-f', 'lavfi', '-t', r3(L), '-i', 'anullsrc=r=48000:cl=stereo');
       a = `[1:a]${AFMT},atrim=duration=${r3(L)},asetpts=PTS-STARTPTS[a]`;
       next = 2;
     }
+    // Letrero de la toma ("Los padrinos"): aparece al inicio unos segundos.
+    if (s.label) {
+      args.push('-loop', '1', '-framerate', String(FPS), '-t', r3(L + 0.2), '-i', s.label);
+      const a0 = 0.4, a1 = Math.max(a0 + 1, Math.min(L - 0.3, 5));
+      v = v.replace(/\[v\]$/, '[lv]') + `;[${next}:v]format=rgba,fade=t=in:st=${a0}:d=0.4:alpha=1,fade=t=out:st=${r3(a1 - 0.5)}:d=0.5:alpha=1[lb];` +
+        `[lv][lb]overlay=0:0:shortest=1:enable='between(t,${a0},${r3(a1)})',format=yuv420p[v]`;
+      next++;
+    }
     // Marca de agua de esta toma (negra o blanca según su fondo)
     if (s.wm) {
       args.push('-loop', '1', '-framerate', String(FPS), '-t', r3(L + 0.2), '-i', s.wm);
       v = v.replace(/\[v\]$/, '[pv]') + `;[${next}:v]format=rgba[wm];[pv][wm]overlay=0:0:shortest=1,format=yuv420p[v]`;
+      next++;
     }
     args.push('-filter_complex', `${v};${a}`, '-map', '[v]', '-map', '[a]', '-r', String(FPS), ...(o.interArgs || E.FILM_INTER), ...PCM, '-t', r3(L), out);
     return args;
   };
 
   // Une tomas (o grupos) con transiciones de video y de sonido.
+  // T puede ser un número (igual en todas las uniones) o una lista con la duración de cada unión (0 = corte directo).
+  const CUT = 1 / FPS;
+  E.joinDur = (T, k) => Array.isArray(T) ? (T[k] || 0) : (T || 0);
   E.filmJoinFilter = (lens, T, transitions) => {
     const n = lens.length, p = [];
     lens.forEach((_, i) => { p.push(`[${i}:v]settb=AVTB,fps=${FPS},format=yuv420p,setsar=1[v${i}]`, `[${i}:a]${AFMT},asetpts=PTS-STARTPTS[a${i}]`); });
     if (n === 1) { p.push('[v0]null[jv]', '[a0]anull[ja]'); return { fc: p.join(';'), len: lens[0] }; }
-    if (!T) {
+    const all0 = Array.isArray(T) ? T.slice(0, n - 1).every(x => !x) : !T;
+    if (all0) {
       p.push(lens.map((_, i) => `[v${i}][a${i}]`).join('') + `concat=n=${n}:v=1:a=1[jv][ja]`);
       return { fc: p.join(';'), len: q(lens.reduce((s, l) => s + l, 0)) };
     }
     let acc = lens[0], pv = 'v0', pa = 'a0';
     for (let k = 1; k < n; k++) {
       const last = k === n - 1, ov = last ? 'jv' : `xv${k}`, oa = last ? 'ja' : `xa${k}`;
-      p.push(`[${pv}][v${k}]xfade=transition=${transitions[k - 1] || 'fade'}:duration=${r3(T)}:offset=${r3(acc - T)}[${ov}]`);
-      p.push(`[${pa}][a${k}]acrossfade=d=${r3(T)}:c1=tri:c2=tri[${oa}]`);
-      acc = q(acc + lens[k] - T); pv = ov; pa = oa;
+      const d = q(Math.max(CUT, E.joinDur(T, k - 1))), tr = E.joinDur(T, k - 1) ? (transitions[k - 1] || 'fade') : 'fade';
+      p.push(`[${pv}][v${k}]xfade=transition=${tr}:duration=${r3(d)}:offset=${r3(acc - d)}[${ov}]`);
+      p.push(`[${pa}][a${k}]acrossfade=d=${r3(d)}:c1=tri:c2=tri[${oa}]`);
+      acc = q(acc + lens[k] - d); pv = ov; pa = oa;
     }
     return { fc: p.join(';'), len: acc };
   };
@@ -402,37 +442,57 @@
       const segFiles = [], lens = [];
       segs.forEach((s, si) => {
         const L = q(s.len);
-        const key = E.hash(JSON.stringify([s.kind, s.path || s.still, s.in || 0, L, s.w, s.h, s.hasAudio, s.vol, s.zoomIn, s.wm || '', o.W, o.H, o.enhance, o.style, o.denoise, !!o.hwaccel, interKey]));
+        // Ajustes avanzados en la clave solo si los hay: así las tomas ya hechas con versiones anteriores se aprovechan.
+        const adv = [+s.speed || 1, +s.rot || 0, +s.zoom || 1, s.color || null, !!s.stab, s.label || ''];
+        const plain = adv[0] === 1 && !adv[1] && adv[2] === 1 && !adv[3] && !adv[4] && !adv[5];
+        const key = E.hash(JSON.stringify([s.kind, s.path || s.still, s.in || 0, L, s.w, s.h, s.hasAudio, s.vol, s.zoomIn, s.wm || '', o.W, o.H, o.enhance, o.style, o.denoise, !!o.hwaccel, interKey].concat(plain ? [] : [adv])));
         const out = J(`toma_${key}.mkv`);
         steps.push({ stage: 'toma', unit: ui, unitName: u.name, n: si + 1, of: segs.length, seconds: L, weight: L, out, seg: s,
           args: E.filmSegmentArgs(Object.assign({}, s, { len: L }), o, out) });
         segFiles.push(out); lens.push(L);
       });
-      // Transiciones: la primera después de una tarjeta de título siempre es fundido.
-      const trans = [];
-      for (let k = 1; k < segs.length; k++) trans.push(segs[k - 1].kind === 'card' ? 'fade' : (mood.list[(tr++) % (mood.list.length || 1)] || 'fade'));
-      // Más de 12 tomas: se unen de 10 en 10 para cuidar la memoria.
-      let inputs = segFiles, ilens = lens, itrans = trans;
-      if (segFiles.length > 12) {
-        const gIn = [], gLens = [], gTr = [];
-        for (let a = 0, g = 1; a < segFiles.length; a += E.BATCH, g++) {
-          const b = Math.min(segFiles.length, a + E.BATCH);
-          const sub = segFiles.slice(a, b), subL = lens.slice(a, b), subT = trans.slice(a, b - 1);
-          const key = E.hash(JSON.stringify([sub, subL, T, subT, interKey]));
-          const out = J(`grupo_${key}.mkv`);
-          const r = E.filmUnitArgs(sub, subL, T, subT, { encArgs: o.interArgs || E.FILM_INTER }, out);
-          steps.push({ stage: 'grupo', unit: ui, unitName: u.name, n: g, of: Math.ceil(segFiles.length / E.BATCH), seconds: r.len, weight: r.len * .5, out, args: r.args });
-          gIn.push(out); gLens.push(r.len);
-          if (b < segFiles.length) gTr.push(trans[b - 1]);
-        }
-        inputs = gIn; ilens = gLens; itrans = gTr;
+      // Transición y duración de cada unión: la que se eligió para la toma o el momento (edición avanzada) o la del estilo.
+      // Después de una tarjeta de título, fundido; entre pedazos de una misma toma, un fundido muy corto.
+      const trans = [], Ts = [];
+      for (let k = 1; k < segs.length; k++) {
+        const s = segs[k], prev = segs[k - 1];
+        let type, d;
+        if (s.join) { type = 'fade'; d = T ? Math.min(T, 0.3) : 0; }
+        else if (s.trans && s.trans.type && s.trans.type !== 'auto') { type = s.trans.type; d = type === 'corte' ? 0 : (+s.trans.dur || T || 0.8); }
+        else if (prev.kind === 'card') { type = 'fade'; d = T; }
+        else { type = mood.list[(tr++) % (mood.list.length || 1)] || 'fade'; d = T; }
+        d = type === 'corte' ? 0 : q(Math.min(d, Math.max(0, Math.min(lens[k - 1], lens[k]) * .45)));
+        trans.push(type === 'corte' ? 'fade' : type); Ts.push(d);
       }
+      const uniform = Ts.every(x => x === T);
+      // Más de 12 tomas: se unen de 10 en 10 para cuidar la memoria. En 4K cada toma ocupa 4 veces más
+      // memoria al unirla, así que se unen de 3 en 3 (y los grupos otra vez de 3 en 3, las veces que haga falta).
+      const big = o.W * o.H > 4.2e6, MAXIN = big ? 3 : 12, BATCH = big ? 3 : E.BATCH;
+      let inputs = segFiles, ilens = lens, itrans = trans, iD = Ts;
+      for (let level = 1; inputs.length > MAXIN; level++) {
+        const gIn = [], gLens = [], gTr = [], gD = [], ng = Math.ceil(inputs.length / BATCH);
+        for (let a = 0, g = 1; a < inputs.length; a += BATCH, g++) {
+          const b = Math.min(inputs.length, a + BATCH);
+          if (b - a === 1) { gIn.push(inputs[a]); gLens.push(ilens[a]); }
+          else {
+            const sub = inputs.slice(a, b), subL = ilens.slice(a, b), subT = itrans.slice(a, b - 1), subD = uniform ? T : iD.slice(a, b - 1);
+            const key = E.hash(JSON.stringify([sub, subL, subD, subT, interKey]));
+            const out = J(`grupo_${key}.mkv`);
+            const r = E.filmUnitArgs(sub, subL, subD, subT, { encArgs: o.interArgs || E.FILM_INTER }, out);
+            steps.push({ stage: 'grupo', unit: ui, unitName: u.name, n: g, of: ng, level, seconds: r.len, weight: r.len * .5, out, args: r.args });
+            gIn.push(out); gLens.push(r.len);
+          }
+          if (b < inputs.length) { gTr.push(itrans[b - 1]); gD.push(iD[b - 1]); }
+        }
+        inputs = gIn; ilens = gLens; itrans = gTr; iD = gD;
+      }
+      const iT = uniform ? T : iD;
       // La marca de agua no va sobre la portada ni los créditos, y en cada capítulo empieza después de su título.
       const x = { music: u.music || null, watermark: u.noWatermark ? null : (o.watermark || null), fades: true, encArgs: o.encArgs,
         wmFrom: segs[0].kind === 'card' && segs.length > 1 ? q(segs[0].len) : 0 };
-      const key = E.hash(JSON.stringify([inputs, ilens, T, itrans, x.music, x.watermark, x.wmFrom, encKey]));
+      const key = E.hash(JSON.stringify([inputs, ilens, iT, itrans, x.music, x.watermark, x.wmFrom, encKey]));
       const out = J(`capitulo_${key}.mkv`);
-      const r = E.filmUnitArgs(inputs, ilens, T, itrans, x, out);
+      const r = E.filmUnitArgs(inputs, ilens, iT, itrans, x, out);
       steps.push({ stage: 'capitulo', unit: ui, unitName: u.name, n: 1, of: 1, seconds: r.len, weight: r.len * 1.1, out, args: r.args, unitFinal: true });
       unitOuts.push(out);
       chapters.push({ title: u.chapter || u.name, start: t, end: t + r.len });
@@ -508,6 +568,70 @@
     return u;
   };
 
+  /* ---------- Acortar la película ----------
+   * Partes que se usan de una toma (quitando los cortes) en segundos del archivo. */
+  E.keptRanges = (c, minPiece) => {
+    const a0 = c.in || 0, b0 = c.out || c.duration || 0, m = minPiece == null ? 0.5 : minPiece;
+    const cuts = (c.cuts || []).filter(r => r[1] > a0 && r[0] < b0).map(r => [Math.max(a0, r[0]), Math.min(b0, r[1])]).sort((x, y) => x[0] - y[0]);
+    const out = []; let t = a0;
+    cuts.forEach(([a, b]) => { if (a - t >= m) out.push([t, a]); t = Math.max(t, b); });
+    if (b0 - t >= m) out.push([t, b0]);
+    return out;
+  };
+  /* Elige qué quitar para acortar: ventanas de `win` segundos con el puntaje más bajo (oscuro, quieto, sin sonido,
+   * borroso). Cada toma conserva al menos `minKeep` segundos y los huecos chicos entre partes quitadas también se quitan.
+   * clips: [{ id, in, out, duration, cuts, hl, speed }] · need: segundos (en pantalla) que hay que quitar.
+   * Devuelve { cuts: { id: [[a, b], ...] }, removed } con los cortes nuevos (además de los que ya tenía). */
+  E.planShorten = (clips, need, opt) => {
+    opt = opt || {};
+    const win = opt.win || 6, minKeep = opt.minKeep || 3, gap = opt.gap || 4;
+    const wins = [], keepLeft = {};
+    clips.forEach(c => {
+      const sp = +c.speed || 1, S = E.hlScores(c.hl, c.in || 0, c.out || c.duration);
+      const at = t => S.s[Math.max(0, Math.min(S.s.length - 1, Math.floor((t - S.ini) / S.step)))] ?? 0.5;
+      let kept = 0;
+      E.keptRanges(c).forEach(([a, b]) => {
+        kept += b - a;
+        for (let t = a; t + win <= b + 1e-6; t += win) {
+          let sum = 0, n = 0;
+          for (let x = t; x < t + win; x += S.step) { sum += at(x); n++; }
+          wins.push({ id: c.id, a: t, b: t + win, sc: n ? sum / n : 0.5, sp });
+        }
+      });
+      keepLeft[c.id] = kept / sp;
+    });
+    // Suavizado con las ventanas vecinas de la misma toma: así se quitan tramos completos y no pedacitos sueltos.
+    const raw = wins.map(w => w.sc);
+    wins.forEach((w, i) => {
+      const p = i > 0 && wins[i - 1].id === w.id && Math.abs(wins[i - 1].b - w.a) < 1e-6 ? raw[i - 1] : raw[i];
+      const n = i + 1 < wins.length && wins[i + 1].id === w.id && Math.abs(wins[i + 1].a - w.b) < 1e-6 ? raw[i + 1] : raw[i];
+      w.sc = .6 * raw[i] + .2 * p + .2 * n;
+    });
+    wins.sort((x, y) => x.sc - y.sc || x.a - y.a);
+    const picked = {}; let removed = 0;
+    for (const w of wins) {
+      if (removed >= need) break;
+      const len = (w.b - w.a) / w.sp;
+      if (keepLeft[w.id] - len < minKeep) continue;
+      (picked[w.id] = picked[w.id] || []).push([w.a, w.b]);
+      keepLeft[w.id] -= len; removed += len;
+    }
+    const cuts = {};
+    clips.forEach(c => {
+      const list = (picked[c.id] || []).sort((x, y) => x[0] - y[0]);
+      if (!list.length) return;
+      const sp = +c.speed || 1, merged = [];
+      list.forEach(r => {
+        const last = merged[merged.length - 1];
+        // se juntan si están pegadas o si lo que queda en medio es muy corto para verse
+        const g = (r[0] - last?.[1]) / sp;
+        if (last && r[0] - last[1] < gap && keepLeft[c.id] - g >= minKeep) { removed += g; keepLeft[c.id] -= g; last[1] = r[1]; } else merged.push(r.slice());
+      });
+      cuts[c.id] = merged.map(r => [Math.round(r[0] * 10) / 10, Math.round(r[1] * 10) / 10]);
+    });
+    return { cuts, removed };
+  };
+
   /* opt: { media:[{kind,duration}], mode:'shots'|'song', intro, outro, shot, T, target, trans:[...],
    *        beat:{period, offset} | null, beats, maxShots } */
   E.tplPlan = opt => {
@@ -581,9 +705,11 @@
       }
     } else {
       args.push(...(o.hwaccel ? ['-hwaccel', 'auto'] : []), '-ss', r3(seg.start || 0), '-t', r3(L + 0.5), '-i', md.path);
-      const pre = `scale='trunc(iw*sar/2)*2':ih,setsar=1,bwdif=mode=send_frame:parity=auto:deint=interlaced,fps=${FPS}`;
-      const tail = `,format=yuv420p${o.look || ''},tpad=stop_mode=clone:stop_duration=4,trim=duration=${r3(L)},setpts=PTS-STARTPTS`;
-      const srcAr = md.width && md.height ? md.width / md.height : W / H, outAr = W / H;
+      // Giro, acercamiento y color de la toma (los que se pusieron en la película) también en el resumen y el reel.
+      const side = md.rot === 90 || md.rot === 270, mw = side ? md.height : md.width, mh = side ? md.width : md.height;
+      const pre = `scale='trunc(iw*sar/2)*2':ih,setsar=1,bwdif=mode=send_frame:parity=auto:deint=interlaced,fps=${FPS}${E.clipPre({ rot: md.rot, zoom: md.vzoom })}`;
+      const tail = `,format=yuv420p${E.clipColor(md.color)}${o.look || ''},tpad=stop_mode=clone:stop_duration=4,trim=duration=${r3(L)},setpts=PTS-STARTPTS`;
+      const srcAr = mw && mh ? mw / mh : W / H, outAr = W / H;
       const differ = Math.abs(Math.log(srcAr / outAr)) > 0.35;
       const blur = o.fit === 'blur' ? differ || srcAr !== outAr : o.fit === 'cover' ? false : differ;
       if (!blur) {
@@ -773,7 +899,13 @@
   E.hlScores = (hl, ini, fin) => {
     const step = 0.5, out = [];
     if (!hl || !hl.v || !hl.v.length) { for (let t = ini; t < fin; t += step) out.push(0.5); return { step, ini, s: out }; }
-    const near = (arr, t) => { let b = arr[0]; for (const r of arr) { if (Math.abs(r[0] - t) < Math.abs(b[0] - t)) b = r; if (r[0] > t + 2) break; } return b; };
+    // Muestra más cercana a t. Como t siempre avanza, cada lista guarda dónde se quedó (rápido en videos de horas).
+    const at = new Map();
+    const near = (arr, t) => {
+      let i = at.get(arr) || 0;
+      while (i + 1 < arr.length && Math.abs(arr[i + 1][0] - t) <= Math.abs(arr[i][0] - t)) i++;
+      at.set(arr, i); return arr[i];
+    };
     const ds = hl.v.map(r => r[2]).sort((a, b) => a - b), bs = hl.v.map(r => r[3]).sort((a, b) => a - b);
     const pct = (arr, q2) => arr[Math.min(arr.length - 1, Math.floor(q2 * arr.length))] || 0;
     const d50 = pct(ds, .5), d95 = pct(ds, .95) || 1, b20 = pct(bs, .2), b80 = pct(bs, .8) || 1;
@@ -806,10 +938,12 @@
         if (c.kind === 'image') { cands.push({ ci, start: 0, sc: 0.55, img: true }); return; }
         const len = c.out - c.in;
         if (len < shot * 0.8) return;
-        const S = E.hlScores(c.hl, c.in, c.out), k = Math.max(1, Math.round(shot / S.step));
+        const S = E.hlScores(c.hl, c.in, c.out), k = Math.max(1, Math.round(shot / S.step)), cuts = c.cuts || [];
         for (let i = 0; i + k <= S.s.length; i++) {
+          const a = c.in + i * S.step;
+          if (cuts.some(r => r[0] < a + shot && r[1] > a)) continue;   // lo que se quitó no sale en el resumen
           let s = 0; for (let j = i; j < i + k; j++) s += S.s[j];
-          cands.push({ ci, start: c.in + i * S.step, sc: s / k });
+          cands.push({ ci, start: a, sc: s / k });
         }
       });
       cands.sort((a, b) => b.sc - a.sc);

@@ -6,7 +6,7 @@ Programa para Windows de **Eduardo Saucedo · Video & Fotografía**. Está hecho
 |---|---|
 | **Fotos** | Botón "Mejorar colores", 6 estilos (Natural, Boda cálida, Rosa XV, Blanco y negro, Colores vivos, Película) y el logo oficial como marca de agua. Guarda por lote en JPG al tamaño original. |
 | **Plantillas de video** | 30 plantillas tipo CapCut, simples y elaboradas, con textos animados, efectos y cortes al ritmo. Cada una ya trae su canción sugerida (se puede cambiar). Vertical, horizontal y cuadrado. |
-| **Película del evento** | La película completa de la fiesta, guiada por momentos, más un **resumen** de 3 a 5 min y un **reel** vertical armados solos con las mejores partes. |
+| **Película del evento** | La película completa de la fiesta, guiada por momentos, más un **resumen** de 3 a 5 min y un **reel** vertical armados solos con las mejores partes. Con edición avanzada: tijeras, acortar la película a la duración que se pida, transición, velocidad, giro y color por toma. |
 
 **Logo:** viene de fábrica el logo oficial en negro y en blanco. En automático se pone negro sobre fondos claros y blanco sobre oscuros, foto por foto y toma por toma. Tamaño chico, mediano o grande desde Fotos, Plantillas o Película (es el mismo ajuste en las tres). Se puede subir otro logo.
 
@@ -58,7 +58,16 @@ Las plantillas están en `src/js/templates.js`: cada una es una receta (tiempos,
 3. **Revisión automática:** marca tomas en negro (tapa puesta), muy oscuras, muy cortas, muy largas, sin sonido y de celular vertical, y dice qué conviene hacer.
 4. **Momentos:** cada uno trae una recomendación (por ejemplo, en el vals se deja el sonido original y sin música). Cada momento tiene volumen de las tomas, título de capítulo opcional y música que baja sola cuando alguien habla.
 5. **Cada toma:** recorte con "Empieza aquí" / "Termina aquí", volumen de 0 a 150 % o sin sonido, y orden dentro del momento.
-6. **Crear película:** portada, capítulos, créditos con el logo, transiciones (suaves, dinámicas o solo cortes), reducción de ruido del salón, volumen parejo en toda la película (−16 LUFS) y capítulos marcados en el MP4. Si se pausa o se apaga la computadora, al volver a crear sigue donde se quedó.
+6. **Crear película:** portada, capítulos, créditos con el logo, transiciones (suaves, dinámicas o solo cortes), reducción de ruido del salón, volumen parejo en toda la película (−16 LUFS) y capítulos marcados en el MP4. Calidad ligera 720p, normal 1080p o máxima 4K. Si se pausa o se apaga la computadora, al volver a crear sigue donde se quedó.
+
+### Edición avanzada (Película)
+
+- **✂ Cortar aquí** (tecla **S**): parte una toma en dos donde está el video. Cada pedazo se acomoda, recorta o quita por separado; en la barra se ven los otros pedazos del mismo archivo.
+- **✂ Acortar la película…**: se elige cuánto debe durar (por ejemplo, de 4 h a 2 h) y el programa revisa cada toma segundo a segundo y quita primero lo oscuro, sin movimiento, sin sonido o fuera de foco. Cada toma conserva por lo menos 3 segundos y la ceremonia, el vals y el brindis no se tocan (se puede cambiar). Lo quitado queda en gris en la barra de cada toma: un clic lo regresa.
+- **Opciones avanzadas de cada toma:** transición al empezar (11 tipos con vista previa animada y duración rápida, normal o lenta), velocidad (0.5× cámara lenta a 2×), acercar (115 a 150 %), girar videos grabados de lado, color propio (brillo, contraste, saturación y calidez, o el mismo en todo el momento), estabilizar y un letrero en pantalla ("Los padrinos").
+- **Opciones avanzadas del momento:** una transición para todas sus tomas y si se puede recortar o no.
+- **↶ Deshacer** (Ctrl+Z) para cualquier cambio, y atajos: I / O marcan inicio y fin, Espacio reproduce, Supr quita la toma.
+- La duración de la película se ve siempre en la barra, ya con las partes quitadas, la velocidad y las transiciones.
 7. **Resumen y reel:** cada toma se revisa segundo a segundo (brillo, nitidez, movimiento y sonido, como aplausos) y se eligen las mejores partes de cada momento. Se cortan al ritmo de la canción, con el título al inicio, el nombre de cada momento y los créditos con el logo. El resumen sale horizontal (3, 4 o 5 min) y el reel vertical (30, 45 o 60 s). Nunca dura más que la canción, y si hay poco material sale más corto en lugar de repetir tomas.
 
 ## Música incluida (`tools/musica/`)
@@ -93,8 +102,8 @@ Cada vez que se sube un cambio a `main`, GitHub genera un instalador nuevo en Re
 
 Se trabaja por etapas para que un evento con muchos clips en 4K no se acabe la memoria:
 
-1. **Tomas:** cada clip o foto se recorta al formato y se guarda como archivo temporal. Las fotos se preparan en la interfaz con el mismo color que la pestaña Fotos, y FFmpeg les da un acercamiento lento. Un clip horizontal en un video vertical lleva el fondo difuminado del mismo clip. Los videos entrelazados (por ejemplo `.MTS` de videocámara) se desentrelazan.
-2. **Grupos:** con más de 12 tomas, se unen de 10 en 10 con sus transiciones.
+1. **Tomas:** cada clip o foto se recorta al formato y se guarda como archivo temporal (una toma con partes quitadas se guarda en pedazos, unidos después con un fundido muy corto). Las fotos se preparan en la interfaz con el mismo color que la pestaña Fotos, y FFmpeg les da un acercamiento lento. Un clip horizontal en un video vertical lleva el fondo difuminado del mismo clip. Los videos entrelazados (por ejemplo `.MTS` de videocámara) se desentrelazan.
+2. **Grupos:** con más de 12 tomas, se unen de 10 en 10 con sus transiciones (en 4K de 3 en 3, porque cada toma ocupa 4 veces más memoria al unirla).
 3. **Final:** se unen los grupos y se agregan títulos, logo, música con entrada y salida suaves, y se exporta el MP4 (H.264 + AAC).
 
 Los títulos se dibujan en la interfaz (Great Vibes, Cormorant Garamond y Archivo) como PNG transparentes, y FFmpeg los pone encima con desvanecido.

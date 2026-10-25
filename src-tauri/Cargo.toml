@@ -1,6 +1,6 @@
 [package]
 name = "editor-saucedo"
-version = "0.4.0"
+version = "0.5.0"
 description = "Editor de fotos y video para Eduardo Saucedo · Video & Fotografía"
 edition = "2021"
 

@@ -33,7 +33,11 @@
 
   document.addEventListener('keydown', e => {
     if (!$('#errModal').hidden && e.key === 'Escape') { $('#errModal').hidden = true; return; }
-    if (e.target && (e.target.id === 'phSplit' || /INPUT|TEXTAREA|SELECT|VIDEO/.test(e.target.tagName))) return;
+    if (e.target && (e.target.id === 'phSplit' || /INPUT|TEXTAREA|SELECT/.test(e.target.tagName))) return;
+    if (document.querySelector('.modal:not([hidden])')) return;
+    // Atajos de la película (cortar, deshacer, reproducir…), también con el video seleccionado
+    if (tabs[current] && tabs[current].onKey && tabs[current].onKey(e)) { e.preventDefault(); return; }
+    if (e.target && e.target.tagName === 'VIDEO') return;
     const dir = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
     if (!dir) return;
     if (current === 'fotos') SA.photos.keyNav(dir); else tabs[current] && tabs[current].keyNav(dir);

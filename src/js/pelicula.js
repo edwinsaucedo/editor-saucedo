@@ -25,6 +25,17 @@
     vertical: { t: 'Celular vertical', d: 'Grabada en vertical: va al centro con el fondo difuminado de la misma toma.' }
   };
   const MIN_LEN = 1.5;
+  // Edición avanzada: transiciones que se pueden elegir (nombre de FFmpeg → nombre para el usuario).
+  const TRANS = [['auto', 'Automática'], ['corte', 'Corte directo'], ['fade', 'Fundido'], ['fadeblack', 'Fundido a negro'], ['fadewhite', 'Destello blanco'],
+    ['smoothleft', 'Deslizar ←'], ['smoothright', 'Deslizar →'], ['smoothup', 'Subir'], ['circleopen', 'Círculo'], ['zoomin', 'Acercamiento'], ['hblur', 'Desenfoque'], ['wiperight', 'Barrido']];
+  const TDUR = [[0.4, 'Rápida'], [0.8, 'Normal'], [1.5, 'Lenta']];
+  const SPEEDS = [[0.5, '0.5×'], [0.75, '0.75×'], [1, 'Normal'], [1.5, '1.5×'], [2, '2×']];
+  const ROTS = [[0, 'Normal'], [90, '↻ 90°'], [180, '180°'], [270, '↺ 90°']];
+  const ZOOMS = [[1, 'Normal'], [1.15, '115 %'], [1.3, '130 %'], [1.5, '150 %']];
+  const QUALITY = { '720': { W: 1280, H: 720, name: 'Ligera 720p' }, '1080': { W: 1920, H: 1080, name: 'Normal 1080p' }, '2160': { W: 3840, H: 2160, name: 'Máxima 4K' } };
+  // Al acortar sola, estos momentos no se recortan (se pueden cambiar en cada momento).
+  const PROTECT = ['ceremonia', 'vals', 'brindis'];
+  const COLOR0 = { b: 0, c: 0, s: 0, w: 0 };
   const RECENTS = 'saucedo-peliculas';
   const fmt = s => E.fmtTime(s);
   const hhmm = t => t ? new Date(t).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false }) : '--:--';
@@ -94,6 +105,8 @@
                 <div class="stepper" data-el="hlStartRow" hidden><span class="lbl">Empieza en</span><button type="button" data-act="hlStart" data-v="-5">−5 s</button><output data-el="hlStart">0:00</output><button type="button" data-act="hlStart" data-v="5">+5 s</button></div>
                 <p class="hint">Se eligen solas las mejores partes de cada momento (bien iluminadas, nítidas, con movimiento y aplausos) y se corta al ritmo de esta canción.</p></div>
             </div>
+            <div class="field" data-el="qualityBox"><span class="lbl">Calidad del archivo de la película</span><div class="seg" data-el="quality">${Object.entries(QUALITY).map(([k, v]) => `<button type="button" data-v="${k}">${v.name}</button>`).join('')}</div>
+              <p class="hint" data-el="qualityHint"></p></div>
             <p class="summary" data-el="summary"></p>
             <button class="primary" type="button" data-act="create" data-el="create">Crear película</button>
             <div class="progress" data-el="progress" hidden>
@@ -126,6 +139,7 @@
               <div class="screen" data-el="screen">
                 <video data-el="video" controls preload="metadata"></video>
                 <img data-el="img" alt="" hidden>
+                <p class="lbl-prev" data-el="lblPrev" hidden></p>
                 <p class="screen-msg" data-el="screenMsg">Elige una toma de abajo para verla aquí.</p>
               </div>
               <div class="trim" data-el="trimBox" hidden>
@@ -136,12 +150,20 @@
                   <button class="navbtn" type="button" data-act="markOut">Termina aquí</button>
                 </div>
                 <div class="trim-row small">
+                  <button class="navbtn cutbtn" type="button" data-act="split" title="Atajo: tecla S">✂ Cortar aquí</button>
                   <button class="navbtn" type="button" data-act="playRange">▶ Ver lo que se usa</button>
                   <button class="navbtn" type="button" data-act="resetTrim">Usar toda la toma</button>
                 </div>
+                <p class="trim-cuts" data-el="trimCuts" hidden></p>
               </div>
             </div>
             <div class="detail" data-el="detail"><p class="hint">Toca una toma para recortarla y ajustar su sonido, o el nombre de un momento para elegir su música.</p></div>
+          </div>
+          <div class="toolbar" data-el="toolbar">
+            <button class="tbtn" type="button" data-act="undo" data-el="undoBtn" disabled title="Atajo: Ctrl+Z">↶ Deshacer</button>
+            <button class="tbtn" type="button" data-act="shorten">✂ Acortar la película…</button>
+            <button class="tbtn" type="button" data-act="keys">Atajos del teclado</button>
+            <span class="tb-len" data-el="tbLen"></span>
           </div>
           <div class="actionbar" data-el="actionbar" hidden>
             <span data-el="selCount"></span>
@@ -169,7 +191,7 @@
       }));
       const seg = (name, key) => SA.ui.seg(this.q(name), '', v => { this.p[key] = v; this.dirty(); this.syncStyle(); this.summary(); });
       SA.ui.seg(this.q('wmSize'), S.size || 'm', v => { S.size = v; SA.brandChanged(); });
-      seg('mood', 'mood'); seg('style', 'style'); seg('theme', 'theme');
+      seg('mood', 'mood'); seg('style', 'style'); seg('theme', 'theme'); seg('quality', 'quality');
       $$('[data-el="outputs"] .chip', R).forEach(b => b.addEventListener('click', () => {
         const set = new Set(this.p.outputs || ['pelicula']); set.has(b.dataset.v) ? set.delete(b.dataset.v) : set.add(b.dataset.v);
         if (!set.size) { toast('Elige por lo menos una cosa para crear.'); return; }
@@ -185,9 +207,16 @@
       v.addEventListener('error', () => this.onVideoError());
       this.q('track').addEventListener('click', e => {
         const c = this.clip(this.focus); if (!c || c.kind !== 'video') return;
+        const cut = e.target.closest('.cutr'), sib = e.target.closest('.sib');
+        if (cut) { this.restoreCut(+cut.dataset.i); return; }
+        if (sib) { this.focusClip(sib.dataset.id); return; }
         const r = this.q('track').getBoundingClientRect();
         v.currentTime = Math.max(0, Math.min(c.duration, (e.clientX - r.left) / r.width * c.duration));
       });
+      v.addEventListener('loadedmetadata', () => this.applyPreviewLook());
+      // Video girado (sin controles): un clic reproduce o pausa.
+      v.addEventListener('click', () => { if (!v.controls) v.paused ? v.play() : v.pause(); });
+      if (window.ResizeObserver) new ResizeObserver(() => { if (this.focus) this.applyPreviewLook(); }).observe(this.q('screen'));
     }
 
     /* ================= Proyecto ================= */
@@ -240,7 +269,7 @@
     }
     async load(p) {
       this.flush();
-      this.p = p; this.rt = {}; this.selected.clear(); this.focus = null; this.panel = null;
+      this.p = p; this.rt = {}; this.selected.clear(); this.focus = null; this.panel = null; this.undo = []; this.syncUndo();
       // Música incluida: la ruta se actualiza por si el programa se instaló en otra carpeta.
       [p.music, p.hl && p.hl.music].concat(p.moments.map(m => m.music)).forEach(m => SA.music.resolve(m));
       this.cache = await B.filmCacheDir(p.id);
@@ -266,7 +295,7 @@
 
     /* ================= Material ================= */
     clip(id) { return this.p && this.p.clips[id]; }
-    time(c) { const sh = (this.p.sources[c.dir] || {}).shift || 0; return (c.t || 0) + sh * 3600e3; }
+    time(c) { const sh = (this.p.sources[c.dir] || {}).shift || 0; return (c.t || 0) + sh * 3600e3 + (c.split ? (c.in || 0) * 1000 : 0); }
     momentOf(id) { return this.p.moments.find(m => m.clips.includes(id)); }
     act_add() { B.pick('media', true).then(p => p.length && this.addPaths(p)); }
     act_folder() { B.pickFolder().then(p => p && this.addPaths([p])); }
@@ -304,7 +333,7 @@
     // Lee datos, saca miniatura y revisa la toma (todo queda guardado para la próxima vez).
     async prepare(c) {
       const rt = this.rt[c.id] = this.rt[c.id] || {};
-      const thumbPath = B.join(this.cache, `cuadro_${E.hash(c.path)}.jpg`);
+      const thumbPath = B.join(this.cache, `cuadro_${E.hash(c.split ? c.path + '@' + (c.in || 0) : c.path)}.jpg`);
       if (c.kind === 'image') {
         if (!c.ready) {
           const bmp = await createImageBitmap(await B.readBlob(c.path));
@@ -328,7 +357,7 @@
         c.ready = true;
       }
       if (!(await B.exists(thumbPath))) {
-        const at = Math.min(2, c.duration * .3);
+        const at = c.split ? (c.in || 0) + Math.min(1, this.clipLen(c) * .3) : Math.min(2, c.duration * .3);
         let r = await B.run('ffmpeg', ['-y', '-hide_banner', '-v', 'error', '-ss', String(at), '-i', c.path, '-frames:v', '1', '-vf', 'scale=360:-2', thumbPath]);
         if (r.code !== 0 || !(await B.exists(thumbPath))) await B.run('ffmpeg', ['-y', '-hide_banner', '-v', 'error', '-i', c.path, '-frames:v', '1', '-vf', 'scale=360:-2', thumbPath]);
       }
@@ -370,7 +399,7 @@
         '<p class="hint">Las tomas marcadas tienen un punto de color; tócalas para ver qué se recomienda.</p>' : '';
     }
     act_dropBlack() {
-      let n = 0;
+      this.snap(); let n = 0;
       Object.values(this.p.clips).forEach(c => { if (!c.excluded && c.scan && c.scan.flags.includes('negra')) { this.exclude(c.id, true); n++; } });
       this.dirty(); this.renderBoard(); this.renderAdvice(); this.summary();
       toast(`Se quitaron ${n} tomas en negro. Están en la columna "No se usan" por si quieres regresarlas.`);
@@ -381,7 +410,8 @@
       const inM = new Set(this.p.moments.flatMap(m => m.clips));
       return Object.values(this.p.clips).filter(c => !inM.has(c.id) && !c.excluded).sort((a, b) => this.time(a) - this.time(b));
     }
-    clipLen(c) { return c.kind === 'image' ? (c.len || 4) : Math.max(0, (c.out || c.duration) - (c.in || 0)); }
+    clipLen(c) { return c.kind === 'image' ? (c.len || 4) : E.keptRanges(c).reduce((s, r) => s + r[1] - r[0], 0) / (c.speed || 1); }
+    cutSecs(c) { const a0 = c.in || 0, b0 = c.out || c.duration; return (c.cuts || []).reduce((s, r) => s + Math.max(0, Math.min(b0, r[1]) - Math.max(a0, r[0])), 0); }
     renderBoard() {
       if (!this.p) return;
       const board = this.q('board');
@@ -422,7 +452,17 @@
         <canvas width="160" height="90"></canvas>
         <span class="cc-t">${hhmm(this.time(c))}</span><span class="cc-d">${c.kind === 'image' ? 'FOTO' : fmt(this.clipLen(c))}</span>
         ${flags.length ? `<span class="cc-f" title="${esc(flags.map(f => FLAG[f].t).join(', '))}"></span>` : ''}
-        ${c.mute || (c.kind === 'video' && !c.hasAudio && c.ready) ? '<span class="cc-m" title="Sin sonido">🔇</span>' : ''}</button>`;
+        ${c.mute || (c.kind === 'video' && !c.hasAudio && c.ready) ? '<span class="cc-m" title="Sin sonido">🔇</span>' : ''}
+        ${this.badges(c)}</button>`;
+    }
+    // Marcas pequeñas en la tarjeta: partes quitadas, velocidad, letrero, transición propia.
+    badges(c) {
+      const b = [];
+      if (c.cuts && c.cuts.length && this.cutSecs(c) > 0.5) b.push(`<span class="cc-b" title="Tiene partes quitadas">✂</span>`);
+      if (c.speed && c.speed !== 1) b.push(`<span class="cc-b" title="Velocidad">${c.speed}×</span>`);
+      if (c.label) b.push('<span class="cc-b" title="Letrero en pantalla">T</span>');
+      if (c.trans && c.trans.type && c.trans.type !== 'auto') b.push('<span class="cc-b" title="Transición propia">⇄</span>');
+      return b.length ? `<span class="cc-bs">${b.join('')}</span>` : '';
     }
     refreshCard(id) {
       const el = this.q('board').querySelector(`.cc[data-id="${id}"]`), c = this.clip(id);
@@ -468,6 +508,7 @@
       this.q('sendTo').innerHTML = '<option value="">elige…</option>' + this.p.moments.map((m, i) => `<option value="${m.id}">${i + 1}. ${esc(m.name)}</option>`).join('') + '<option value="_un">Sin acomodar</option>';
     }
     sendSelected(mid) {
+      this.snap();
       const ids = [...this.selected];
       this.p.moments.forEach(m => { m.clips = m.clips.filter(id => !this.selected.has(id)); });
       ids.forEach(id => { this.p.clips[id].excluded = false; });
@@ -483,7 +524,7 @@
       const c = this.p.clips[id]; c.excluded = on;
       if (on) this.p.moments.forEach(m => { m.clips = m.clips.filter(x => x !== id); });
     }
-    act_excludeSel() { [...this.selected].forEach(id => this.exclude(id, true)); this.selected.clear(); this.dirty(); this.renderBoard(); this.summary(); this.renderAdvice(); }
+    act_excludeSel() { this.snap(); [...this.selected].forEach(id => this.exclude(id, true)); this.selected.clear(); this.dirty(); this.renderBoard(); this.summary(); this.renderAdvice(); }
     act_addMoment() {
       const id = 'm' + Date.now().toString(36);
       this.p.moments.push({ id, key: 'otro', name: 'Momento nuevo', title: true, vol: 1, music: null, clips: [], manual: false });
@@ -502,6 +543,9 @@
     showDetail() {
       const d = this.q('detail');
       if (!this.p) return;
+      // Otra toma u otro momento: el panel empieza arriba; la misma: se queda donde estaba.
+      const who = this.panel || this.focus || '';
+      if (who !== this.detailFor) { d.scrollTop = 0; this.detailFor = who; }
       if (this.panel) return this.momentPanel(d);
       const c = this.clip(this.focus);
       if (!c) { d.innerHTML = '<p class="hint">Toca una toma para recortarla y ajustar su sonido, o el nombre de un momento para elegir su música.</p>'; return; }
@@ -518,24 +562,286 @@
             ${c.hasAudio && !c.mute ? `<div class="slider"><input type="range" min="0" max="150" step="5" value="${Math.round(c.vol * 100)}" data-cf="vol" aria-label="Volumen de esta toma"><output>${Math.round(c.vol * 100)} %</output></div>` : ''}
           </div>` : `
           <div class="field"><span class="lbl">Cuánto dura la foto</span><div class="stepper"><button type="button" data-act="photoLen" data-v="-1">−1 s</button><output>${c.len || 4} s</output><button type="button" data-act="photoLen" data-v="1">+1 s</button></div></div>`}
+        ${c.kind === 'video' ? this.cutsInfo(c) : ''}
+        ${this.advHtml(c)}
         <div class="d-actions">
           ${m ? `<button class="navbtn dark" type="button" data-act="moveClip" data-v="-1" ${i <= 0 ? 'disabled' : ''}>‹ Antes</button><button class="navbtn dark" type="button" data-act="moveClip" data-v="1" ${i >= m.clips.length - 1 ? 'disabled' : ''}>Después ›</button>` : ''}
           ${c.excluded ? '<button class="btn" type="button" data-act="restoreClip">Volver a usar</button>' : '<button class="btn" type="button" data-act="excludeClip">No usar esta toma</button>'}
         </div>`;
       const vol = d.querySelector('[data-cf="vol"]');
       if (vol) vol.addEventListener('input', () => { c.vol = vol.value / 100; vol.nextElementSibling.textContent = `${vol.value} %`; this.applyPreviewVolume(); this.dirty(); });
-      this.renderTrim();
+      this.bindAdv(d, c);
+      this.renderTrim(); this.applyPreviewLook();
+    }
+
+    /* ================= Edición avanzada ================= */
+    cutsInfo(c) {
+      const n = (c.cuts || []).length, secs = this.cutSecs(c);
+      if (!n || secs < 0.5) return '';
+      return `<p class="flag tip"><strong>✂ ${n} ${n === 1 ? 'parte quitada' : 'partes quitadas'} (${fmt(secs)}).</strong> Están en gris en la barra debajo del video: toca una para regresarla.</p>
+        <button class="link" type="button" data-act="restoreAllCuts">Regresar todas las partes quitadas</button>`;
+    }
+    transGrid(cur, act) {
+      return `<div class="trans-grid">${TRANS.map(([k, t]) => `<button type="button" class="tr${(cur || 'auto') === k ? ' on' : ''}" data-act="${act}" data-v="${k}" aria-pressed="${(cur || 'auto') === k}"><span class="tp tp-${k}"><i></i><b></b></span><span class="tn">${t}</span></button>`).join('')}</div>`;
+    }
+    advSeg(name, list, val) {
+      return `<div class="seg small" data-cv="${name}" role="radiogroup">${list.map(([v, t]) => `<button type="button" data-v="${v}" aria-checked="${String(v) === String(val)}">${t}</button>`).join('')}</div>`;
+    }
+    advHtml(c) {
+      const tr = c.trans || {}, video = c.kind === 'video', col = Object.assign({}, COLOR0, c.color || {});
+      return `<details class="adv" data-el="adv"${this.advOpen() ? ' open' : ''}><summary>Opciones avanzadas</summary>
+        <div class="field"><span class="lbl">Transición al empezar esta toma</span>${this.transGrid(tr.type, 'setTrans')}
+          ${tr.type && tr.type !== 'auto' && tr.type !== 'corte' ? `<span class="lbl">Duración de la transición</span>${this.advSeg('tdur', TDUR, tr.dur || 0.8)}` : ''}</div>
+        ${video ? `
+        <div class="field"><span class="lbl">Velocidad (menos de 1× es cámara lenta)</span>${this.advSeg('speed', SPEEDS, c.speed || 1)}</div>
+        <div class="field"><span class="lbl">Acercar (recorta los bordes)</span>${this.advSeg('zoom', ZOOMS, c.zoom || 1)}</div>
+        <div class="field"><span class="lbl">Girar (videos grabados de lado o de cabeza)</span>${this.advSeg('rot', ROTS, c.rot || 0)}</div>
+        <div class="field"><span class="lbl">Color de esta toma</span>
+          ${[['b', 'Brillo'], ['c', 'Contraste'], ['s', 'Saturación'], ['w', 'Calidez']].map(([k, t]) => `<label class="cslider"><span>${t}</span><input type="range" min="-100" max="100" step="5" value="${col[k]}" data-col="${k}" aria-label="${t}"><output>${col[k] > 0 ? '+' : ''}${col[k]}</output></label>`).join('')}
+          <div class="links"><button class="link" type="button" data-act="colorReset">Restablecer</button><button class="link" type="button" data-act="colorAll">Igual en todo el momento</button></div></div>
+        <div class="sw-row"><button class="switch" type="button" role="switch" data-act="stab" aria-checked="${!!c.stab}" aria-label="Estabilizar"></button><span>Estabilizar (quita el temblor; tarda un poco más)</span></div>` : ''}
+        <label class="field"><span class="lbl">Letrero en pantalla (opcional)</span><input class="input" type="text" data-cv="label" maxlength="40" placeholder="Ej. Los padrinos" value="${esc(c.label || '')}" autocomplete="off"></label>
+      </details>`;
+    }
+    advOpen(v) {
+      if (v != null) { try { localStorage.setItem('saucedo-avanzado', v ? '1' : '0'); } catch (e) {} return v; }
+      try { return localStorage.getItem('saucedo-avanzado') === '1'; } catch (e) { return false; }
+    }
+    bindAdv(d, c) {
+      const adv = d.querySelector('[data-el="adv"]');
+      if (!adv) return;
+      adv.addEventListener('toggle', () => this.advOpen(adv.open));
+      $$('.seg[data-cv]', adv).forEach(g => g.addEventListener('click', e => {
+        const b = e.target.closest('button[data-v]'); if (!b) return;
+        this.snap();
+        const k = g.dataset.cv, v = +b.dataset.v;
+        if (k === 'tdur') c.trans = Object.assign({}, c.trans, { dur: v });
+        else if (k === 'rot') c.rot = v || undefined;
+        else c[k] = v === 1 ? undefined : v;
+        this.changedClip(c);
+      }));
+      let snapped = false;
+      $$('[data-col]', adv).forEach(r => {
+        r.addEventListener('pointerdown', () => { if (!snapped) { this.snap(); snapped = true; } });
+        r.addEventListener('input', () => {
+          c.color = Object.assign({}, COLOR0, c.color || {}, { [r.dataset.col]: +r.value });
+          if (!c.color.b && !c.color.c && !c.color.s && !c.color.w) c.color = undefined;
+          r.nextElementSibling.textContent = `${+r.value > 0 ? '+' : ''}${r.value}`;
+          this.applyPreviewLook(); this.dirty();
+        });
+      });
+      const lb = adv.querySelector('[data-cv="label"]');
+      lb.addEventListener('focus', () => this.snap(), { once: true });
+      lb.addEventListener('input', () => { c.label = lb.value.trim() || undefined; this.applyPreviewLook(); this.dirty(); });
+      lb.addEventListener('change', () => this.refreshCard(c.id));
+    }
+    changedClip(c) { this.dirty(); this.showDetail(); this.refreshCard(c.id); this.summary(); }
+    act_setTrans(b) {
+      const c = this.clip(this.focus); if (!c) return;
+      this.snap();
+      c.trans = b.dataset.v === 'auto' ? undefined : { type: b.dataset.v, dur: (c.trans && c.trans.dur) || 0.8 };
+      this.changedClip(c);
+    }
+    act_stab() { const c = this.clip(this.focus); this.snap(); c.stab = !c.stab || undefined; this.changedClip(c); }
+    act_colorReset() { const c = this.clip(this.focus); this.snap(); c.color = undefined; this.changedClip(c); }
+    act_colorAll() {
+      const c = this.clip(this.focus), m = this.momentOf(c.id);
+      if (!m) { toast('Primero manda esta toma a un momento.'); return; }
+      this.snap();
+      let n = 0; m.clips.forEach(id => { const x = this.p.clips[id]; if (x && x.kind === 'video' && x !== c) { x.color = c.color ? Object.assign({}, c.color) : undefined; n++; } });
+      this.dirty(); toast(`Se puso el mismo color en ${n} ${n === 1 ? 'toma' : 'tomas'} de "${m.name}".`);
+    }
+    // Vista previa: color, giro, acercamiento, velocidad y letrero sobre el reproductor.
+    applyPreviewLook() {
+      const c = this.clip(this.focus), v = this.q('video'), lp = this.q('lblPrev');
+      const plain = () => { v.style.filter = v.style.transform = v.style.clipPath = ''; v.controls = true; };
+      if (!c) { plain(); lp.hidden = true; return; }
+      lp.hidden = !c.label; lp.textContent = c.label || '';
+      if (c.kind !== 'video') { plain(); return; }
+      const col = Object.assign({}, COLOR0, c.color || {}), f = [];
+      if (col.b) f.push(`brightness(${(1 + col.b / 250).toFixed(3)})`);
+      if (col.c) f.push(`contrast(${(1 + col.c / 250).toFixed(3)})`);
+      if (col.s) f.push(`saturate(${Math.max(0, 1 + col.s / 100).toFixed(3)})`);
+      if (col.w > 0) f.push(`sepia(${(col.w / 350).toFixed(3)})`); else if (col.w < 0) f.push(`hue-rotate(${(col.w / 8).toFixed(1)}deg) saturate(${(1 + col.w / 400).toFixed(3)})`);
+      v.style.filter = f.join(' ');
+      // Giro y acercamiento: el cuadro del video se gira y se escala; el recorte (clip-path) deja ver solo
+      // la parte central que quedará en la película. Con el video girado no se muestran los controles.
+      const rot = c.rot || 0, z = c.zoom || 1, side = rot % 180 !== 0;
+      const ew = v.clientWidth || 1, eh = v.clientHeight || 1, ar = (v.videoWidth || c.w || 16) / (v.videoHeight || c.h || 9);
+      const w = Math.min(ew, eh * ar), h = w / ar, sc = (side ? Math.min(ew / h, eh / w) : 1) * z;
+      const ix = (ew - w) / 2 + w * (1 - 1 / z) / 2, iy = (eh - h) / 2 + h * (1 - 1 / z) / 2;
+      v.style.clipPath = z > 1 ? `inset(${iy.toFixed(1)}px ${ix.toFixed(1)}px)` : '';
+      v.style.transform = rot || z !== 1 ? `rotate(${rot}deg) scale(${sc.toFixed(4)})` : '';
+      v.controls = !rot;
+      try { v.playbackRate = c.speed || 1; v.preservesPitch = true; } catch (e) {}
+    }
+
+    /* ---------- Acortar la película ---------- */
+    async act_shorten() {
+      if (!this.p || this.busy) return;
+      if (this.pumping) { toast('Espera a que termine la revisión del material.'); return; }
+      const units = this.units(), cur = this.filmLen(units);
+      if (units.length <= 2) { toast('Primero manda tomas a los momentos.'); return; }
+      if (cur < 8 * 60) { toast('La película dura menos de 8 minutos: no hace falta acortarla.'); return; }
+      const label = x => x >= 3600 ? `${Math.floor(x / 3600)} h${x % 3600 ? ` ${Math.round(x % 3600 / 60)} min` : ''}` : `${Math.round(x / 60)} min`;
+      const opts = [5, 10, 15, 20, 30, 45, 60, 90, 120, 150, 180, 240, 300].map(m => m * 60).filter(x => x < cur - 60 && x >= cur * .2);
+      if (!opts.length) { toast('La película ya está muy corta.'); return; }
+      const ms = units.filter(u => u.moment);
+      const wrap = document.createElement('div');
+      wrap.className = 'modal shorten'; wrap.setAttribute('role', 'dialog'); wrap.setAttribute('aria-modal', 'true');
+      wrap.innerHTML = `<div class="modal-card">
+        <div class="mp-head"><h2>Acortar la película</h2><button class="mp-x" type="button" data-sact="close" aria-label="Cerrar">×</button></div>
+        <p>Ahora dura <strong>${fmt(cur)}</strong>. ¿Cuánto quieres que dure?</p>
+        <div class="chips sh-opts">${opts.map(x => `<button type="button" class="chip" data-sv="${x}">${label(x)}</button>`).join('')}</div>
+        <p class="hint">Se quitan primero las partes oscuras, sin movimiento, sin sonido o fuera de foco. Cada toma conserva por lo menos unos segundos, y lo que se quita queda en gris para regresarlo si quieres.</p>
+        <div class="field"><span class="lbl">Momentos que no se recortan (toca para marcar o desmarcar)</span><div class="chips">${ms.map(u => `<button type="button" class="chip" data-sm="${u.moment.id}" aria-pressed="${this.isProtected(u.moment)}">${esc(u.moment.name)}</button>`).join('')}</div></div>
+        <div class="progress" data-s="prog" hidden><div class="prog-row"><span data-s="ptext">Revisando…</span></div><div class="bar"><i data-s="bar"></i></div></div>
+        <div class="modal-actions"><button class="btn" type="button" data-sact="close">Cancelar</button><button class="primary small" type="button" data-sact="go" disabled>Acortar</button></div>
+      </div>`;
+      document.body.appendChild(wrap);
+      let target = null, stop = false, running = false;
+      const onEsc = e => { if (e.key === 'Escape' && !running) close(); };
+      const close = () => { stop = true; wrap.remove(); document.removeEventListener('keydown', onEsc); };
+      document.addEventListener('keydown', onEsc);
+      wrap.addEventListener('click', async e => {
+        if (e.target === wrap && !running) { close(); return; }
+        const b = e.target.closest('button'); if (!b) return;
+        if (b.dataset.sv) { target = +b.dataset.sv; $$('[data-sv]', wrap).forEach(x => x.setAttribute('aria-pressed', String(x === b))); wrap.querySelector('[data-sact="go"]').disabled = false; }
+        else if (b.dataset.sm) { const m = this.p.moments.find(x => x.id === b.dataset.sm); m.protect = !this.isProtected(m); b.setAttribute('aria-pressed', String(m.protect)); this.dirty(); }
+        else if (b.dataset.sact === 'close') { if (running) B.cancel(); close(); }
+        else if (b.dataset.sact === 'go' && target && !running) {
+          running = true; b.disabled = true;
+          const prog = wrap.querySelector('[data-s="prog"]'), pt = wrap.querySelector('[data-s="ptext"]'), bar = wrap.querySelector('[data-s="bar"]');
+          prog.hidden = false;
+          try {
+            const r = await this.shortenTo(target, (f, txt) => { bar.style.width = (f * 100).toFixed(1) + '%'; pt.textContent = txt; }, () => stop);
+            if (stop) return;
+            close();
+            if (r && !r.parts) toast('No encontré partes que se puedan quitar sin dejar las tomas demasiado cortas. Prueba desmarcando algún momento protegido.', 10000);
+            else if (r) toast(`Listo: la película pasó de ${fmt(cur)} a ${fmt(r.after)}${r.short ? ' (es lo más corto posible sin tocar los momentos protegidos ni dejar tomas de menos de 3 segundos)' : ''}. Se quitaron ${r.parts} partes; están en gris en cada toma por si quieres regresar alguna, o usa Deshacer.`, 12000);
+          } catch (err) { close(); SA.showError('No se pudo acortar la película.', String(err && err.stack || err)); }
+        }
+      });
+    }
+    // Revisa segundo a segundo las tomas que se pueden recortar y quita lo menos bueno hasta llegar a la duración.
+    async shortenTo(target, onProg, stopped) {
+      const units = this.units(), before = this.filmLen(units);
+      const clips = units.filter(u => u.moment && !this.isProtected(u.moment)).flatMap(u => u.clips).filter(c => c.kind === 'video');
+      if (!clips.length) { toast('Todos los momentos están marcados para no recortarse.'); return null; }
+      // 1. Revisión por segundo (una vez por archivo; los pedazos de un mismo archivo la comparten)
+      await this.analyzeHl(clips, (f, k, n) => onProg(f * .9, `Revisando segundo a segundo: archivo ${k + 1} de ${n}`), stopped);
+      if (stopped()) return null;
+      onProg(.95, 'Eligiendo qué quitar');
+      this.snap();
+      const plan = E.planShorten(clips.map(c => ({ id: c.id, in: c.in || 0, out: c.out || c.duration, duration: c.duration, cuts: c.cuts, hl: c.hl, speed: c.speed || 1 })), before - target);
+      let parts = 0;
+      Object.entries(plan.cuts).forEach(([id, list]) => {
+        const c = this.p.clips[id]; parts += list.length;
+        const all = (c.cuts || []).concat(list).sort((x, y) => x[0] - y[0]), merged = [];
+        all.forEach(r => { const l = merged[merged.length - 1]; if (l && r[0] <= l[1] + .05) l[1] = Math.max(l[1], r[1]); else merged.push(r.slice()); });
+        c.cuts = merged;
+      });
+      const after = this.filmLen();
+      this.dirty(); this.renderBoard(); this.showDetail(); this.summary();
+      return { after, parts, short: after > target + 60 };
+    }
+
+    // Revisión segundo a segundo de los videos que aún no la tienen. Se hace una vez por archivo
+    // y se comparte con todos los pedazos de ese archivo. onProg(fracción, i, total)
+    async analyzeHl(list, onProg, stopped) {
+      const all = Object.values(this.p.clips).filter(c => c.kind === 'video'), byPath = {};
+      all.forEach(c => { (byPath[c.path] = byPath[c.path] || []).push(c); });
+      Object.values(byPath).forEach(g => { const h = g.find(c => c.hl); if (h) g.forEach(c => { c.hl = c.hl || h.hl; }); });
+      const todo = [...new Set(list.filter(c => c.kind === 'video' && !c.hl).map(c => c.path))];
+      for (let i = 0; i < todo.length; i++) {
+        if (stopped && stopped()) return;
+        const c0 = byPath[todo[i]][0], n = todo.length;
+        onProg(i / n, i, n);
+        const r = await B.run('ffmpeg', E.hlArgs(c0.path, c0.hasAudio), t => onProg((i + Math.min(1, t / Math.max(1, c0.duration))) / n, i, n), true);
+        const hl = E.hlParse(r.stderr || '');
+        const packed = { v: hl.v.map(x => [Math.round(x[0] * 10) / 10, Math.round(x[1]), Math.round(x[2] * 10) / 10, Math.round(x[3] * 100) / 100]), a: hl.a.map(x => [Math.round(x[0] * 10) / 10, Math.round(x[1] * 10) / 10]) };
+        byPath[todo[i]].forEach(c => { c.hl = packed; });
+      }
+    }
+
+    /* ---------- Tijeras, partes quitadas y deshacer ---------- */
+    act_split() {
+      const c = this.clip(this.focus), v = this.q('video');
+      if (!c || c.kind !== 'video' || !c.ready) return;
+      const t = Math.round(v.currentTime * 10) / 10, a = c.in || 0, b = c.out || c.duration;
+      if (t - a < MIN_LEN || b - t < MIN_LEN) { toast('Pon el video justo donde quieres cortar: por lo menos 1.5 segundos después del inicio y antes del final de esta toma.', 6000); return; }
+      this.snap();
+      const id = c.id.split('_')[0] + '_' + Date.now().toString(36).slice(-5) + Math.random().toString(36).slice(2, 4);
+      const n = JSON.parse(JSON.stringify(c));
+      n.id = id; n.in = t; n.out = b; n.label = undefined; n.trans = undefined;
+      n.cuts = (c.cuts || []).filter(r => r[1] > t).map(r => [Math.max(t, r[0]), r[1]]);
+      c.cuts = (c.cuts || []).filter(r => r[0] < t).map(r => [r[0], Math.min(t, r[1])]);
+      c.out = t; c.split = n.split = true;
+      if (n.scan && n.scan.flags) n.scan = Object.assign({}, n.scan, { flags: n.scan.flags.filter(f => f !== 'larga') });
+      this.p.clips[id] = n;
+      const m = this.momentOf(c.id);
+      if (m) { m.clips.splice(m.clips.indexOf(c.id) + 1, 0, id); }
+      this.rt[id] = { thumb: (this.rt[c.id] || {}).thumb, proxy: (this.rt[c.id] || {}).proxy };
+      this.queue.push(id, c.id); this.pump();
+      this.dirty(); this.renderBoard(); this.showDetail(); this.summary();
+      toast('Listo: la toma quedó en dos pedazos. Si no quieres uno, tócalo y usa "No usar esta toma" (o la tecla Supr).', 7000);
+    }
+    focusClip(id) {
+      const c = this.clip(id); if (!c) return;
+      this.focus = id; this.panel = null; this.selected.clear(); this.selected.add(id);
+      this.syncSel(); this.showDetail(); this.loadPlayer();
+    }
+    restoreCut(i) {
+      const c = this.clip(this.focus); if (!c || !c.cuts || !c.cuts[i]) return;
+      this.snap(); c.cuts.splice(i, 1); if (!c.cuts.length) c.cuts = undefined;
+      this.dirty(); this.showDetail(); this.refreshCard(c.id); this.summary();
+      toast('Se regresó esa parte a la película.');
+    }
+    act_restoreAllCuts() { const c = this.clip(this.focus); if (!c) return; this.snap(); c.cuts = undefined; this.dirty(); this.showDetail(); this.refreshCard(c.id); this.summary(); }
+    snap() {
+      if (!this.p) return;
+      this.undo = this.undo || [];
+      this.undo.push(JSON.stringify({ clips: this.p.clips, moments: this.p.moments }));
+      if (this.undo.length > 60) this.undo.shift();
+      this.syncUndo();
+    }
+    syncUndo() { const b = this.q('undoBtn'); if (b) b.disabled = !(this.undo && this.undo.length); }
+    act_undo() {
+      if (!this.p || !this.undo || !this.undo.length) { toast('No hay nada que deshacer.'); return; }
+      const st = JSON.parse(this.undo.pop());
+      this.p.clips = st.clips; this.p.moments = st.moments;
+      Object.keys(this.p.clips).forEach(id => { if (!this.rt[id] || !this.rt[id].thumb) this.queue.push(id); });
+      if (this.focus && !this.p.clips[this.focus]) this.focus = null;
+      this.selected.clear(); this.syncUndo();
+      this.dirty(); this.renderBoard(); this.showDetail(); this.summary(); this.pump();
+      toast('Se deshizo el último cambio.');
+    }
+    act_keys() {
+      SA.ui.toast('Atajos: S = cortar aquí · I = empieza aquí · O = termina aquí · Espacio = reproducir/pausar · Supr = no usar la toma · Ctrl+Z = deshacer · ← → = toma anterior o siguiente', 12000);
+    }
+    onKey(e) {
+      if (!this.p || this.root.hidden || this.q('editor').hidden) return false;
+      const k = (e.key || '').toLowerCase();
+      if ((e.ctrlKey || e.metaKey) && k === 'z') { this.act_undo(); return true; }
+      const c = this.clip(this.focus);
+      if (!c || e.altKey) return false;
+      if (k === 's' && !e.ctrlKey && !e.metaKey || (e.ctrlKey && k === 'b')) { if (c.kind === 'video') this.act_split(); return true; }
+      if (k === 'delete' || k === 'supr') { if (!c.excluded) this.act_excludeClip(); return true; }
+      if (k === ' ' && c.kind === 'video') { const v = this.q('video'); v.paused ? v.play() : v.pause(); return true; }
+      if (k === 'i' && c.kind === 'video') { this.act_markIn(); return true; }
+      if (k === 'o' && c.kind === 'video') { this.act_markOut(); return true; }
+      return false;
     }
     act_mute() { const c = this.clip(this.focus); c.mute = !c.mute; this.dirty(); this.showDetail(); this.applyPreviewVolume(); this.renderBoard(); }
     act_photoLen(b) { const c = this.clip(this.focus); c.len = Math.max(2, Math.min(15, (c.len || 4) + (+b.dataset.v))); this.dirty(); this.showDetail(); this.renderBoard(); this.summary(); }
     act_moveClip(b) {
       const c = this.clip(this.focus), m = this.momentOf(c.id), i = m.clips.indexOf(c.id), j = i + (+b.dataset.v);
       if (j < 0 || j >= m.clips.length) return;
-      [m.clips[i], m.clips[j]] = [m.clips[j], m.clips[i]]; m.manual = true;
+      this.snap(); [m.clips[i], m.clips[j]] = [m.clips[j], m.clips[i]]; m.manual = true;
       this.dirty(); this.renderBoard(); this.showDetail();
     }
-    act_excludeClip() { this.exclude(this.focus, true); this.dirty(); this.renderBoard(); this.showDetail(); this.summary(); this.renderAdvice(); }
-    act_restoreClip() { this.exclude(this.focus, false); this.dirty(); this.renderBoard(); this.showDetail(); this.summary(); }
+    act_excludeClip() { this.snap(); this.exclude(this.focus, true); this.dirty(); this.renderBoard(); this.showDetail(); this.summary(); this.renderAdvice(); }
+    act_restoreClip() { this.snap(); this.exclude(this.focus, false); this.dirty(); this.renderBoard(); this.showDetail(); this.summary(); }
 
     momentPanel(d) {
       const m = this.p.moments.find(x => x.id === this.panel);
@@ -557,6 +863,12 @@
             <div class="links"><button class="link" type="button" data-act="mSong">Cambiar música</button><button class="link danger" type="button" data-act="mSongOff">Quitar música</button></div></div>`
           : `<button class="btn" type="button" data-act="mSong">Elegir música</button>`}
         </div>
+        <details class="adv" data-el="adv"${this.advOpen() ? ' open' : ''}><summary>Opciones avanzadas del momento</summary>
+          <div class="field"><span class="lbl">Transición entre las tomas de este momento</span>${this.transGrid(m.trans && m.trans.type, 'setMTrans')}
+            ${m.trans && m.trans.type !== 'corte' ? `<span class="lbl">Duración</span>${this.advSeg('mtdur', TDUR, m.trans.dur || 0.8)}` : ''}
+            <p class="hint">Las tomas que tengan su propia transición la conservan.</p></div>
+          <div class="sw-row"><button class="switch" type="button" role="switch" data-act="mProtect" aria-checked="${this.isProtected(m)}" aria-label="No recortar"></button><span>No recortar este momento al usar "Acortar la película"</span></div>
+        </details>
         <p class="d-sub">${cs.length} tomas · ${fmt(cs.reduce((s, c) => s + this.clipLen(c), 0))} antes de transiciones</p>
         <div class="d-actions">
           <button class="navbtn dark" type="button" data-act="mMove" data-v="-1" ${i <= 0 ? 'disabled' : ''}>‹ Mover momento</button>
@@ -570,8 +882,15 @@
       vol.addEventListener('input', () => { m.vol = vol.value / 100; vol.nextElementSibling.textContent = `${vol.value} %`; this.dirty(); });
       const mv = d.querySelector('[data-mf="mvol"]');
       if (mv) mv.addEventListener('input', () => { m.music.vol = mv.value / 100; mv.nextElementSibling.textContent = `${mv.value} %`; if (this.audio) this.audio.volume = Math.min(1, m.music.vol); this.dirty(); });
+      const adv = d.querySelector('[data-el="adv"]');
+      adv.addEventListener('toggle', () => this.advOpen(adv.open));
+      const md = adv.querySelector('[data-cv="mtdur"]');
+      if (md) md.addEventListener('click', e => { const b = e.target.closest('button[data-v]'); if (!b) return; this.snap(); m.trans = Object.assign({}, m.trans, { dur: +b.dataset.v }); this.dirty(); this.showDetail(); this.summary(); });
       this.q('trimBox').hidden = true;
     }
+    isProtected(m) { return m.protect != null ? !!m.protect : PROTECT.includes(m.key); }
+    act_setMTrans(b) { const m = this.curMoment(); this.snap(); m.trans = b.dataset.v === 'auto' ? undefined : { type: b.dataset.v, dur: (m.trans && m.trans.dur) || 0.8 }; this.dirty(); this.showDetail(); this.summary(); }
+    act_mProtect() { const m = this.curMoment(); m.protect = !this.isProtected(m); this.dirty(); this.showDetail(); }
     curMoment() { return this.p.moments.find(x => x.id === this.panel); }
     act_mTitle() { const m = this.curMoment(); m.title = !m.title; this.dirty(); this.showDetail(); this.summary(); }
     async act_mSong() {
@@ -597,7 +916,7 @@
       [ms[i], ms[j]] = [ms[j], ms[i]]; this.dirty(); this.renderBoard(); this.showDetail(); this.summary();
     }
     act_mSort() { const m = this.curMoment(); m.manual = false; m.clips.sort((a, b) => this.time(this.p.clips[a]) - this.time(this.p.clips[b])); this.dirty(); this.renderBoard(); this.showDetail(); }
-    act_mDelete() { this.p.moments = this.p.moments.filter(x => x.id !== this.panel); this.panel = null; this.dirty(); this.renderBoard(); this.showDetail(); this.summary(); }
+    act_mDelete() { this.snap(); this.p.moments = this.p.moments.filter(x => x.id !== this.panel); this.panel = null; this.dirty(); this.renderBoard(); this.showDetail(); this.summary(); }
 
     async readSong(path) {
       try {
@@ -669,7 +988,24 @@
       box.hidden = false;
       const a = (c.in || 0) / c.duration * 100, b = (c.out || c.duration) / c.duration * 100;
       Object.assign(this.q('keep').style, { left: a + '%', width: (b - a) + '%' });
-      this.q('trimTxt').textContent = `Se usa de ${fmt(c.in || 0)} a ${fmt(c.out || c.duration)} · ${fmt(this.clipLen(c))}`;
+      this.q('trimTxt').textContent = `Se usa de ${fmt(c.in || 0)} a ${fmt(c.out || c.duration)} · ${fmt(this.clipLen(c))}${c.speed && c.speed !== 1 ? ` (a ${c.speed}×)` : ''}`;
+      const track = this.q('track'), head = this.q('head');
+      $$('.cutr,.sib', track).forEach(x => x.remove());
+      const pct = x => (x / c.duration * 100).toFixed(3) + '%';
+      Object.values(this.p.clips).filter(x => x.id !== c.id && x.split && x.path === c.path && !x.excluded).forEach(x => {
+        const el = document.createElement('div'); el.className = 'sib'; el.dataset.id = x.id;
+        el.title = `Otro pedazo de esta toma (${fmt(x.in || 0)} a ${fmt(x.out || x.duration)}): tócalo para verlo`;
+        Object.assign(el.style, { left: pct(x.in || 0), width: pct((x.out || x.duration) - (x.in || 0)) });
+        track.insertBefore(el, head);
+      });
+      (c.cuts || []).forEach((r, i) => {
+        const el = document.createElement('div'); el.className = 'cutr'; el.dataset.i = i;
+        el.title = `Parte quitada (${fmt(r[0])} a ${fmt(r[1])}): tócala para regresarla`;
+        Object.assign(el.style, { left: pct(r[0]), width: pct(r[1] - r[0]) });
+        track.insertBefore(el, head);
+      });
+      const n = (c.cuts || []).length, tc = this.q('trimCuts');
+      tc.hidden = !n; tc.textContent = n ? `${n} ${n === 1 ? 'parte quitada' : 'partes quitadas'} (en gris). Toca una para regresarla.` : '';
       this.onTime();
     }
     onTime() {
@@ -677,19 +1013,24 @@
       if (!c || c.kind !== 'video' || !c.duration) return;
       this.q('head').style.left = (v.currentTime / c.duration * 100) + '%';
       if (this.playRange && v.currentTime >= (c.out || c.duration)) { v.pause(); this.playRange = false; }
+      // "Ver lo que se usa" se brinca las partes quitadas, como quedará en la película
+      if (this.playRange && !v.paused) { const r = (c.cuts || []).find(x => v.currentTime >= x[0] && v.currentTime < x[1] - .05); if (r) v.currentTime = Math.min(r[1], c.out || c.duration); }
     }
     act_markIn() {
       const c = this.clip(this.focus), t = this.q('video').currentTime;
       if (t > (c.out || c.duration) - MIN_LEN) { toast('El inicio tiene que quedar antes del final, con al menos 1.5 segundos de toma.'); return; }
-      c.in = Math.round(t * 10) / 10; this.dirty(); this.renderTrim(); this.renderBoard(); this.summary();
+      this.snap(); c.in = Math.round(t * 10) / 10; this.dirty(); this.renderTrim(); this.renderBoard(); this.summary();
     }
     act_markOut() {
       const c = this.clip(this.focus), t = this.q('video').currentTime;
       if (t < (c.in || 0) + MIN_LEN) { toast('El final tiene que quedar después del inicio, con al menos 1.5 segundos de toma.'); return; }
-      c.out = Math.round(t * 10) / 10; this.dirty(); this.renderTrim(); this.renderBoard(); this.summary();
+      this.snap(); c.out = Math.round(t * 10) / 10; this.dirty(); this.renderTrim(); this.renderBoard(); this.summary();
     }
     act_playRange() { const c = this.clip(this.focus), v = this.q('video'); v.currentTime = c.in || 0; this.playRange = true; v.play(); }
-    act_resetTrim() { const c = this.clip(this.focus); c.in = 0; c.out = c.duration; this.dirty(); this.renderTrim(); this.renderBoard(); this.summary(); }
+    act_resetTrim() {
+      const c = this.clip(this.focus);
+      if (c.split) { toast('Esta toma está cortada en pedazos: para juntarlos usa Deshacer.'); return; }
+      this.snap(); c.in = 0; c.out = c.duration; this.dirty(); this.renderTrim(); this.renderBoard(); this.summary(); }
     keyNav(dir) {
       const ids = $$('.cc', this.q('board')).map(x => x.dataset.id);
       const i = ids.indexOf(this.focus) + dir;
@@ -708,6 +1049,10 @@
       this.q('pSong').textContent = this.p.music ? `♪ ${this.p.music.name} · ${fmt(this.p.music.duration)}` : 'Sin canción';
       const pb = this.root.querySelector('[data-act="pSong"]'); if (pb) pb.textContent = this.p.music ? 'Cambiar' : 'Elegir';
       this.q('pSongOff').hidden = !this.p.music;
+      const qk = this.p.quality || '1080';
+      SA.ui.setSeg(this.q('quality'), qk);
+      this.q('qualityHint').textContent = qk === '2160' ? 'Más nítida para pantallas grandes. Tarda unas 4 veces más, el archivo pesa mucho más y pide una computadora con 16 GB de memoria. Úsala solo si la cámara grabó en 4K.'
+        : qk === '720' ? 'Más rápida y ligera, buena para mandar por WhatsApp o subir a redes.' : 'Recomendada: Full HD, como la entregan la mayoría de los estudios.';
     }
     act_enhance() { this.p.enhance = !this.p.enhance; this.dirty(); this.syncStyle(); }
     act_denoise() { this.p.denoise = !this.p.denoise; this.dirty(); this.syncStyle(); }
@@ -758,14 +1103,7 @@
       try {
         this.encoder = await B.detectEncoder();
         // 1. Revisar cada toma segundo a segundo (una sola vez; queda guardado)
-        const vids = ms.flatMap(m => m.clips).filter(c => c.kind === 'video' && !c.hl);
-        for (let k = 0; k < vids.length; k++) {
-          if (this.cancelled) break;
-          this.setProgress(k / Math.max(1, vids.length) * .3, `Buscando los mejores momentos: toma ${k + 1} de ${vids.length}`);
-          const r = await B.run('ffmpeg', E.hlArgs(vids[k].path, vids[k].hasAudio), null, true);
-          const hl = E.hlParse(r.stderr || '');
-          vids[k].hl = { v: hl.v.map(x => [Math.round(x[0] * 10) / 10, Math.round(x[1]), Math.round(x[2] * 10) / 10, Math.round(x[3] * 100) / 100]), a: hl.a.map(x => [Math.round(x[0] * 10) / 10, Math.round(x[1] * 10) / 10]) };
-        }
+        await this.analyzeHl(ms.flatMap(m => m.clips), (f, k, n) => this.setProgress(f * .3, `Buscando los mejores momentos: toma ${k + 1} de ${n}`), () => this.cancelled);
         this.dirty();
         // 2. Ritmo de la canción
         if (!song.beat && !this.cancelled) {
@@ -804,7 +1142,7 @@
       const intro = beat ? beat.offset + Math.max(1, Math.round((3.6 - beat.offset) / unit)) * unit : 3.6;
       const outro = 5;
       const ms = this.hlMoments();
-      const picked = E.pickHighlights(ms.map(m => ({ id: m.id, clips: m.clips.map(c => ({ id: c.id, kind: c.kind, duration: c.duration, in: c.in || 0, out: c.out || c.duration, hl: c.hl })) })), Math.max(unit * 2, target - intro - outro), unit);
+      const picked = E.pickHighlights(ms.map(m => ({ id: m.id, clips: m.clips.map(c => ({ id: c.id, kind: c.kind, duration: c.duration, in: c.in || 0, out: c.out || c.duration, hl: c.hl, cuts: c.cuts })) })), Math.max(unit * 2, target - intro - outro), unit);
       const flat = [];
       picked.forEach((pm, mi) => pm.picks.forEach((pk, j) => flat.push(Object.assign({ moment: ms.find(m => m.id === pm.id), first: j === 0 }, pk))));
       if (!flat.length) throw new Error('No encontré tomas que se puedan usar. Revisa que los momentos tengan tomas de por lo menos 2 segundos.');
@@ -814,7 +1152,7 @@
       const push = (pk, len) => {
         const c = p.clips[pk.clip], out = (c.out || c.duration);
         const st = c.kind === 'video' ? Math.max(c.in || 0, Math.min(pk.start, out - len)) : 0;
-        media.push({ kind: c.kind, path: c.path, width: c.w, height: c.h, duration: c.duration, name: c.name, clip: c });
+        media.push({ kind: c.kind, path: c.path, width: c.w, height: c.h, duration: c.duration, name: c.name, clip: c, rot: c.rot || 0, vzoom: c.zoom || 1, color: c.color || null });
         segments.push({ m: media.length - 1, len: Math.round(len * 30) / 30, start: Math.round(st * 1000) / 1000, zoomIn: segments.length % 2 === 0 });
         if (pk.first && kind === 'resumen') momentAt.push({ t, name: pk.moment.name });
         t += Math.round(len * 30) / 30;
@@ -916,16 +1254,37 @@
       units.push({ name: 'Créditos', chapter: 'Créditos', card: { kind: 'creditos', data, len: 6 }, clips: [], music: p.music });
       return units;
     }
+    // Duración de la película: cada toma (sin partes quitadas) menos lo que se encima en cada transición.
+    filmLen(units) {
+      units = units || this.units();
+      const T = (E.FILM_MOODS[this.p.mood] || E.FILM_MOODS.suave).T;
+      let total = 0;
+      units.forEach(u => {
+        const parts = [];
+        if (u.card) parts.push({ len: u.card.len, card: true });
+        u.clips.forEach(c => {
+          const sp = c.speed || 1, tr = c.trans || (u.moment && u.moment.trans) || null;
+          if (c.kind === 'image') parts.push({ len: c.len || 4, tr });
+          else E.keptRanges(c).forEach((r, k) => parts.push({ len: (r[1] - r[0]) / sp, tr: k ? null : tr, join: k > 0 }));
+        });
+        parts.forEach((x, i) => {
+          total += x.len;
+          if (!i) return;
+          const prev = parts[i - 1];
+          let d = x.join ? Math.min(T, .3) : x.tr && x.tr.type && x.tr.type !== 'auto' ? (x.tr.type === 'corte' ? 0 : (x.tr.dur || T || .8)) : T;
+          total -= Math.min(d, Math.min(prev.len, x.len) * .45);
+        });
+      });
+      return total;
+    }
     summary() {
       const el = this.q('summary'); if (!this.p || !el) return;
-      const units = this.units(), T = (E.FILM_MOODS[this.p.mood] || E.FILM_MOODS.suave).T;
+      const units = this.units();
       const moments = units.length - 2;
-      let total = 0, clips = 0;
-      units.forEach(u => {
-        const lens = (u.card ? [u.card.len] : []).concat(u.clips.map(c => this.clipLen(c)));
-        clips += u.clips.length;
-        total += lens.reduce((s, l) => s + l, 0) - Math.max(0, lens.length - 1) * T;
-      });
+      let clips = 0;
+      units.forEach(u => { clips += u.clips.length; });
+      const total = this.filmLen(units);
+      const tl = this.q('tbLen'); if (tl) tl.textContent = moments ? `Película: ${fmt(total)}` : '';
       const un = this.unassigned().length;
       const outs = this.p.outputs || ['pelicula'], h = this.hl();
       const hs = h.music || this.p.music, avail = hs ? Math.max(15, hs.duration - (hs.start || 0)) : h.res;
@@ -1031,8 +1390,20 @@
     }
 
     async render(units, interGpu) {
-      const W = 1920, H = 1080, cache = this.cache, p = this.p, sep = B.paths.sep;
-      const theme = p.theme || 'dorado';
+      const Q = QUALITY[this.p.quality || '1080'] || QUALITY['1080'];
+      const W = Q.W, H = Q.H, cache = this.cache, p = this.p, sep = B.paths.sep;
+      const theme = p.theme || 'dorado', th = Object.assign({ key: theme }, SA.cards.THEMES[theme]);
+      // Letrero de una toma ("Los padrinos"), con el estilo de los nombres de los momentos.
+      const labelFor = async text => {
+        if (!text) return '';
+        const path = B.join(cache, `letrero_${E.hash(JSON.stringify([text, theme, W, H, 1]))}.png`);
+        if (!(await B.exists(path))) {
+          const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+          this.momentLabel(cv.getContext('2d'), W, H, text, th);
+          await this.writeCanvas(cv, path);
+        }
+        return path;
+      };
       // 1. Tarjetas, fotos y marca de agua (se reusan si no cambiaron)
       const logoKey = SA.logo ? E.hash(SA.logo.src || 'logo') : 'texto';
       const wmPaths = await this.wmFiles(W, H, logoKey);
@@ -1056,10 +1427,15 @@
               this.setProgress(0, `Preparando la foto ${c.name}`);
               await this.makeStill(c, W, H, still);
             }
-            segs.push({ kind: 'image', still, len: c.len || 4, zoomIn: zoom++ % 2 === 0, wm: u.moment ? wmOf(c) : null });
+            segs.push({ kind: 'image', still, len: c.len || 4, zoomIn: zoom++ % 2 === 0, wm: u.moment ? wmOf(c) : null,
+              trans: c.trans || (u.moment && u.moment.trans) || null, label: await labelFor(c.label) });
           } else {
-            const vol = (c.mute ? 0 : c.vol) * (u.moment ? u.moment.vol : 1);
-            segs.push({ kind: 'video', path: c.path, in: c.in || 0, len: this.clipLen(c), w: c.w, h: c.h, hasAudio: c.hasAudio && vol > 0.001, vol, name: c.name, id: c.id, wm: u.moment ? wmOf(c) : null });
+            const vol = (c.mute ? 0 : c.vol) * (u.moment ? u.moment.vol : 1), sp = c.speed || 1;
+            const tr = c.trans || (u.moment && u.moment.trans) || null, label = await labelFor(c.label);
+            // Una toma con partes quitadas se arma con sus pedazos, unidos con un fundido muy corto.
+            E.keptRanges(c).forEach((r, k) => segs.push({ kind: 'video', path: c.path, in: r[0], len: (r[1] - r[0]) / sp, w: c.w, h: c.h, hasAudio: c.hasAudio && vol > 0.001, vol,
+              name: c.name, id: c.id, wm: u.moment ? wmOf(c) : null, speed: sp, rot: c.rot || 0, zoom: c.zoom || 1, color: c.color || null, stab: !!c.stab,
+              label: k ? '' : label, trans: k ? null : tr, join: k > 0 }));
           }
         }
         prepared.push({ name: u.name, chapter: u.chapter, segments: segs, noWatermark: !u.moment, music: u.music ? { path: u.music.path, start: u.music.start || 0, vol: u.music.vol == null ? .6 : u.music.vol } : null });
