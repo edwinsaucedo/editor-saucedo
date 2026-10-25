@@ -700,7 +700,7 @@
       A.rule(ctx, W / 2, cy - 55 * u, 140 * u * eo(prog(t, .8, 1.5)), u, '#E9E4D8', 1, true);
       A.text(ctx, d.title || '', W / 2, cy + 70 * u, { w: 600, s: 130 * u, f: F.serif, ls: .04, color: '#FFFFFF', alpha: prog(t, 1, 1.8), maxW: W * .76 });
       A.text(ctx, dl(d.date, 'long'), W / 2, cy + 160 * u, { s: 48 * u, f: F.serif, color: '#CFC8B8', alpha: prog(t, 1.6, 2.3), maxW: W * .76 });
-    }, 1 - prog(t, dur - .6, dur));
+    }, 1 - prog(t, dur - 1.9, dur - 1.2));   // el letrero se quita antes para que se vea la primera foto
   } };
   D.mudoOut = { draw: (ctx, W, H, t, dur, d) => {
     const u = U(W, H), cy = H * .5;
@@ -892,7 +892,7 @@
       layers: [{ at: 'intro', d: D.globoIn }, { at: 'outro', d: D.globoOut }, { at: 'captions', split: 'lines', field: 'phrase', d: D.globo }] },
     { id: 'cine-antiguo', music: ['cine-mudo', 'cafe-de-la-tarde'], name: 'Película antigua', cats: ['vlog', 'llamativas', 'eventos'], level: 'Simple', theme: 'blanco',
       desc: 'Blanco y negro, parpadeo de proyector, grano y letreros de cine mudo.', fields: [f('subtitle', 'Letrero inicial', '', 'Había una vez…'), f('title', 'Título', 'Ana & Luis'), f('phrase', 'Letrero final', '', 'Fin'), FECHA],
-      mode: 'song', durations: [60, 30, 'full'], intro: 4.4, shot: 2.6, outro: 4.2, beats: 4, T: .4, trans: ['fadeblack', 'fade'],
+      mode: 'song', durations: [60, 30, 'full'], intro: 5.4, shot: 2.6, outro: 4.2, beats: 4, T: .4, trans: ['fade', 'fadeblack'],
       post: "hue=s=0,eq=contrast=1.18:brightness='0.02*sin(t*41)+0.012*sin(t*67)':eval=frame,noise=alls=18:allf=t+u,vignette=angle=PI/4",
       preview: 'grayscale(1) contrast(1.18)', grain: true, vignette: true, wmSkip: ['intro', 'outro'], layers: [{ at: 'intro', d: D.mudoIn }, { at: 'outro', d: D.mudoOut }] },
     { id: 'aniversario', music: ['para-siempre', 'vals-de-quince', 'brillar'], name: 'Aniversario', cats: ['bodas', 'familia'], level: 'Simple', theme: 'dorado', photoStyle: 'calido',
