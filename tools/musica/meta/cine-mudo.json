@@ -1,0 +1,39 @@
+{
+ "id": "cine-mudo",
+ "name": "Cine mudo",
+ "mood": "Antigua",
+ "desc": "Piano de cantina estilo ragtime, como película antigua.",
+ "tags": [
+  "cine antiguo",
+  "blanco y negro",
+  "divertido"
+ ],
+ "file": "cine-mudo.mp3",
+ "bpm": 104,
+ "meter": 4,
+ "duration": 131.73,
+ "hot": 9.231,
+ "sections": [
+  {
+   "name": "intro",
+   "t": 0.0
+  },
+  {
+   "name": "rag",
+   "t": 9.231
+  },
+  {
+   "name": "trio",
+   "t": 46.154
+  },
+  {
+   "name": "rag2",
+   "t": 83.077
+  },
+  {
+   "name": "final",
+   "t": 120.0
+  }
+ ],
+ "end": 129.231
+}

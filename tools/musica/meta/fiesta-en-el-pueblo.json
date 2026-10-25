@@ -1,0 +1,52 @@
+{
+ "id": "fiesta-en-el-pueblo",
+ "name": "Fiesta en el pueblo",
+ "mood": "Cumbia",
+ "desc": "Cumbia con acordeón y güiro para la fiesta mexicana.",
+ "tags": [
+  "fiesta mexicana",
+  "cumpleaños",
+  "baile",
+  "promo"
+ ],
+ "file": "fiesta-en-el-pueblo.mp3",
+ "bpm": 96,
+ "meter": 4,
+ "duration": 142.5,
+ "hot": 10.0,
+ "sections": [
+  {
+   "name": "intro",
+   "t": 0.0
+  },
+  {
+   "name": "cumbia",
+   "t": 10.0
+  },
+  {
+   "name": "segunda",
+   "t": 30.0
+  },
+  {
+   "name": "cumbia2",
+   "t": 50.0
+  },
+  {
+   "name": "solo",
+   "t": 70.0
+  },
+  {
+   "name": "segunda2",
+   "t": 90.0
+  },
+  {
+   "name": "cumbia3",
+   "t": 110.0
+  },
+  {
+   "name": "final",
+   "t": 130.0
+  }
+ ],
+ "end": 140.0
+}

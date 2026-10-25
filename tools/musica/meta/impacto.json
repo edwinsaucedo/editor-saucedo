@@ -1,0 +1,41 @@
+{
+ "id": "impacto",
+ "name": "Impacto",
+ "mood": "Trap",
+ "desc": "Graves fuertes y hi-hats rápidos, para videos con fuerza.",
+ "tags": [
+  "impacto",
+  "reel",
+  "glitch",
+  "xv",
+  "antes y después"
+ ],
+ "file": "impacto.mp3",
+ "bpm": 140,
+ "meter": 4,
+ "duration": 85.29,
+ "hot": 6.857,
+ "sections": [
+  {
+   "name": "intro",
+   "t": 0.0
+  },
+  {
+   "name": "caida",
+   "t": 6.857
+  },
+  {
+   "name": "pausa",
+   "t": 34.286
+  },
+  {
+   "name": "caida2",
+   "t": 48.0
+  },
+  {
+   "name": "final",
+   "t": 75.429
+  }
+ ],
+ "end": 82.286
+}

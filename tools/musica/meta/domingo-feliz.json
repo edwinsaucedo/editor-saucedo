@@ -1,0 +1,53 @@
+{
+ "id": "domingo-feliz",
+ "name": "Domingo feliz",
+ "mood": "Acústica",
+ "desc": "Guitarra, ukulele y silbido; luminosa y familiar.",
+ "tags": [
+  "vlog",
+  "bautizo",
+  "infantil",
+  "familia",
+  "polaroid"
+ ],
+ "file": "domingo-feliz.mp3",
+ "bpm": 100,
+ "meter": 4,
+ "duration": 137.4,
+ "hot": 28.8,
+ "sections": [
+  {
+   "name": "intro",
+   "t": 0.0
+  },
+  {
+   "name": "estrofa",
+   "t": 9.6
+  },
+  {
+   "name": "coro",
+   "t": 28.8
+  },
+  {
+   "name": "estrofa2",
+   "t": 48.0
+  },
+  {
+   "name": "coro2",
+   "t": 67.2
+  },
+  {
+   "name": "puente",
+   "t": 86.4
+  },
+  {
+   "name": "coro3",
+   "t": 105.6
+  },
+  {
+   "name": "final",
+   "t": 124.8
+  }
+ ],
+ "end": 134.4
+}

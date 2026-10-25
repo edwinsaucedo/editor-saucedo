@@ -1,0 +1,44 @@
+{
+ "id": "cascabeles",
+ "name": "Cascabeles",
+ "mood": "Navidad",
+ "desc": "Navideña con cascabeles, celesta y metales.",
+ "tags": [
+  "navidad",
+  "temporada",
+  "familia",
+  "promo"
+ ],
+ "file": "cascabeles.mp3",
+ "bpm": 116,
+ "meter": 4,
+ "duration": 131.78,
+ "hot": 41.379,
+ "sections": [
+  {
+   "name": "intro",
+   "t": 0.0
+  },
+  {
+   "name": "estrofa",
+   "t": 8.276
+  },
+  {
+   "name": "coro",
+   "t": 41.379
+  },
+  {
+   "name": "puente",
+   "t": 74.483
+  },
+  {
+   "name": "coro2",
+   "t": 82.759
+  },
+  {
+   "name": "final",
+   "t": 115.862
+  }
+ ],
+ "end": 128.276
+}

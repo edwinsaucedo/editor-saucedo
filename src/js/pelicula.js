@@ -73,6 +73,7 @@
             <div class="sw-row"><button class="switch" type="button" role="switch" data-act="denoise" data-el="denoise" aria-labelledby="pDenoise"></button><span class="sw-state" id="pDenoise">Reducir el ruido del salón</span></div>
             <div class="field"><span class="lbl">Color de las letras</span><div class="chips" data-el="theme" role="radiogroup">${themes}</div></div>
             <div class="sw-row"><button class="switch" type="button" role="switch" data-act="wm" data-el="wm" aria-labelledby="pWm"></button><span class="sw-state" id="pWm">Marca de agua</span></div>
+            <div class="field" data-el="wmSizeBox"><span class="lbl">Tamaño del logo</span><div class="seg" data-el="wmSize" role="radiogroup" aria-label="Tamaño del logo"><button type="button" data-v="s">Chico</button><button type="button" data-v="m">Mediano</button><button type="button" data-v="l">Grande</button></div></div>
             <div class="field"><span class="lbl">Canción de la portada y los créditos</span>
               <div class="song-mini"><span data-el="pSong">Sin canción</span><button class="btn" type="button" data-act="pSong">Elegir</button><button class="link" type="button" data-act="pSongOff" data-el="pSongOff" hidden>Quitar</button></div></div>
           </section>
@@ -167,6 +168,7 @@
         this.p[inp.dataset.pf] = inp.value; this.dirty(); this.summary();
       }));
       const seg = (name, key) => SA.ui.seg(this.q(name), '', v => { this.p[key] = v; this.dirty(); this.syncStyle(); this.summary(); });
+      SA.ui.seg(this.q('wmSize'), S.size || 'm', v => { S.size = v; SA.brandChanged(); });
       seg('mood', 'mood'); seg('style', 'style'); seg('theme', 'theme');
       $$('[data-el="outputs"] .chip', R).forEach(b => b.addEventListener('click', () => {
         const set = new Set(this.p.outputs || ['pelicula']); set.has(b.dataset.v) ? set.delete(b.dataset.v) : set.add(b.dataset.v);
@@ -239,6 +241,8 @@
     async load(p) {
       this.flush();
       this.p = p; this.rt = {}; this.selected.clear(); this.focus = null; this.panel = null;
+      // Música incluida: la ruta se actualiza por si el programa se instaló en otra carpeta.
+      [p.music, p.hl && p.hl.music].concat(p.moments.map(m => m.music)).forEach(m => SA.music.resolve(m));
       this.cache = await B.filmCacheDir(p.id);
       this.q('start').hidden = true; this.q('editor').hidden = false;
       this.q('stepsOn').hidden = false; this.q('stepsOff').hidden = true;
@@ -550,8 +554,8 @@
             <div class="stepper"><span class="lbl">Empieza en</span><button type="button" data-act="mStart" data-v="-5">−5 s</button><output>${fmt(m.music.start)}</output><button type="button" data-act="mStart" data-v="5">+5 s</button><button class="btn" type="button" data-act="mListen">Escuchar</button></div>
             <div class="slider"><input type="range" min="5" max="100" step="5" value="${Math.round(m.music.vol * 100)}" data-mf="mvol" aria-label="Volumen de la música"><output>${Math.round(m.music.vol * 100)} %</output></div>
             <p class="hint">La música baja sola cuando alguien habla en las tomas.</p>
-            <div class="links"><button class="link" type="button" data-act="mSong">Cambiar canción</button><button class="link danger" type="button" data-act="mSongOff">Quitar música</button></div></div>`
-          : `<button class="btn" type="button" data-act="mSong">Elegir canción</button>`}
+            <div class="links"><button class="link" type="button" data-act="mSong">Cambiar música</button><button class="link danger" type="button" data-act="mSongOff">Quitar música</button></div></div>`
+          : `<button class="btn" type="button" data-act="mSong">Elegir música</button>`}
         </div>
         <p class="d-sub">${cs.length} tomas · ${fmt(cs.reduce((s, c) => s + this.clipLen(c), 0))} antes de transiciones</p>
         <div class="d-actions">
@@ -571,10 +575,18 @@
     curMoment() { return this.p.moments.find(x => x.id === this.panel); }
     act_mTitle() { const m = this.curMoment(); m.title = !m.title; this.dirty(); this.showDetail(); this.summary(); }
     async act_mSong() {
-      const p = await B.pick('audio', false); if (!p.length) return;
-      const song = await this.readSong(p[0]); if (!song) return;
-      const m = this.curMoment(); m.music = Object.assign(song, { vol: .6 });
+      const m = this.curMoment(); this.stopAudio();
+      const song = await this.chooseSong({ title: `Música para «${m.name}»`, forName: m.name, suggest: SA.music.forMoment(m.key), current: m.music });
+      if (!song) return;
+      m.music = Object.assign(song, { vol: .6 });
       this.dirty(); this.showDetail(); this.renderBoard();
+    }
+    // Ventana de música (incluida o de la computadora) → canción lista para guardar en el proyecto.
+    async chooseSong(opts) {
+      const r = await SA.music.pick(opts);
+      if (!r || r.kind === 'none') return null;
+      if (r.kind === 'builtin') return SA.music.song(r.id);
+      return this.readSong(r.path);
     }
     act_mSongOff() { this.stopAudio(); const m = this.curMoment(); m.music = null; this.dirty(); this.showDetail(); this.renderBoard(); }
     act_mStart(b) { const m = this.curMoment(); m.music.start = Math.max(0, Math.min(Math.floor(m.music.duration - 10), m.music.start + (+b.dataset.v))); this.dirty(); this.showDetail(); if (this.audio && !this.audio.paused) this.audio.currentTime = m.music.start; }
@@ -692,17 +704,23 @@
       enh.setAttribute('aria-pressed', String(this.p.enhance)); this.q('enhState').textContent = this.p.enhance ? 'Activado' : 'Apagado';
       this.q('denoise').setAttribute('aria-checked', String(this.p.denoise));
       this.q('wm').setAttribute('aria-checked', String(S.wm));
-      this.q('pSong').textContent = this.p.music ? `${this.p.music.name} · ${fmt(this.p.music.duration)}` : 'Sin canción';
+      this.q('wmSizeBox').hidden = !S.wm; SA.ui.setSeg(this.q('wmSize'), S.size || 'm');
+      this.q('pSong').textContent = this.p.music ? `♪ ${this.p.music.name} · ${fmt(this.p.music.duration)}` : 'Sin canción';
+      const pb = this.root.querySelector('[data-act="pSong"]'); if (pb) pb.textContent = this.p.music ? 'Cambiar' : 'Elegir';
       this.q('pSongOff').hidden = !this.p.music;
     }
     act_enhance() { this.p.enhance = !this.p.enhance; this.dirty(); this.syncStyle(); }
     act_denoise() { this.p.denoise = !this.p.denoise; this.dirty(); this.syncStyle(); }
     act_wm() { S.wm = !S.wm; SA.brandChanged(); }
-    async act_pSong() { const p = await B.pick('audio', false); if (!p.length) return; const s = await this.readSong(p[0]); if (s) { this.p.music = Object.assign(s, { vol: .7 }); this.dirty(); this.syncStyle(); this.summary(); } }
+    async act_pSong() {
+      const s = await this.chooseSong({ title: 'Música de la portada y los créditos', forName: 'la película', suggest: ['para-siempre', 'vals-de-quince', 'nuestra-historia', 'brillar'], current: this.p.music });
+      if (s) { this.p.music = Object.assign(s, { vol: .7 }); this.dirty(); this.syncStyle(); this.summary(); }
+    }
     act_pSongOff() { this.p.music = null; this.dirty(); this.syncStyle(); this.summary(); }
 
     /* ================= Resumen y reel ================= */
-    hl() { return this.p.hl || (this.p.hl = { res: 240, reel: 60, fit: 'blur', music: null }); }
+    // Resumen y reel: si no hay canción, se propone una incluida (se puede cambiar).
+    hl() { return this.p.hl || (this.p.hl = { res: 240, reel: 60, fit: 'blur', music: this.p.music ? null : SA.music.song('brillar') }); }
     syncOutputs() {
       if (!this.p) return;
       const outs = this.p.outputs || ['pelicula'], h = this.hl();
@@ -711,12 +729,16 @@
       this.q('hlOpts').hidden = !any; this.q('resOpt').hidden = !outs.includes('resumen'); this.q('reelOpt').hidden = !outs.includes('reel');
       SA.ui.setSeg(this.q('resDur'), String(h.res)); SA.ui.setSeg(this.q('reelDur'), String(h.reel)); SA.ui.setSeg(this.q('reelFit'), h.fit);
       const song = h.music || this.p.music;
-      this.q('hlSong').textContent = song ? `${song.name}${h.music ? '' : ' (la de la portada)'}` : 'Sin canción';
+      this.q('hlSong').textContent = song ? `♪ ${song.name}${h.music ? '' : ' (la de la portada)'}${song.builtin ? ' · incluida' : ''}` : 'Sin canción';
+      const hb = this.root.querySelector('[data-act="hlSong"]'); if (hb) hb.textContent = song ? 'Cambiar' : 'Elegir';
       this.q('hlStartRow').hidden = !h.music; if (h.music) this.q('hlStart').textContent = fmt(h.music.start || 0);
       const n = outs.length;
       if (!this.busy) this.q('create').textContent = n === 1 ? { pelicula: 'Crear película', resumen: 'Crear resumen', reel: 'Crear reel' }[outs[0]] : `Crear ${n} videos`;
     }
-    async act_hlSong() { const p = await B.pick('audio', false); if (!p.length) return; const s = await this.readSong(p[0]); if (s) { this.hl().music = s; this.dirty(); this.syncOutputs(); this.summary(); } }
+    async act_hlSong() {
+      const s = await this.chooseSong({ title: 'Música del resumen y del reel', forName: 'el resumen y el reel', suggest: ['brillar', 'dia-de-fiesta', 'nuestra-historia', 'para-siempre', 'noche-de-neon'], current: this.hl().music });
+      if (s) { this.hl().music = s; this.dirty(); this.syncOutputs(); this.summary(); }
+    }
     act_hlStart(b) { const m = this.hl().music; if (!m) return; m.start = Math.max(0, Math.min(Math.floor(m.duration - 20), (m.start || 0) + (+b.dataset.v))); this.dirty(); this.syncOutputs(); }
     hlMoments() {
       return this.p.moments.map(m => ({ id: m.id, name: m.name, clips: m.clips.map(id => this.p.clips[id]).filter(c => c && c.ready && !c.excluded) })).filter(m => m.clips.length);
@@ -906,7 +928,8 @@
       });
       const un = this.unassigned().length;
       const outs = this.p.outputs || ['pelicula'], h = this.hl();
-      const extra = [outs.includes('resumen') && `resumen de ${fmt(h.res)}`, outs.includes('reel') && `reel de ${h.reel} s`].filter(Boolean);
+      const hs = h.music || this.p.music, avail = hs ? Math.max(15, hs.duration - (hs.start || 0)) : h.res;
+      const extra = [outs.includes('resumen') && `resumen de ${fmt(Math.min(h.res, avail))}${avail < h.res ? ' (lo que dura la canción)' : ''}`, outs.includes('reel') && `reel de ${Math.round(Math.min(h.reel, avail))} s`].filter(Boolean);
       el.innerHTML = moments ? (outs.includes('pelicula') ? `Película: <strong>${fmt(total)}</strong> · ${moments} ${moments === 1 ? 'capítulo' : 'capítulos'} · ${clips} tomas` : `${moments} ${moments === 1 ? 'momento' : 'momentos'} · ${clips} tomas`) +
         (extra.length ? `<br>Además: ${extra.join(' y ')}${(h.music || this.p.music) ? '' : ' (<strong>falta elegir la canción</strong>)'}` : '') +
         (un ? `<br><strong>${un} tomas sin acomodar</strong> no van en la película.` : '') + `<br>Se guarda en ${esc(this.shown(this.p.dir))}`

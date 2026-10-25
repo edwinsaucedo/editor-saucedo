@@ -1,0 +1,52 @@
+{
+ "id": "rebobinar",
+ "name": "Rebobinar",
+ "mood": "Retro 80s",
+ "desc": "Sintetizadores de los ochenta, ideal para VHS.",
+ "tags": [
+  "vhs",
+  "retro",
+  "vlog",
+  "glitch"
+ ],
+ "file": "rebobinar.mp3",
+ "bpm": 108,
+ "meter": 4,
+ "duration": 127.94,
+ "hot": 35.556,
+ "sections": [
+  {
+   "name": "intro",
+   "t": 0.0
+  },
+  {
+   "name": "estrofa",
+   "t": 17.778
+  },
+  {
+   "name": "coro",
+   "t": 35.556
+  },
+  {
+   "name": "estrofa2",
+   "t": 53.333
+  },
+  {
+   "name": "coro2",
+   "t": 71.111
+  },
+  {
+   "name": "pausa",
+   "t": 88.889
+  },
+  {
+   "name": "coro3",
+   "t": 97.778
+  },
+  {
+   "name": "final",
+   "t": 115.556
+  }
+ ],
+ "end": 124.444
+}

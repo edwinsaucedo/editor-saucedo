@@ -1,0 +1,49 @@
+{
+ "id": "noche-de-neon",
+ "name": "Noche de neón",
+ "mood": "Electrónica",
+ "desc": "Para bailar: bajos, sintetizadores y caídas fuertes.",
+ "tags": [
+  "xv",
+  "reel",
+  "fiesta",
+  "neón",
+  "promo"
+ ],
+ "file": "noche-de-neon.mp3",
+ "bpm": 124,
+ "meter": 4,
+ "duration": 142.35,
+ "hot": 30.968,
+ "sections": [
+  {
+   "name": "intro",
+   "t": 0.0
+  },
+  {
+   "name": "sube",
+   "t": 15.484
+  },
+  {
+   "name": "caida",
+   "t": 30.968
+  },
+  {
+   "name": "pausa",
+   "t": 61.935
+  },
+  {
+   "name": "sube2",
+   "t": 77.419
+  },
+  {
+   "name": "caida2",
+   "t": 92.903
+  },
+  {
+   "name": "final",
+   "t": 123.871
+  }
+ ],
+ "end": 139.355
+}

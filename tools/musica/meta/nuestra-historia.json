@@ -1,0 +1,49 @@
+{
+ "id": "nuestra-historia",
+ "name": "Nuestra historia",
+ "mood": "De película",
+ "desc": "Cuerdas, cornos y tambores que crecen, como tráiler de cine.",
+ "tags": [
+  "save the date",
+  "boda",
+  "cuenta regresiva",
+  "resumen",
+  "película"
+ ],
+ "file": "nuestra-historia.mp3",
+ "bpm": 90,
+ "meter": 4,
+ "duration": 131.33,
+ "hot": 53.333,
+ "sections": [
+  {
+   "name": "intro",
+   "t": 0.0
+  },
+  {
+   "name": "historia",
+   "t": 10.667
+  },
+  {
+   "name": "pulso",
+   "t": 32.0
+  },
+  {
+   "name": "cumbre",
+   "t": 53.333
+  },
+  {
+   "name": "respiro",
+   "t": 74.667
+  },
+  {
+   "name": "final",
+   "t": 96.0
+  },
+  {
+   "name": "cierre",
+   "t": 117.333
+  }
+ ],
+ "end": 125.333
+}

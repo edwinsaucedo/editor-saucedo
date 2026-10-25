@@ -1,0 +1,61 @@
+{
+ "id": "para-siempre",
+ "name": "Para siempre",
+ "mood": "Romántica",
+ "desc": "Piano y cuerdas, tierna y elegante.",
+ "tags": [
+  "boda",
+  "xv",
+  "save the date",
+  "agradecimiento",
+  "resumen"
+ ],
+ "file": "para-siempre.mp3",
+ "bpm": 72,
+ "meter": 4,
+ "duration": 238.33,
+ "hot": 66.667,
+ "sections": [
+  {
+   "name": "intro",
+   "t": 0.0
+  },
+  {
+   "name": "estrofa",
+   "t": 13.333
+  },
+  {
+   "name": "pre",
+   "t": 40.0
+  },
+  {
+   "name": "coro",
+   "t": 66.667
+  },
+  {
+   "name": "estrofa2",
+   "t": 93.333
+  },
+  {
+   "name": "pre2",
+   "t": 120.0
+  },
+  {
+   "name": "coro2",
+   "t": 146.667
+  },
+  {
+   "name": "puente",
+   "t": 173.333
+  },
+  {
+   "name": "coro3",
+   "t": 186.667
+  },
+  {
+   "name": "final",
+   "t": 213.333
+  }
+ ],
+ "end": 233.333
+}

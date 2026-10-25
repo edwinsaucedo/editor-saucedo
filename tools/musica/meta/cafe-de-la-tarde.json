@@ -1,0 +1,49 @@
+{
+ "id": "cafe-de-la-tarde",
+ "name": "Café de la tarde",
+ "mood": "Tranquila",
+ "desc": "Lo-fi relajado, como de cafetería.",
+ "tags": [
+  "vlog",
+  "polaroid",
+  "nostalgia",
+  "minimal",
+  "fondo"
+ ],
+ "file": "cafe-de-la-tarde.mp3",
+ "bpm": 80,
+ "meter": 4,
+ "duration": 148.0,
+ "hot": 36.0,
+ "sections": [
+  {
+   "name": "intro",
+   "t": 0.0
+  },
+  {
+   "name": "ritmo",
+   "t": 12.0
+  },
+  {
+   "name": "melodia",
+   "t": 36.0
+  },
+  {
+   "name": "puente",
+   "t": 60.0
+  },
+  {
+   "name": "melodia2",
+   "t": 84.0
+  },
+  {
+   "name": "puente2",
+   "t": 108.0
+  },
+  {
+   "name": "final",
+   "t": 132.0
+  }
+ ],
+ "end": 144.0
+}

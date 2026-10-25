@@ -342,11 +342,23 @@ fn clean_old_jobs(app: &AppHandle) {
 #[tauri::command]
 fn app_paths(app: AppHandle) -> Result<serde_json::Value, String> {
     let docs = app.path().document_dir().or_else(|_| app.path().home_dir()).map_err(|e| e.to_string())?;
+    // Música incluida (se instala junto al programa, en la carpeta "musica")
+    let music = app.path().resource_dir().ok().map(|d| plain_path(d.join("musica")));
     Ok(serde_json::json!({
         "documents": docs.to_string_lossy(),
         "sep": std::path::MAIN_SEPARATOR.to_string(),
         "os": std::env::consts::OS,
+        "music": music.map(|p| p.to_string_lossy().into_owned()),
     }))
+}
+
+/// Quita el prefijo \\?\ que Windows a veces agrega (FFmpeg y el reproductor lo entienden mejor sin él).
+fn plain_path(p: PathBuf) -> PathBuf {
+    let s = p.to_string_lossy().into_owned();
+    match s.strip_prefix(r"\\?\") {
+        Some(rest) if !rest.starts_with("UNC") => PathBuf::from(rest),
+        _ => p,
+    }
 }
 
 #[tauri::command]

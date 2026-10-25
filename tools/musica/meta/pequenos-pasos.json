@@ -1,0 +1,49 @@
+{
+ "id": "pequenos-pasos",
+ "name": "Pequeños pasos",
+ "mood": "Tierna",
+ "desc": "Caja de música y pizzicato, para bebés y niños.",
+ "tags": [
+  "bautizo",
+  "bebé",
+  "infantil",
+  "revelación",
+  "familia"
+ ],
+ "file": "pequenos-pasos.mp3",
+ "bpm": 92,
+ "meter": 4,
+ "duration": 129.22,
+ "hot": 31.304,
+ "sections": [
+  {
+   "name": "intro",
+   "t": 0.0
+  },
+  {
+   "name": "A",
+   "t": 10.435
+  },
+  {
+   "name": "B",
+   "t": 31.304
+  },
+  {
+   "name": "A2",
+   "t": 52.174
+  },
+  {
+   "name": "B2",
+   "t": 73.043
+  },
+  {
+   "name": "A3",
+   "t": 93.913
+  },
+  {
+   "name": "final",
+   "t": 114.783
+  }
+ ],
+ "end": 125.217
+}

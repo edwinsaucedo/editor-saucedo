@@ -5,6 +5,7 @@ from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 
 ROOT = os.path.join(os.path.dirname(__file__), '..', 'src')
 TEST = os.path.abspath(sys.argv[1]); PORT = int(sys.argv[2])
+MUSIC = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src-tauri', 'musica'))
 DOCS = os.path.join(TEST, 'Documentos'); CACHE = os.path.join(TEST, 'cache', 'trabajos')
 IMG = {'jpg','jpeg','png','webp','heic','heif'}; VID = {'mp4','mov','mts','m2ts','avi','mkv'}; AUD = {'mp3','m4a','wav','aac'}
 PICKS = json.load(open(os.path.join(TEST, 'picks.json')))
@@ -28,7 +29,7 @@ class H(SimpleHTTPRequestHandler):
         try:
             if cmd == 'read_file': return self.send(200, open(a['path'], 'rb').read(), 'application/octet-stream')
             r = None
-            if cmd == 'app_paths': r = {'documents': DOCS, 'sep': '/', 'os': 'linux'}
+            if cmd == 'app_paths': r = {'documents': DOCS, 'sep': '/', 'os': 'linux', 'music': MUSIC}
             elif cmd == 'list_media':
                 out = []
                 for p in a['paths']:
@@ -62,7 +63,7 @@ def _get(self):
     if u.path == '/file':
         p = urllib.parse.parse_qs(u.query)['path'][0]
         data = open(p, 'rb').read()
-        ctype = 'video/mp4' if p.endswith('.mp4') else 'application/octet-stream'
+        ctype = 'video/mp4' if p.endswith('.mp4') else 'audio/mpeg' if p.endswith('.mp3') else 'application/octet-stream'
         rng = self.headers.get('Range')
         if rng:
             a, b = rng.replace('bytes=', '').split('-'); a = int(a); b = int(b) if b else len(data) - 1

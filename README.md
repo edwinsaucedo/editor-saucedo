@@ -5,10 +5,12 @@ Programa para Windows de **Eduardo Saucedo · Video & Fotografía**. Está hecho
 | Pestaña | Qué hace |
 |---|---|
 | **Fotos** | Botón "Mejorar colores", 6 estilos (Natural, Boda cálida, Rosa XV, Blanco y negro, Colores vivos, Película) y el logo oficial como marca de agua. Guarda por lote en JPG al tamaño original. |
-| **Plantillas de video** | 20 plantillas tipo CapCut, simples y elaboradas, con textos animados, efectos y cortes al ritmo de la canción. Vertical, horizontal y cuadrado. |
+| **Plantillas de video** | 30 plantillas tipo CapCut, simples y elaboradas, con textos animados, efectos y cortes al ritmo. Cada una ya trae su canción sugerida (se puede cambiar). Vertical, horizontal y cuadrado. |
 | **Película del evento** | La película completa de la fiesta, guiada por momentos, más un **resumen** de 3 a 5 min y un **reel** vertical armados solos con las mejores partes. |
 
-**Logo:** viene de fábrica el logo oficial en negro y en blanco. En automático se pone negro sobre fondos claros y blanco sobre oscuros, foto por foto y toma por toma. Se puede subir otro logo.
+**Logo:** viene de fábrica el logo oficial en negro y en blanco. En automático se pone negro sobre fondos claros y blanco sobre oscuros, foto por foto y toma por toma. Tamaño chico, mediano o grande desde Fotos, Plantillas o Película (es el mismo ajuste en las tres). Se puede subir otro logo.
+
+**Música incluida:** 14 canciones originales hechas para el programa (romántica, vals, de película, inspiradora, alegre, acústica, lo-fi, tierna, cumbia, electrónica, trap, retro 80s, navideña y ragtime). Se pueden subir a Facebook, Instagram, TikTok y YouTube sin reclamos de derechos. En la ventana de música se escucha la mejor parte con ▶ y se elige con "Usar"; también se puede usar una canción de la computadora.
 
 Todo se guarda en `Documentos\Saucedo\<fecha> <plantilla o evento> <nombres>\`.
 
@@ -36,8 +38,18 @@ Todo se guarda en `Documentos\Saucedo\<fecha> <plantilla o evento> <nombres>\`.
 | Minimal | Simple | Solo un título pequeño y fundidos |
 | Promo del negocio | Elaborada | Anuncio con el logo, servicios y "Agenda tu fecha" |
 | Antes y después | Elaborada | Cada foto sin editar y luego mejorada, con barrido |
+| Feliz Navidad | Simple | Nieve que cae, destellos, letras doradas y el año nuevo |
+| Fiesta mexicana | Elaborada | Papel picado que se mece, letras con contorno y rebote, cumbia |
+| Revelación: ¿niño o niña? | Elaborada | Pregunta al inicio; al final cuenta 3, 2, 1 y revela con confeti rosa o azul |
+| Fiesta infantil | Simple | Globos que suben, letras redondas, etiqueta con los años |
+| Collage de recuerdos | Elaborada | Tres fotos a la vez con marco blanco (las fotos se juntan de 3 en 3) |
+| Glitch digital | Elaborada | Letras que fallan, colores corridos e interferencia en cada corte |
+| Letras al ritmo | Elaborada | La frase aparece palabra por palabra, una en cada corte |
+| Subtítulos estilo CapCut | Simple | Cada toma con su frase en globo blanco (frases separadas con /) |
+| Película antigua | Simple | Blanco y negro, parpadeo de proyector, letreros de cine mudo |
+| Aniversario | Simple | "10 años" en grande, corazones que suben, nombres manuscritos |
 
-Las plantillas están en `src/js/templates.js`: cada una es una receta (tiempos, transiciones, color, efectos) más sus diseños de texto, que se dibujan cuadro por cuadro y FFmpeg pone encima del video.
+Las plantillas están en `src/js/templates.js`: cada una es una receta (tiempos, transiciones, color, efectos, canciones sugeridas) más sus diseños de texto, que se dibujan cuadro por cuadro y FFmpeg pone encima del video. En videos cortos con música incluida, la canción empieza sola en su mejor parte (el coro) y los cortes caen exactos en el ritmo, porque el tempo de cada canción se conoce de fábrica.
 
 ## Película del evento
 
@@ -48,6 +60,18 @@ Las plantillas están en `src/js/templates.js`: cada una es una receta (tiempos,
 5. **Cada toma:** recorte con "Empieza aquí" / "Termina aquí", volumen de 0 a 150 % o sin sonido, y orden dentro del momento.
 6. **Crear película:** portada, capítulos, créditos con el logo, transiciones (suaves, dinámicas o solo cortes), reducción de ruido del salón, volumen parejo en toda la película (−16 LUFS) y capítulos marcados en el MP4. Si se pausa o se apaga la computadora, al volver a crear sigue donde se quedó.
 7. **Resumen y reel:** cada toma se revisa segundo a segundo (brillo, nitidez, movimiento y sonido, como aplausos) y se eligen las mejores partes de cada momento. Se cortan al ritmo de la canción, con el título al inicio, el nombre de cada momento y los créditos con el logo. El resumen sale horizontal (3, 4 o 5 min) y el reel vertical (30, 45 o 60 s). Nunca dura más que la canción, y si hay poco material sale más corto en lugar de repetir tomas.
+
+## Música incluida (`tools/musica/`)
+
+Las 14 canciones se componen en código (acordes, melodías, baterías y bajos en `tools/musica/canciones/`), se tocan con el banco de sonidos **GeneralUser GS** de S. Christian Collins (su licencia permite usarlo para hacer música, incluso comercial) y se mezclan y masterizan en Python: ecualización, reverberación de sala, compresión lateral en la electrónica, balance tonal por género y −14 LUFS con picos de −1 dB. Para volver a generarlas:
+
+```bash
+pip install mido pyloudnorm numpy scipy
+SAUCEDO_SF2=/ruta/GeneralUser-GS.sf2 python3 tools/musica/producir.py      # todas
+SAUCEDO_SF2=/ruta/GeneralUser-GS.sf2 python3 tools/musica/producir.py brillar
+```
+
+Se guardan en `src-tauri/musica/*.mp3` (se instalan junto al programa) y sus datos (nombre, ánimo, tempo, compás, coro y secciones) en `src/js/musica-data.js`. "Cascabeles" es un arreglo nuevo de *Jingle Bells* (James Lord Pierpont, 1857), que es de dominio público.
 
 ## Instalar en la computadora
 
@@ -102,3 +126,4 @@ node tools/test-templates.mjs ./.prueba-plantillas <material>   # ritmo, capas a
 
 - Letras: Great Vibes, Cormorant Garamond, Archivo, Atkinson Hyperlegible y VT323, todas con licencia SIL Open Font License 1.1.
 - FFmpeg (compilación GPL de BtbN) se incluye como programa aparte dentro del instalador, bajo su propia licencia GPL.
+- Música: composiciones originales de este proyecto, tocadas con GeneralUser GS (S. Christian Collins), cuya licencia permite usarlo sin restricción para crear música privada o comercial.

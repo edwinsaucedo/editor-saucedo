@@ -1,0 +1,69 @@
+{
+ "id": "brillar",
+ "name": "Brillar",
+ "mood": "Inspiradora",
+ "desc": "Piano, cuerdas y tambores que crecen; motivadora.",
+ "tags": [
+  "graduación",
+  "promo",
+  "resumen",
+  "save the date",
+  "aniversario"
+ ],
+ "file": "brillar.mp3",
+ "bpm": 100,
+ "meter": 4,
+ "duration": 218.8,
+ "hot": 48.0,
+ "sections": [
+  {
+   "name": "intro",
+   "t": 0.0
+  },
+  {
+   "name": "inicio",
+   "t": 9.6
+  },
+  {
+   "name": "sube",
+   "t": 28.8
+  },
+  {
+   "name": "coro",
+   "t": 48.0
+  },
+  {
+   "name": "calma",
+   "t": 67.2
+  },
+  {
+   "name": "sube2",
+   "t": 86.4
+  },
+  {
+   "name": "coro2",
+   "t": 105.6
+  },
+  {
+   "name": "puente",
+   "t": 124.8
+  },
+  {
+   "name": "sube3",
+   "t": 144.0
+  },
+  {
+   "name": "coro3",
+   "t": 163.2
+  },
+  {
+   "name": "coro4",
+   "t": 182.4
+  },
+  {
+   "name": "final",
+   "t": 201.6
+  }
+ ],
+ "end": 214.8
+}

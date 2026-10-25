@@ -25,7 +25,7 @@
       this.root.innerHTML = `
       <div class="tpl-gallery" data-el="gallery">
         <div class="tg-head">
-          <div><h2 class="tg-t">Plantillas</h2><p class="tg-sub">Elige una. Después agregas tus fotos y videos, escribes los textos y eliges la canción; el programa arma el video.</p></div>
+          <div><h2 class="tg-t">Plantillas</h2><p class="tg-sub">Elige una: cada plantilla ya trae su música. Después agregas tus fotos y videos, escribes los textos y el programa arma el video.</p></div>
           <div class="chips" data-el="cats" role="radiogroup" aria-label="Tipo de plantilla">${SA.TPL_CATS.map(([k, n]) => `<button type="button" class="chip" data-v="${k}">${n}</button>`).join('')}</div>
         </div>
         <div class="tg-grid" data-el="grid"></div>
@@ -47,14 +47,11 @@
           </section>
           <section class="step">
             <h2><span class="num">3</span>Música</h2>
-            <button class="btn" type="button" data-act="song" data-el="songBtn">Elegir canción</button>
-            <div class="song" data-el="songBox" hidden>
-              <span class="song-name" data-el="songName"></span>
-              <div class="field"><span class="lbl">La canción empieza en</span>
-                <div class="stepper"><button type="button" data-act="ssMinus">−5 s</button><output data-el="ss">0:00</output><button type="button" data-act="ssPlus">+5 s</button><button class="btn" type="button" data-act="listen" data-el="listen">Escuchar</button></div></div>
-              <div class="sw-row" data-el="beatRow" hidden><button class="switch" type="button" role="switch" data-act="beatOn" data-el="beatOn" aria-labelledby="tBeat"></button><span class="sw-state" id="tBeat" data-el="beatTxt"></span></div>
-              <button class="link" type="button" data-act="song">Cambiar canción</button>
-            </div>
+            <div class="mcard" data-el="mcard"></div>
+            <div class="field" data-el="startBox" hidden><span class="lbl">La canción empieza en</span>
+              <div class="stepper"><button type="button" data-act="ssMinus">−5 s</button><output data-el="ss">0:00</output><button type="button" data-act="ssPlus">+5 s</button></div>
+              <p class="hint" data-el="ssHint" hidden>Empieza en la mejor parte de la canción.</p></div>
+            <div class="sw-row" data-el="beatRow" hidden><button class="switch" type="button" role="switch" data-act="beatOn" data-el="beatOn" aria-labelledby="tBeat"></button><span class="sw-state" id="tBeat" data-el="beatTxt"></span></div>
             <div class="field" data-el="durBox" hidden><span class="lbl">Duración del video</span><div class="seg" data-el="target"></div></div>
           </section>
           <section class="step">
@@ -63,6 +60,7 @@
             <p class="hint">Puedes elegir varios: se crea un video de cada uno.</p>
             <button class="big" type="button" data-act="enhance"><span class="t">Mejorar colores</span><span class="pill" data-el="enhState">Activado</span></button>
             <div class="sw-row"><button class="switch" type="button" role="switch" data-act="wm" data-el="wm" aria-labelledby="tWm"></button><span class="sw-state" id="tWm" data-el="wmTxt"></span></div>
+            <div class="field" data-el="wmSizeBox"><span class="lbl">Tamaño del logo</span><div class="seg" data-el="wmSize" role="radiogroup" aria-label="Tamaño del logo"><button type="button" data-v="s">Chico</button><button type="button" data-v="m">Mediano</button><button type="button" data-v="l">Grande</button></div></div>
           </section>
           <section class="step">
             <h2><span class="num">5</span>Crear video</h2>
@@ -106,6 +104,7 @@
       SA.ui.seg(this.q('cats'), this.cat, v => { this.cat = v; SA.ui.setSeg(this.q('cats'), v); this.renderGallery(); });
       SA.ui.seg(this.q('theme'), '', v => { this.st.theme = v; this.changed(); });
       SA.ui.seg(this.q('which'), this.which, v => { this.which = v; this.pt = 0; SA.ui.setSeg(this.q('which'), v); });
+      SA.ui.seg(this.q('wmSize'), S.size || 'm', v => { S.size = v; SA.brandChanged(); });
       $$('.fmt', this.q('formats')).forEach(b => b.addEventListener('click', () => {
         const set = new Set(this.st.formats); set.has(b.dataset.v) ? set.delete(b.dataset.v) : set.add(b.dataset.v);
         if (!set.size) { toast('Elige por lo menos un formato.'); return; }
@@ -121,7 +120,7 @@
       grid.innerHTML = list.map(t => `<button class="tcard" type="button" data-act="pick" data-id="${t.id}">
         <canvas width="216" height="384" aria-hidden="true"></canvas>
         <span class="tc-body"><span class="tc-top"><strong>${esc(t.name)}</strong><span class="tc-lvl ${t.level === 'Pro' ? 'pro' : ''}">${LEVEL[t.level]}</span></span>
-        <span class="tc-desc">${esc(t.desc)}</span></span></button>`).join('');
+        <span class="tc-desc">${esc(t.desc)}</span>${this.musicName(t) ? `<span class="tc-music">♪ ${esc(this.musicName(t))}</span>` : ''}</span></button>`).join('');
       $$('.tcard', grid).forEach((card, i) => {
         const t = SA.TEMPLATES.find(x => x.id === card.dataset.id), cv = card.querySelector('canvas');
         this.drawCard(cv, t, 2.4, i);
@@ -130,6 +129,7 @@
         card.addEventListener('mouseleave', () => { cancelAnimationFrame(raf); this.drawCard(cv, t, 2.4, i); });
       });
     }
+    musicName(t) { const m = t.music && SA.music.available() && SA.music.get(t.music[0]); return m ? m.name : ''; }
     sample(W, H, i) { this.samples = this.samples || {}; const k = `${W}x${H}x${i % 4}`; return this.samples[k] || (this.samples[k] = A.sampleBg(W, H, i % 4)); }
     tplData(t) {
       const d = {}; t.fields.forEach(f => { d[f.key] = f.def || f.ph || ''; });
@@ -141,6 +141,7 @@
       ctx.save(); ctx.clearRect(0, 0, W, H);
       const bgSrc = this.media.find(m => m.status === 'ok');
       if (t.still === 'polaroid') SA.tpl.polaroid(ctx, bgSrc ? bgSrc.thumb : this.sample(W, H, i), W, H, 0, t.fields[0] && (t.fields[0].ph || t.fields[0].def));
+      else if (t.still === 'collage') { const th = this.media.filter(m => m.status === 'ok' && m.kind === 'image').slice(0, 3).map(m => m.thumb); SA.tpl.collage(ctx, th.length ? th : [0, 1, 2].map(k => this.sample(W, H, i + k)), W, H, 0); }
       else { if (t.preview) ctx.filter = t.preview; C.drawFit(ctx, bgSrc ? bgSrc.thumb : this.sample(W, H, i), W, H, 'cover', 1.02); ctx.filter = 'none'; }
       this.drawLayers(ctx, W, H, t, 'intro', time, this.tplData(t), THEME(t.theme));
       ctx.restore();
@@ -182,13 +183,14 @@
       tg.innerHTML = (t.durations || []).map(v => `<button type="button" data-v="${v}">${DUR_LABEL(v)}</button>`).join('');
       SA.ui.seg(tg, String(this.st.target), v => { this.st.target = v === 'full' ? 'full' : +v; this.changed(); });
       this.q('done').hidden = true;
+      this.pickSong(t, saved.song);
       this.syncStyle(); this.summary(); this.sizePreview(); this.startPreview();
       this.root.querySelector('.tpl-editor .steps').scrollTop = 0;
     }
-    act_back() { this.stopPreview(); this.stopListen(); this.q('editor').hidden = true; this.q('gallery').hidden = false; this.renderGallery(); }
+    act_back() { this.stopPreview(); this.stopListen(); SA.music.stop(); this.q('editor').hidden = true; this.q('gallery').hidden = false; this.renderGallery(); }
     save() {
-      const { theme, formats, enhance, target, values } = this.st;
-      this.store[this.tpl.id] = { theme, formats, enhance, target, values };
+      const { theme, formats, enhance, target, values, song } = this.st;
+      this.store[this.tpl.id] = { theme, formats, enhance, target, values, song };
       try { localStorage.setItem('saucedo-plantillas', JSON.stringify(this.store)); } catch (e) {}
     }
     changed() { this.save(); this.syncStyle(); this.summary(); }
@@ -200,6 +202,7 @@
       const enh = this.root.querySelector('[data-act="enhance"]');
       enh.setAttribute('aria-pressed', String(this.st.enhance)); this.q('enhState').textContent = this.st.enhance ? 'Activado' : 'Apagado';
       this.q('wm').setAttribute('aria-checked', String(S.wm));
+      this.q('wmSizeBox').hidden = !S.wm; SA.ui.setSeg(this.q('wmSize'), S.size || 'm');
       this.q('wmTxt').textContent = S.wm ? `Logo en cada toma (${S.wmColor === 'negro' ? 'negro' : S.wmColor === 'blanco' ? 'blanco' : 'negro o blanco según el fondo'})` : 'Sin logo';
       this.q('beatOn').setAttribute('aria-checked', String(this.st.beatOn));
     }
@@ -321,20 +324,58 @@
     }
 
     /* ---------- Música y ritmo ---------- */
-    act_song() { B.pick('audio', false).then(p => p.length && this.setSong(p[0])); }
-    async setSong(path) {
+    // Cada plantilla trae su canción sugerida (como en CapCut); si ya se eligió otra, se respeta.
+    pickSong(t, saved) {
+      this.stopListen(); this.song = null; this.beat = null; this.st.song = null;
+      if (saved === 'none') { this.st.song = 'none'; }
+      else if (saved && saved.builtin && SA.music.get(saved.builtin) && this.useBuiltin(saved.builtin, true)) { /* listo */ }
+      else if (saved && saved.path) { this.setSong(saved.path, true).then(ok => { if (!ok && this.tpl === t) this.defaultSong(t); }); }
+      else this.defaultSong(t);
+      this.renderSong();
+    }
+    defaultSong(t) { if (t.music && SA.music.available()) this.useBuiltin(t.music[0], true); else this.renderSong(); }
+    async act_song() {
+      const t = this.tpl; this.stopListen();
+      const r = await SA.music.pick({ title: 'Música del video', forName: t.name, suggest: t.music || [], current: this.song, allowNone: true, noneLabel: 'Hacer el video sin música' });
+      if (!r) return;
+      if (r.kind === 'builtin') this.useBuiltin(r.id);
+      else if (r.kind === 'file') this.setSong(r.path);
+      else this.act_songOff();
+    }
+    act_songOff() { this.stopListen(); this.song = null; this.beat = null; this.st.song = 'none'; this.save(); this.renderSong(); this.syncStyle(); this.summary(); }
+    useBuiltin(id, quiet) {
+      const s = SA.music.song(id); if (!s) return false;
+      this.stopListen();
+      this.song = s; this.beat = s.beat; this.st.song = { builtin: id }; this.st.startAuto = true; this.st.songStart = 0;
+      this.renderSong(); this.syncStyle(); this.summary(); this.save();
+      return true;
+    }
+    async setSong(path, quiet) {
       this.stopListen();
       try {
         const p = await B.probe(path);
         if (!p.hasAudio || !p.duration) throw new Error('sin audio');
         this.song = { path, name: B.baseName(path), duration: p.duration }; this.beat = null;
-        this.st.songStart = 0; this.audioUrl = null;
-        this.q('songBox').hidden = false; this.q('songBtn').hidden = true;
-        this.q('songName').textContent = `${this.song.name} · ${fmt(p.duration)}`;
-        this.q('beatRow').hidden = true;
-        this.setStart(0);
+        this.st.songStart = 0; this.st.startAuto = false; this.st.song = { path };
+        this.save(); this.renderSong(); this.setStart(0); this.summary();
         this.detectBeat(this.song);
-      } catch (e) { toast('No se pudo leer esa canción. Prueba con un MP3 o M4A.'); }
+        return true;
+      } catch (e) { if (!quiet) toast('No se pudo leer esa canción. Prueba con un MP3 o M4A.'); return false; }
+    }
+    renderSong() {
+      const el = this.q('mcard'); if (!el) return;
+      const s = this.song;
+      el.classList.toggle('empty', !s);
+      el.innerHTML = s ? `<button class="mplay" type="button" data-act="listen" aria-label="Escuchar la canción"><span class="ic">▶</span></button>
+          <div class="minfo"><div class="mname">${esc(s.name)}</div><div class="mdesc">${esc(SA.music.sub(s))}</div></div>
+          <div class="mcard-actions" style="grid-column:2"><button class="btn" type="button" data-act="song">Cambiar música</button><button class="link danger" type="button" data-act="songOff">Quitar</button></div>`
+        : `<div class="minfo"><div class="mname">Sin música</div><div class="mdesc">El video saldrá sin sonido.</div></div>
+          <div class="mcard-actions"><button class="btn" type="button" data-act="song">Elegir música</button></div>`;
+      this.q('startBox').hidden = !s;
+      this.q('ss').textContent = fmt(this.st.songStart || 0);
+      this.q('ssHint').hidden = !(s && s.builtin && this.st.startAuto && this.st.songStart > 0);
+      this.q('beatRow').hidden = !(s && this.beat && this.tpl.beats);
+      if (this.beat) this.q('beatTxt').textContent = `Cortes al ritmo de la canción (${Math.round(this.beat.bpm)} golpes por minuto)`;
     }
     // Encuentra el ritmo de la canción para que los cortes caigan en los golpes.
     async detectBeat(song) {
@@ -346,9 +387,7 @@
         const info = E.detectBeats(new Float32Array(buf), 11025);
         if (!info || this.song !== song) return;
         this.beat = info;
-        this.q('beatRow').hidden = !this.tpl.beats;
-        this.q('beatTxt').textContent = `Cortes al ritmo de la canción (${Math.round(info.bpm)} golpes por minuto)`;
-        this.syncStyle(); this.summary();
+        this.renderSong(); this.syncStyle(); this.summary();
       } catch (e) { /* sin ritmo: se usan los tiempos de la plantilla */ }
     }
     beatFor() {
@@ -356,25 +395,37 @@
       const s = this.st.songStart, next = this.beat.beats.find(b => b >= s - .02);
       return next == null ? null : { period: this.beat.period, offset: Math.max(0, next - s) };
     }
-    act_ssMinus() { this.setStart(this.st.songStart - 5); }
-    act_ssPlus() { this.setStart(this.st.songStart + 5); }
+    // En un vals (3 tiempos) los cortes van cada compás o cada dos.
+    beatsPerShot() { const k = this.tpl.beats; return this.beat && this.beat.meter === 3 && k ? (k >= 8 ? 6 : 3) : k; }
+    act_ssMinus() { this.st.startAuto = false; this.setStart(this.st.songStart - 5); }
+    act_ssPlus() { this.st.startAuto = false; this.setStart(this.st.songStart + 5); }
     setStart(s) {
       if (!this.song) return;
       this.st.songStart = Math.max(0, Math.min(Math.floor(this.song.duration - 10), s));
       this.q('ss').textContent = fmt(this.st.songStart);
-      if (this.audio && !this.audio.paused) this.audio.currentTime = this.st.songStart;
+      this.q('ssHint').hidden = true;
       this.summary();
     }
-    async act_listen() {
-      if (this.audio && !this.audio.paused) { this.stopListen(); return; }
-      try {
-        if (!this.audioUrl) this.audioUrl = URL.createObjectURL(await B.readBlob(this.song.path));
-        this.audio = this.audio || new Audio(); this.audio.src = this.audioUrl; this.audio.currentTime = this.st.songStart;
-        await this.audio.play(); this.q('listen').textContent = 'Detener';
-        clearTimeout(this.listenT); this.listenT = setTimeout(() => this.stopListen(), 20000);
-      } catch (e) { toast('No se puede escuchar aquí, pero sí se usará en el video.'); }
+    // Para videos cortos con música incluida: empezar en la mejor parte (el coro).
+    autoStart() {
+      if (!this.song || !this.song.builtin || !this.st.startAuto) return;
+      let len;
+      if (this.tpl.mode === 'song') len = this.st.target === 'full' ? 9999 : (+this.st.target || 60);
+      else { if (!this.okMedia().length) return; try { len = this.planAt(0).total; } catch (e) { return; } }
+      const st = len <= 60 ? SA.music.bestStart(this.song.builtin, len) : 0;
+      if (Math.abs(st - this.st.songStart) > .01) {
+        this.st.songStart = st;
+        this.q('ss').textContent = fmt(st);
+      }
+      this.q('ssHint').hidden = !(st > 0);
     }
-    stopListen() { if (this.audio) this.audio.pause(); clearTimeout(this.listenT); const l = this.q('listen'); if (l) l.textContent = 'Escuchar'; }
+    async act_listen() {
+      if (SA.music.playing()) { SA.music.stop(); return; }
+      if (!this.song) return;
+      const icon = on => { const i = this.root.querySelector('.mcard .ic'); if (i) i.textContent = on ? '■' : '▶'; };
+      if (await SA.music.play(this.song, this.st.songStart, () => icon(false))) icon(true);
+    }
+    stopListen() { SA.music.stop(); }
 
     /* ---------- Resumen ---------- */
     target() {
@@ -385,14 +436,25 @@
     }
     expanded() {
       const ok = this.okMedia();
+      if (this.tpl.still === 'collage') {   // fotos de 3 en 3; los videos van solos
+        const out = []; let buf = [];
+        const flush = () => { if (buf.length) out.push({ src: buf[0], kind: 'image', group: buf }); buf = []; };
+        ok.forEach(m => { if (m.kind === 'image') { buf.push(m); if (buf.length === 3) flush(); } else { flush(); out.push({ src: m, kind: m.kind, duration: m.duration || 0 }); } });
+        flush();
+        return out;
+      }
       if (this.tpl.still !== 'antesdespues') return ok.map(m => ({ src: m, kind: m.kind, duration: m.duration || 0 }));
       const out = []; ok.forEach(m => { out.push({ src: m, kind: 'image', ad: 'antes' }, { src: m, kind: 'image', ad: 'despues' }); });
       return out;
     }
-    plan() {
-      const t = this.tpl, list = this.expanded();
-      return E.tplPlan({ media: list, mode: t.mode, target: this.target(), intro: t.intro, outro: t.outro, shot: t.shot, T: t.T, trans: t.trans,
-        beat: this.beatFor(), beats: t.beats, maxShots: t.maxShots || 15, shotMin: t.shotMin, shotMax: t.shotMax });
+    plan() { return this.planAt(); }
+    planAt(start) {
+      const t = this.tpl, list = this.expanded(), keep = this.st.songStart;
+      if (start != null) this.st.songStart = start;
+      try {
+        return E.tplPlan({ media: list, mode: t.mode, target: this.target(), intro: t.intro, outro: t.outro, shot: t.shot, T: t.T, trans: t.trans,
+          beat: this.beatFor(), beats: this.beatsPerShot(), maxShots: t.maxShots || 15, shotMin: t.shotMin, shotMax: t.shotMax });
+      } finally { this.st.songStart = keep; }
     }
     outDir() {
       const d = this.st.values.date || SA.ui.todayISO();
@@ -401,6 +463,7 @@
     }
     summary() {
       const el = this.q('summary'); if (!el || !this.tpl) return;
+      this.autoStart();
       if (!this.okMedia().length) { el.innerHTML = this.tpl.still === 'antesdespues' ? 'Agrega fotos para ver cuánto va a durar.' : 'Agrega fotos o videos para ver cuánto va a durar.'; return; }
       let p; try { p = this.plan(); } catch (e) { el.textContent = e.message; return; }
       const docs = B.paths.documents, dir = this.outDir();
@@ -442,7 +505,9 @@
       const bg = m ? m.thumb : this.sample(W, H, 1);
       ctx.save(); ctx.clearRect(0, 0, W, H);
       const pd = this.data(true);
+      const items = t.still === 'collage' ? this.expanded() : null, it = items && (this.which === 'intro' ? items[0] : items[items.length - 1]);
       if (t.still === 'polaroid' && (!m || m.kind === 'image')) SA.tpl.polaroid(ctx, bg, W, H, 0, pd.title);
+      else if (t.still === 'collage' && (!it || it.group)) SA.tpl.collage(ctx, it ? it.group.map(g => g.thumb) : [0, 1, 2].map(k => this.sample(W, H, k)), W, H, 0);
       else {
         if (t.preview) ctx.filter = t.preview;
         const z = 1 + .05 * Math.min(1, time / 5), vertBg = bg.height > bg.width, vertOut = H > W;
@@ -460,6 +525,7 @@
 
     /* ---------- Crear ---------- */
     async makeStill(m, W, H, out, opts) {
+      if (opts.group && opts.group.length) return this.makeCollage(opts.group, W, H, out, opts);
       const bmp = await createImageBitmap(await B.readBlob(m.path));
       const z = this.tpl.zoom != null ? this.tpl.zoom : .08;
       const k = z > 0 ? 1.5 : 1, SW = Math.round(W * k / 2) * 2, SH = Math.round(H * k / 2) * 2;
@@ -480,6 +546,28 @@
         const u = Math.min(SW, SH) / 1080;
         A.chip(ctx, 60 * u, 90 * u, opts.ad === 'antes' ? 'ANTES' : 'DESPUÉS', u, { s: 40, w: 800, bg: opts.ad === 'antes' ? 'rgba(20,20,20,.75)' : 'rgba(255,255,255,.92)', color: opts.ad === 'antes' ? '#FFFFFF' : '#111111' });
       }
+      const luma = SA.wmZoneLuma(c, W, H, S, SA.VIDEO_WM_SCALE);
+      const blob = await new Promise((res, rej) => c.toBlob(b => b ? res(b) : rej(new Error('jpg')), 'image/jpeg', .92));
+      c.width = c.height = 0;
+      await B.writeBlob(out, blob);
+      return luma;
+    }
+    // Collage: cada foto con su color mejorado, en marcos blancos.
+    async makeCollage(group, W, H, out, opts) {
+      const z = this.tpl.zoom != null ? this.tpl.zoom : .08, k = z > 0 ? 1.25 : 1, SW = Math.round(W * k / 2) * 2, SH = Math.round(H * k / 2) * 2;
+      const imgs = [];
+      for (const g of group) {
+        const bmp = await createImageBitmap(await B.readBlob(g.path));
+        const stats = C.computeStats(C.downscale(bmp, 480));
+        const src = C.downscale(bmp, Math.max(SW, SH) * .8); bmp.close && bmp.close();
+        const t = document.createElement('canvas'); t.width = src.width; t.height = src.height;
+        const tx = t.getContext('2d', { willReadFrequently: true }); tx.drawImage(src, 0, 0);
+        C.colorCanvas(tx, t.width, t.height, stats, { auto: this.st.enhance, style: this.tpl.photoStyle || 'natural' });
+        imgs.push(t);
+      }
+      const c = document.createElement('canvas'); c.width = SW; c.height = SH;
+      const ctx = c.getContext('2d', { willReadFrequently: true }); ctx.imageSmoothingQuality = 'high';
+      SA.tpl.collage(ctx, imgs, SW, SH, opts.i || 0);
       const luma = SA.wmZoneLuma(c, W, H, S, SA.VIDEO_WM_SCALE);
       const blob = await new Promise((res, rej) => c.toBlob(b => b ? res(b) : rej(new Error('jpg')), 'image/jpeg', .92));
       c.width = c.height = 0;
@@ -555,7 +643,7 @@
       const { W, H, name: fname } = E.FORMATS[fk], t = this.tpl, sep = B.paths.sep;
       const tmp = await B.newJobDir();
       try {
-        const list = this.expanded().map(x => ({ kind: x.kind, path: x.src.path, width: x.src.w, height: x.src.h, duration: x.duration || 0, name: x.src.name, src: x.src, ad: x.ad }));
+        const list = this.expanded().map(x => ({ kind: x.kind, path: x.src.path, width: x.src.w, height: x.src.h, duration: x.duration || 0, name: x.src.name, src: x.src, ad: x.ad, group: x.group }));
         const plan = this.plan();
         const data = this.data(), th = THEME(this.st.theme);
         // Pesos para la barra: fotos, capas de texto y pasos de FFmpeg
@@ -571,7 +659,7 @@
           const i = usedImgs[k];
           this.setProgress(done / totalW, `${prefix}Preparando fotos: ${k + 1} de ${usedImgs.length}`);
           list[i].still = B.join(tmp, `foto_${String(i + 1).padStart(3, '0')}.jpg`);
-          try { lumaOf[i] = await this.makeStill(list[i].src, W, H, list[i].still, { ad: list[i].ad, i: k }); }
+          try { lumaOf[i] = await this.makeStill(list[i].src, W, H, list[i].still, { ad: list[i].ad, i: k, group: list[i].group }); }
           catch (e) { throw Object.assign(new Error(`No se pudo preparar la foto «${list[i].name}». Quítala y vuelve a intentar.`), { detail: String(e) }); }
           done += 1.5;
         }
@@ -608,6 +696,28 @@
             const r = await this.renderLayer(l.d, W, H, dur, data, th, B.join(tmp, `capa${li}`));
             if (!r) return null;
             plan.cuts.forEach((c, k) => { if (k % (l.every || 1) === 0 && c - dur / 2 > plan.intro.b && c + dur / 2 < (plan.outro ? plan.outro.a : plan.total) && layers.filter(x => x.cut).length < 8) layers.push(Object.assign({ a: c - dur / 2, b: c + dur / 2, cut: true }, r)); });
+            done += 2; continue;
+          }
+          if (l.at === 'captions') {   // una palabra o frase en cada toma del medio
+            const raw = String(data[l.field] || '').trim();
+            const items = l.split === 'lines' ? raw.split(/\s*\/\s*|\n+/).filter(Boolean) : raw.toUpperCase().split(/\s+/).filter(Boolean);
+            if (!items.length) continue;
+            const end = plan.outro ? plan.outro.a : plan.total, T2 = plan.T * .5;
+            const starts = plan.cuts.filter(c => c < end - .3);
+            const pop = .3, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+            for (let k = 0; k < starts.length; k++) {
+              if (this.cancelled) return null;
+              const a = starts[k] + T2, b = Math.min(end, k + 1 < starts.length ? starts[k + 1] + T2 : end);
+              if (b - a < .35) continue;
+              const dd = Object.assign({}, data, { word: items[k % items.length], k });
+              this.setProgress((done + 2 * k / starts.length) / totalW, `${prefix}Preparando las letras: ${k + 1} de ${starts.length}`);
+              const r = await this.renderLayer(l.d, W, H, pop, dd, th, B.join(tmp, `capa${li}_${k}`));
+              if (!r) return null;
+              layers.push(Object.assign({ a, b: Math.min(b, a + pop + 2 / E.FPS) }, r));
+              const cx = cv.getContext('2d'); cx.clearRect(0, 0, W, H); cx.save(); l.d.draw(cx, W, H, 2, b - a, dd, th); cx.restore();
+              const still = B.join(tmp, `capa${li}_${k}_fija.png`); await this.writeCanvas(cv, still);
+              layers.push({ path: still, seq: false, a: a + pop, b });
+            }
             done += 2; continue;
           }
           const label = `${prefix}Preparando ${l.at === 'intro' ? 'el título' : l.at === 'outro' ? 'el final' : 'los efectos'}`;

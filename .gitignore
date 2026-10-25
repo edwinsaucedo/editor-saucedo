@@ -5,3 +5,7 @@ src-tauri/binaries/ffmpeg-*
 src-tauri/binaries/ffprobe-*
 .prueba-motor/
 *.log
+
+# Música: archivos de trabajo
+tools/musica/.trabajo/
+__pycache__/

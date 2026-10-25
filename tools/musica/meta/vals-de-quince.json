@@ -1,0 +1,56 @@
+{
+ "id": "vals-de-quince",
+ "name": "Vals de quince",
+ "mood": "Vals",
+ "desc": "Vals de orquesta para la entrada y el baile.",
+ "tags": [
+  "xv",
+  "vals",
+  "boda",
+  "elegante"
+ ],
+ "file": "vals-de-quince.mp3",
+ "bpm": 138,
+ "meter": 3,
+ "duration": 151.09,
+ "hot": 52.174,
+ "sections": [
+  {
+   "name": "intro",
+   "t": 0.0
+  },
+  {
+   "name": "vals",
+   "t": 10.435
+  },
+  {
+   "name": "vals-b",
+   "t": 31.304
+  },
+  {
+   "name": "vals-pleno",
+   "t": 52.174
+  },
+  {
+   "name": "cambio",
+   "t": 73.043
+  },
+  {
+   "name": "vals-mib",
+   "t": 75.652
+  },
+  {
+   "name": "vals-mib-b",
+   "t": 96.522
+  },
+  {
+   "name": "vals-final",
+   "t": 117.391
+  },
+  {
+   "name": "final",
+   "t": 138.261
+  }
+ ],
+ "end": 146.087
+}

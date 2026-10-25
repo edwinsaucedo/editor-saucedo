@@ -609,10 +609,13 @@
     o.inputs.forEach(p => args.push('-i', p));
     let idx = o.inputs.length;
     const total = o.total;
+    // Las capas fijas que empiezan después del inicio solo se leen durante su ventana (más rápido).
     const layers = (o.layers || []).map(x => {
+      const win = !x.seq && !x.blink && x.a > 0.01;
       if (x.seq) args.push('-framerate', String(FPS), '-start_number', '0', '-i', x.path);
+      else if (win) args.push('-loop', '1', '-framerate', String(FPS), '-t', r3(Math.max(0.1, x.b - x.a + 0.1)), '-i', x.path);
       else args.push('-loop', '1', '-framerate', String(FPS), '-t', r3(total), '-i', x.path);
-      return Object.assign({ idx: idx++ }, x);
+      return Object.assign({ idx: idx++, win }, x);
     });
     let au = -1;
     if (o.audio) { args.push('-ss', r3(o.audio.start || 0), '-t', r3(total), '-i', o.audio.path); au = idx++; }
@@ -621,7 +624,7 @@
     if (o.post) { fc += `;[j]${o.post}[pp]`; cur = 'pp'; }
     layers.forEach((x, i) => {
       let f = `[${x.idx}:v]format=rgba`;
-      if (x.seq) f += `,setpts=PTS-STARTPTS+${r3(x.a)}/TB`;
+      if (x.seq || x.win) f += `,setpts=PTS-STARTPTS+${r3(x.a)}/TB`;
       if (x.fin) f += `,fade=t=in:st=${r3(x.a)}:d=${r3(x.fin)}:alpha=1`;
       if (x.fout) f += `,fade=t=out:st=${r3(Math.max(x.a, x.b - x.fout))}:d=${r3(x.fout)}:alpha=1`;
       const en = x.blink ? `between(t,${r3(x.a)},${r3(x.b)})*lt(mod(t,1),0.55)` : `between(t,${r3(x.a)},${r3(x.b)})`;

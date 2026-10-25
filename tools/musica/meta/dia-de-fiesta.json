@@ -1,0 +1,61 @@
+{
+ "id": "dia-de-fiesta",
+ "name": "Día de fiesta",
+ "mood": "Alegre",
+ "desc": "Pop con metales y palmas, para celebrar.",
+ "tags": [
+  "cumpleaños",
+  "graduación",
+  "vlog",
+  "reel",
+  "fiesta"
+ ],
+ "file": "dia-de-fiesta.mp3",
+ "bpm": 118,
+ "meter": 4,
+ "duration": 133.17,
+ "hot": 32.542,
+ "sections": [
+  {
+   "name": "intro",
+   "t": 0.0
+  },
+  {
+   "name": "estrofa",
+   "t": 8.136
+  },
+  {
+   "name": "sube",
+   "t": 24.407
+  },
+  {
+   "name": "coro",
+   "t": 32.542
+  },
+  {
+   "name": "estrofa2",
+   "t": 48.814
+  },
+  {
+   "name": "sube2",
+   "t": 65.085
+  },
+  {
+   "name": "coro2",
+   "t": 73.22
+  },
+  {
+   "name": "puente",
+   "t": 89.492
+  },
+  {
+   "name": "coro3",
+   "t": 105.763
+  },
+  {
+   "name": "final",
+   "t": 122.034
+  }
+ ],
+ "end": 130.169
+}
