@@ -670,7 +670,7 @@
   };
   D.globo = { draw: (ctx, W, H, t, dur, d) => {
     const u = U(W, H); if (!d.word) return;
-    bubble(ctx, W, H, d.word, u, prog(t, 0, .25), H > W * 1.2 ? H * .76 : H * .8, H > W * 1.2 ? 54 * u : 46 * u);
+    bubble(ctx, W, H, d.word, u, prog(t, 0, .25), H > W * 1.2 ? H * .74 : H * .8, H > W * 1.2 ? 66 * u : 52 * u);
   } };
   D.globoIn = { draw: (ctx, W, H, t, dur, d, th) => {
     const u = U(W, H); A.scrim(ctx, W, H, 'bottom', prog(t, 0, .5));
