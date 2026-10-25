@@ -1,17 +1,43 @@
 # Editor Saucedo
 
-Programa para Windows de **Saucedo Video y Fotografía**. Está hecho para que se use sin saber editar: se eligen fotos y videos, se escriben los nombres y el programa arma el resultado.
+Programa para Windows de **Eduardo Saucedo · Video & Fotografía**. Está hecho para que se use sin saber editar: se eligen fotos y videos, se escriben los nombres y el programa arma el resultado.
 
 | Pestaña | Qué hace |
 |---|---|
-| **Fotos** | Botón "Mejorar colores", 6 estilos (Natural, Boda cálida, Rosa XV, Blanco y negro, Colores vivos, Película) y marca de agua con el logo. Guarda por lote en JPG al tamaño original. |
-| **Save the Date** | Video de 20 a 40 s con fotos y clips, título "Save the Date" con nombres, cierre con la fecha y el lugar, música y logo. |
-| **Videoclip XV** | Video del largo de la canción (o 1, 2 o 3 min) con portada "Mis XV", cierre con frase de agradecimiento, transiciones y logo. |
-| **Película del evento** | La película completa de la fiesta, guiada por momentos (Llegada, Misa, Entrada, Vals, Brindis, Baile sorpresa, Fiesta, Despedida). Se recorta cada toma, se ajusta su sonido y se elige música por momento. |
+| **Fotos** | Botón "Mejorar colores", 6 estilos (Natural, Boda cálida, Rosa XV, Blanco y negro, Colores vivos, Película) y el logo oficial como marca de agua. Guarda por lote en JPG al tamaño original. |
+| **Plantillas de video** | 20 plantillas tipo CapCut, simples y elaboradas, con textos animados, efectos y cortes al ritmo de la canción. Vertical, horizontal y cuadrado. |
+| **Película del evento** | La película completa de la fiesta, guiada por momentos, más un **resumen** de 3 a 5 min y un **reel** vertical armados solos con las mejores partes. |
 
-Los videos salen en **vertical 1080 × 1920**, **horizontal 1920 × 1080** o los dos.
+**Logo:** viene de fábrica el logo oficial en negro y en blanco. En automático se pone negro sobre fondos claros y blanco sobre oscuros, foto por foto y toma por toma. Se puede subir otro logo.
 
-Todo se guarda en `Documentos\Saucedo\<fecha> <plantilla> <nombres>\`.
+Todo se guarda en `Documentos\Saucedo\<fecha> <plantilla o evento> <nombres>\`.
+
+## Plantillas
+
+| Plantilla | Tipo | Lo que la distingue |
+|---|---|---|
+| Save the Date clásico | Simple | Zoom lento, letra manuscrita, cierre con la fecha |
+| Save the Date de cine | Elaborada | Barras de cine, grano, color cálido, nombres que se acomodan letra por letra |
+| Save the Date moderno | Elaborada | "SAVE THE DATE" que rebota, cortes al ritmo, fecha en números grandes |
+| Videoclip XV clásico | Simple | Portada "Mis XV", toda la canción, agradecimiento |
+| XV neón | Elaborada | Letrero de neón que parpadea, destellos, colores intensos |
+| Boda elegante | Simple | Nombres que se escriben solos, disolvencias lentas |
+| Cuenta regresiva | Elaborada | "30 días para…" con rebote, cortes rápidos |
+| Agradecimiento | Simple | Mensaje en máquina de escribir y firma |
+| Bautizo o primera comunión | Simple | Colores claros, letra delicada |
+| Cumpleaños | Elaborada | Confeti y letras que rebotan |
+| Graduación | Simple | "Generación 2027" en dorado |
+| Vlog del día | Simple | Título palabra por palabra, etiquetas, "REC", cortes directos |
+| Vlog retro VHS | Elaborada | "PLAY", fecha de cámara vieja, colores corridos, ruido |
+| Nostalgia 35 mm | Elaborada | Película antigua, grano, destellos de luz en los cortes |
+| Impacto | Elaborada | Palabras que golpean la pantalla, cortes muy rápidos |
+| Portada de revista | Elaborada | Nombre como título de revista, encabezados, código de barras |
+| Álbum polaroid | Simple | Cada foto en una polaroid sobre papel |
+| Minimal | Simple | Solo un título pequeño y fundidos |
+| Promo del negocio | Elaborada | Anuncio con el logo, servicios y "Agenda tu fecha" |
+| Antes y después | Elaborada | Cada foto sin editar y luego mejorada, con barrido |
+
+Las plantillas están en `src/js/templates.js`: cada una es una receta (tiempos, transiciones, color, efectos) más sus diseños de texto, que se dibujan cuadro por cuadro y FFmpeg pone encima del video.
 
 ## Película del evento
 
@@ -21,6 +47,7 @@ Todo se guarda en `Documentos\Saucedo\<fecha> <plantilla> <nombres>\`.
 4. **Momentos:** cada uno trae una recomendación (por ejemplo, en el vals se deja el sonido original y sin música). Cada momento tiene volumen de las tomas, título de capítulo opcional y música que baja sola cuando alguien habla.
 5. **Cada toma:** recorte con "Empieza aquí" / "Termina aquí", volumen de 0 a 150 % o sin sonido, y orden dentro del momento.
 6. **Crear película:** portada, capítulos, créditos con el logo, transiciones (suaves, dinámicas o solo cortes), reducción de ruido del salón, volumen parejo en toda la película (−16 LUFS) y capítulos marcados en el MP4. Si se pausa o se apaga la computadora, al volver a crear sigue donde se quedó.
+7. **Resumen y reel:** cada toma se revisa segundo a segundo (brillo, nitidez, movimiento y sonido, como aplausos) y se eligen las mejores partes de cada momento. Se cortan al ritmo de la canción, con el título al inicio, el nombre de cada momento y los créditos con el logo. El resumen sale horizontal (3, 4 o 5 min) y el reel vertical (30, 45 o 60 s). Nunca dura más que la canción, y si hay poco material sale más corto en lugar de repetir tomas.
 
 ## Instalar en la computadora
 
@@ -66,11 +93,12 @@ Pruebas del motor:
 node tools/test-engine.mjs ./.prueba-motor --solo-plan   # revisa la lógica sin FFmpeg
 node tools/test-engine.mjs ./.prueba-motor               # crea videos de prueba con FFmpeg del sistema
 node tools/test-film.mjs ./.prueba-pelicula <material>     # película de prueba (necesita horizontal.mp4, vertical.mp4, hdv.mp4 y cancion.mp3)
+node tools/test-templates.mjs ./.prueba-plantillas <material>   # ritmo, capas animadas, efectos y mejores momentos
 ```
 
 `tools/mock_server.py` y `tools/mock_tauri.js` imitan la parte nativa para probar la interfaz en un navegador normal.
 
 ## Licencias de terceros
 
-- Letras: Great Vibes, Cormorant Garamond, Archivo y Atkinson Hyperlegible, todas con licencia SIL Open Font License 1.1.
+- Letras: Great Vibes, Cormorant Garamond, Archivo, Atkinson Hyperlegible y VT323, todas con licencia SIL Open Font License 1.1.
 - FFmpeg (compilación GPL de BtbN) se incluye como programa aparte dentro del instalador, bajo su propia licencia GPL.

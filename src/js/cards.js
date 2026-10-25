@@ -7,7 +7,8 @@
   const THEMES = {
     blanco: { name: 'Blanco', text: '#FFFFFF', accent: '#F1E3C6', soft: 'rgba(255,255,255,.8)' },
     dorado: { name: 'Dorado', text: '#F8EBCB', accent: '#E2B866', soft: 'rgba(248,235,203,.82)' },
-    rosa: { name: 'Rosa', text: '#FFF2F4', accent: '#F0B3C2', soft: 'rgba(255,242,244,.82)' }
+    rosa: { name: 'Rosa', text: '#FFF2F4', accent: '#F0B3C2', soft: 'rgba(255,242,244,.82)' },
+    celeste: { name: 'Celeste', text: '#FFFFFF', accent: '#BFE3FF', soft: 'rgba(235,246,255,.85)' }
   };
   const TEMPLATES = {
     std: { name: 'Save the Date', file: 'SaveTheDate' },
@@ -166,7 +167,7 @@
     const dp = dateParts(data.date);
     if (kind === 'portada') {
       stack(ctx, [
-        textRow('Saucedo Video y Fotografía presenta', 600, 22, CAPS, .32, th.soft, 70, true),
+        textRow('Eduardo Saucedo · Video & Fotografía presenta', 600, 22, CAPS, .3, th.soft, 70, true),
         textRow(data.title, 400, 150, SCRIPT, 0, th.text, 190),
         orn(150, 44),
         dp && textRow(dp.line, 600, 30, CAPS, .32, th.accent, 54, true),
@@ -180,11 +181,12 @@
       ], H * .5);
     } else {
       const rows = [textRow('Una producción de', 600, 22, CAPS, .36, th.soft, 70, true)];
-      if (SA.logo) {
-        const ar = SA.logo.naturalWidth / SA.logo.naturalHeight;
+      const LOGO = SA.logos && (SA.logos.blanco || SA.logo);
+      if (LOGO) {
+        const ar = (LOGO.naturalWidth || LOGO.width) / (LOGO.naturalHeight || LOGO.height);
         let lw = Math.min(W * .42, 520 * u * ar), lh = lw / ar;
         if (lh > 260 * u) { lh = 260 * u; lw = lh * ar; }
-        rows.push({ h: lh + 30 * u, base: 0, draw: y => ctx.drawImage(SA.logo, cx - lw / 2, y + 10 * u, lw, lh) });
+        rows.push({ h: lh + 30 * u, base: 0, draw: y => ctx.drawImage(LOGO, cx - lw / 2, y + 10 * u, lw, lh) });
       } else {
         rows.push(textRow('Saucedo', 400, 170, SCRIPT, 0, th.text, 190));
         rows.push(textRow('Video y Fotografía', 700, 30, CAPS, .3, th.text, 56, true));

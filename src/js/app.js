@@ -27,7 +27,7 @@
     $$('.view').forEach(v => { v.hidden = v.id !== 'view-' + name; });
     if (name === 'fotos') SA.photos.refresh();
     else if (name === 'pelicula') { if (tabs.pelicula) tabs.pelicula.renderBoard(); }
-    else if (tabs[name]) { tabs[name].sync(); tabs[name].drawPreview(); }
+    else if (name === 'plantillas' && tabs.plantillas) tabs.plantillas.sizePreview();
   }
   $$('.tab').forEach(t => t.addEventListener('click', () => show(t.dataset.tab)));
 
@@ -45,13 +45,12 @@
     }
     try { await B.init(); } catch (e) { console.error(e); }
     try {
-      await Promise.all(['400 20px "SA Script"', '600 20px "SA Serif"', '600 20px "SA Caps"', '700 20px "SA Caps"', '400 20px "SA Body"']
+      await Promise.all(['400 20px "SA Script"', '600 20px "SA Serif"', '600 20px "SA Caps"', '700 20px "SA Caps"', '800 20px "SA Caps"', '400 20px "SA Body"', '400 20px "SA VHS"']
         .map(f => document.fonts.load(f)));
     } catch (e) {}
     await SA.loadStoredLogo();
     SA.photos.init();
-    tabs.std = new SA.VideoTab('std', $('#view-std'));
-    tabs.xv = new SA.VideoTab('xv', $('#view-xv'));
+    tabs.plantillas = new SA.Plantillas($('#view-plantillas'));
     tabs.pelicula = new SA.Pelicula($('#view-pelicula'));
     if (B.available) tabs.pelicula.tryReopenLast().catch(() => {});
     const overlay = $('#overlay');

@@ -327,19 +327,26 @@
   });
   SA.ui.seg($('#wmSize'), S.size, v => { S.size = v; syncBrand(); SA.brandChanged(); });
   SA.ui.seg($('#wmAlpha'), S.alpha, v => { S.alpha = v; syncBrand(); SA.brandChanged(); });
+  SA.ui.seg($('#wmColor'), S.wmColor || 'auto', v => { S.wmColor = v; syncBrand(); SA.brandChanged(); });
   wmSwitch.addEventListener('click', () => { S.wm = !S.wm; syncBrand(); SA.brandChanged(); });
   function showLogo() {
     const p = $('#logoPrev'); p.textContent = '';
-    if (SA.logo) { const im = document.createElement('img'); im.src = SA.logo.src; im.alt = 'Logo actual'; p.appendChild(im); }
-    else { const s = document.createElement('span'); s.className = 'txt'; s.textContent = 'Saucedo'; p.appendChild(s); }
-    $('#btnLogo').textContent = SA.logo ? 'Cambiar logo' : 'Subir logo (PNG)';
-    $('#btnLogoOff').hidden = !SA.logo;
+    const v = S.wmColor === 'negro' ? 'negro' : S.wmColor === 'original' && SA.logos.original ? 'original' : 'blanco';
+    const src = SA.logos[v] || SA.logo;
+    if (src) {
+      const c = document.createElement('canvas'); const w = src.naturalWidth || src.width, h = src.naturalHeight || src.height;
+      c.width = 240; c.height = Math.round(240 * h / w); c.getContext('2d').drawImage(src, 0, 0, c.width, c.height);
+      c.setAttribute('aria-label', 'Logo actual'); p.appendChild(c);
+    }
+    p.classList.toggle('on-light', v === 'negro');
+    $('#btnLogoOff').hidden = !SA.logos.custom;
+    $('#wmColor').querySelector('[data-v="original"]').hidden = !SA.logos.original;
   }
   function syncBrand() {
     wmSwitch.setAttribute('aria-checked', S.wm); wmState.textContent = S.wm ? 'Encendida: va en todas las fotos y videos' : 'Apagada: salen sin marca';
     wmFields.disabled = !S.wm;
     wmPos.querySelectorAll('button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.v === S.pos)));
-    SA.ui.setSeg($('#wmSize'), S.size); SA.ui.setSeg($('#wmAlpha'), S.alpha);
+    SA.ui.setSeg($('#wmSize'), S.size); SA.ui.setSeg($('#wmAlpha'), S.alpha); SA.ui.setSeg($('#wmColor'), S.wmColor || 'auto');
     showLogo();
   }
   SA.onBrandChange(syncBrand);
@@ -349,7 +356,7 @@
     try { $('#logoHint').textContent = await SA.loadLogoFromPath(p[0]); }
     catch (e) { toast('No se pudo abrir ese archivo como logo. Usa el logo en PNG.'); }
   });
-  $('#btnLogoOff').addEventListener('click', () => { SA.removeLogo(); $('#logoHint').textContent = 'Se pone el nombre en letra. Puedes subir el logo cuando quieras.'; });
+  $('#btnLogoOff').addEventListener('click', async () => { if (S.wmColor === 'original') S.wmColor = 'auto'; await SA.removeLogo(); $('#logoHint').textContent = 'Logo oficial de Eduardo Saucedo · Video & Fotografía.'; });
 
   /* ---------- Inicio ---------- */
   SA.photos.addPaths = addPaths;
@@ -359,7 +366,7 @@
     sample.src = C.downscale(full, 480); sample.stats = C.computeStats(sample.src);
     items.push(sample); mountThumb(sample); renumber();
     syncUI(); syncBrand(); updateCounts(); showDest();
-    if (SA.logo) $('#logoHint').textContent = 'Usando el logo guardado.';
+    if (SA.logos.custom) $('#logoHint').textContent = 'Usando el logo que subiste.';
     renderThumb(sample); select(sample);
   };
   SA.photos.refresh = () => { lastFit = ''; schedulePreview(); };

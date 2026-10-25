@@ -1,7 +1,7 @@
 [package]
 name = "editor-saucedo"
-version = "0.2.0"
-description = "Editor de fotos y video para Saucedo Video y Fotografía"
+version = "0.3.0"
+description = "Editor de fotos y video para Eduardo Saucedo · Video & Fotografía"
 edition = "2021"
 
 [lib]

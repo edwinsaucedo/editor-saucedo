@@ -10,13 +10,13 @@
 <div class="app">
   <header class="top">
     <div class="brand">
-      <span class="script">Saucedo</span>
-      <span class="kicker">Video y Fotografía · Editor</span>
+      <img class="brand-logo light" src="brand/logo-negro.png" alt="Eduardo Saucedo · Video &amp; Fotografía">
+      <img class="brand-logo dark" src="brand/logo-blanco.png" alt="">
+      <span class="kicker">Editor</span>
     </div>
     <nav class="tabs" role="tablist" aria-label="Qué vas a hacer">
       <button class="tab" type="button" role="tab" data-tab="fotos" aria-selected="true">Fotos</button>
-      <button class="tab" type="button" role="tab" data-tab="std" aria-selected="false">Save the Date</button>
-      <button class="tab" type="button" role="tab" data-tab="xv" aria-selected="false">Videoclip XV</button>
+      <button class="tab" type="button" role="tab" data-tab="plantillas" aria-selected="false">Plantillas de video</button>
       <button class="tab" type="button" role="tab" data-tab="pelicula" aria-selected="false">Película del evento</button>
     </nav>
   </header>
@@ -48,13 +48,20 @@
           <div class="sw-row"><button class="switch" type="button" role="switch" id="wmSwitch" aria-checked="true" aria-labelledby="wmState"></button><span class="sw-state" id="wmState">Encendida</span></div>
           <fieldset id="wmFields">
             <div class="logo">
-              <div class="logo-prev" id="logoPrev"><span class="txt">Saucedo</span></div>
+              <div class="logo-prev" id="logoPrev"></div>
               <div class="logo-actions">
-                <button class="btn" type="button" id="btnLogo">Subir logo (PNG)</button>
-                <button class="link" type="button" id="btnLogoOff" hidden>Usar el nombre en letra</button>
+                <button class="btn" type="button" id="btnLogo">Usar otro logo</button>
+                <button class="link" type="button" id="btnLogoOff" hidden>Volver al logo oficial</button>
               </div>
             </div>
-            <p class="hint" id="logoHint">Mientras no subas el logo, se pone el nombre en letra.</p>
+            <p class="hint" id="logoHint">Logo oficial de Eduardo Saucedo · Video &amp; Fotografía.</p>
+            <div class="field">
+              <span class="lbl" id="lblWmColor">Color del logo</span>
+              <div class="seg" id="wmColor" role="radiogroup" aria-labelledby="lblWmColor">
+                <button type="button" data-v="auto">Automático</button><button type="button" data-v="blanco">Blanco</button><button type="button" data-v="negro">Negro</button><button type="button" data-v="original" hidden>Original</button>
+              </div>
+              <p class="hint">Automático: negro sobre fondos claros y blanco sobre fondos oscuros, foto por foto.</p>
+            </div>
             <div class="wm-grid">
               <div class="field">
                 <span class="lbl" id="lblPos">Lugar</span>
@@ -119,8 +126,7 @@
     </section>
 
     <!-- ================= VIDEOS (se arman en video.js) ================= -->
-    <section class="view work" id="view-std" role="tabpanel" hidden></section>
-    <section class="view work" id="view-xv" role="tabpanel" hidden></section>
+    <section class="view tplview" id="view-plantillas" role="tabpanel" hidden></section>
     <section class="view work" id="view-pelicula" role="tabpanel" hidden></section>
   </main>
 </div>
@@ -141,8 +147,10 @@
 <script src="js/color.js"></script>
 <script src="js/brand.js"></script>
 <script src="js/cards.js"></script>
+<script src="js/anim.js"></script>
+<script src="js/templates.js"></script>
 <script src="js/photos.js"></script>
-<script src="js/video.js"></script>
+<script src="js/plantillas.js"></script>
 <script src="js/pelicula.js"></script>
 <script src="js/app.js"></script>
 </body>

@@ -162,6 +162,10 @@
   E.joinFilter = (lens, T, transitions) => {
     const parts = lens.map((_, i) => `[${i}:v]settb=AVTB,fps=${FPS},format=yuv420p,setsar=1[s${i}]`);
     if (lens.length === 1) return { fc: parts[0].replace('[s0]', '[j]'), len: lens[0] };
+    if (!T) {   // cortes directos (por ejemplo, al ritmo de la canción)
+      parts.push(lens.map((_, i) => `[s${i}]`).join('') + `concat=n=${lens.length}:v=1:a=0[j]`);
+      return { fc: parts.join(';'), len: q(lens.reduce((a, b) => a + b, 0)) };
+    }
     let acc = lens[0], prev = 's0';
     for (let k = 1; k < lens.length; k++) {
       const out = k === lens.length - 1 ? 'j' : `x${k}`;
@@ -314,13 +318,19 @@
         v = `[0:v]scale=${W}:${H},format=yuv420p,setsar=1,trim=duration=${r3(L)},setpts=PTS-STARTPTS[v]`;
       }
     }
-    let a;
+    let a, next = 1;
     const vol = Math.max(0, Math.min(2, s.vol == null ? 1 : s.vol));
     if (s.kind === 'video' && s.hasAudio && vol > 0.001) {
       a = `[0:a]${AFMT},volume=${r3(vol)}${o.denoise ? ',afftdn=nf=-28' : ''},apad,atrim=duration=${r3(L)},asetpts=PTS-STARTPTS[a]`;
     } else {
       args.push('-f', 'lavfi', '-t', r3(L), '-i', 'anullsrc=r=48000:cl=stereo');
       a = `[1:a]${AFMT},atrim=duration=${r3(L)},asetpts=PTS-STARTPTS[a]`;
+      next = 2;
+    }
+    // Marca de agua de esta toma (negra o blanca según su fondo)
+    if (s.wm) {
+      args.push('-loop', '1', '-framerate', String(FPS), '-t', r3(L + 0.2), '-i', s.wm);
+      v = v.replace(/\[v\]$/, '[pv]') + `;[${next}:v]format=rgba[wm];[pv][wm]overlay=0:0:shortest=1,format=yuv420p[v]`;
     }
     args.push('-filter_complex', `${v};${a}`, '-map', '[v]', '-map', '[a]', '-r', String(FPS), ...(o.interArgs || E.FILM_INTER), ...PCM, '-t', r3(L), out);
     return args;
@@ -392,7 +402,7 @@
       const segFiles = [], lens = [];
       segs.forEach((s, si) => {
         const L = q(s.len);
-        const key = E.hash(JSON.stringify([s.kind, s.path || s.still, s.in || 0, L, s.w, s.h, s.hasAudio, s.vol, s.zoomIn, o.W, o.H, o.enhance, o.style, o.denoise, !!o.hwaccel, interKey]));
+        const key = E.hash(JSON.stringify([s.kind, s.path || s.still, s.in || 0, L, s.w, s.h, s.hasAudio, s.vol, s.zoomIn, s.wm || '', o.W, o.H, o.enhance, o.style, o.denoise, !!o.hwaccel, interKey]));
         const out = J(`toma_${key}.mkv`);
         steps.push({ stage: 'toma', unit: ui, unitName: u.name, n: si + 1, of: segs.length, seconds: L, weight: L, out, seg: s,
           args: E.filmSegmentArgs(Object.assign({}, s, { len: L }), o, out) });
@@ -474,6 +484,362 @@
     if (!info.hasAudio || (mv && +mv[1] < -50)) flags.push('sinsonido');
     if (info.height > info.width) flags.push('vertical');
     return { flags, brightness: med, meanVolume: mv ? +mv[1] : null };
+  };
+
+  /* =====================================================================
+   * PLANTILLAS (estilo CapCut)
+   * Igual que el motor de arriba, pero cada toma lleva su propia marca de agua
+   * (negra o blanca según el fondo), las capas de texto pueden ser animadas
+   * (secuencias PNG dibujadas en el programa), hay efectos finales (grano, VHS,
+   * viñeta) y los cortes pueden caer en el ritmo de la canción.
+   * ===================================================================== */
+  E.FORMATS = {
+    v: { W: 1080, H: 1920, name: 'vertical', label: 'Vertical 9:16' },
+    h: { W: 1920, H: 1080, name: 'horizontal', label: 'Horizontal 16:9' },
+    sq: { W: 1080, H: 1080, name: 'cuadrado', label: 'Cuadrado 1:1' }
+  };
+
+  // Largo de cada toma ajustado al ritmo: tantos tiempos de la canción como pida la plantilla.
+  E.beatUnit = (period, beats, lo, hi) => {
+    let u = period * (beats || 4);
+    lo = lo || 1.4; hi = hi || 4.8;
+    while (u < lo) u *= 2;
+    while (u > hi) u /= 2;
+    return u;
+  };
+
+  /* opt: { media:[{kind,duration}], mode:'shots'|'song', intro, outro, shot, T, target, trans:[...],
+   *        beat:{period, offset} | null, beats, maxShots } */
+  E.tplPlan = opt => {
+    const T = q(opt.T || 0), n = opt.media.length;
+    if (!n) throw new Error('Agrega al menos una foto o un video.');
+    const beat = opt.beat && opt.beat.period > 0.25 ? opt.beat : null;
+    const shot = beat ? E.beatUnit(beat.period, opt.beats, opt.shotMin, opt.shotMax) : (opt.shot || 3);
+    // Si hay ritmo, el primer corte cae en un tiempo fuerte después del inicio de la canción.
+    const snap = (len, minLen) => {
+      if (!beat) return len;
+      const off = beat.offset || 0;
+      const k = Math.max(1, Math.round((len - off) / shot));
+      return Math.max(minLen || shot, off + k * shot);
+    };
+    let lens = [], use = [];
+    if (opt.mode === 'song') {
+      const target = Math.max(15, opt.target || 60);
+      const intro = snap(opt.intro || 4), outro = opt.outro || 5;
+      const mid = Math.max(shot, target - T - intro - outro);
+      const k = Math.max(1, Math.round(mid / shot));
+      lens.push(intro); use.push(0);
+      for (let j = 0; j < k; j++) { lens.push(beat ? shot : mid / k); use.push(n > 1 ? (1 + j) % n : 0); }
+      lens.push(Math.max(2, target - T - intro - (beat ? shot * k : mid))); use.push(n > 1 ? n - 1 : 0);
+      lens = lens.map(q);
+      const diff = Math.round((target - T) * FPS) - lens.reduce((s, l) => s + Math.round(l * FPS), 0);
+      lens[lens.length - 1] = q(lens[lens.length - 1] + diff / FPS);
+    } else {
+      const count = Math.min(n, opt.maxShots || 15);
+      for (let i = 0; i < count; i++) {
+        let len = count === 1 ? Math.max(6, opt.intro || 4) : i === 0 ? snap(opt.intro || 4) : i === count - 1 ? (opt.outro || 5) : shot;
+        lens.push(len); use.push(i);
+      }
+      lens = lens.map(q);
+    }
+    const uses = {}, seen = {};
+    use.forEach(m => { uses[m] = (uses[m] || 0) + 1; });
+    let zoom = 0;
+    const segments = lens.map((len, i) => {
+      const m = use[i], md = opt.media[m], k = seen[m] = (seen[m] || 0) + 1, need = len + T;
+      let start = md.start || 0;
+      const avail = (md.end || md.duration || 0) - start;
+      if (md.kind === 'video' && avail > need) start += Math.min(Math.max(0, avail * (k - .5) / uses[m] - need / 2), avail - need);
+      return { m, len, start: Math.round(start * 1000) / 1000, zoomIn: md.kind === 'image' ? (zoom++ % 2 === 0) : false };
+    });
+    const total = q(lens.reduce((s, l) => s + l, 0) + T);
+    const list = opt.trans && opt.trans.length ? opt.trans : ['fade'];
+    const transitions = segments.slice(1).map((_, i) => list[i % list.length]);
+    const cuts = []; let acc = 0;
+    lens.slice(0, -1).forEach(l => { acc += l; cuts.push(q(acc)); });
+    const lastStart = cuts.length ? cuts[cuts.length - 1] : 0;
+    return {
+      T, total, segments, transitions, cuts, shot,
+      intro: { a: 0, b: q(Math.min(total, lens[0] + T * 0.5)) },
+      outro: segments.length > 1 ? { a: q(lastStart + T * 0.6), b: total } : null
+    };
+  };
+
+  // Una toma de plantilla: encuadre, color del estilo, acercamiento en fotos y su marca de agua.
+  E.tplSegmentArgs = (seg, md, o) => {
+    const { W, H } = o, L = q(seg.len + (o.T || 0));
+    const args = [...BASE];
+    let v;
+    if (md.kind === 'image') {
+      args.push('-loop', '1', '-framerate', String(FPS), '-t', r3(L + 0.2), '-i', md.still);
+      const Z = md.zoom != null ? md.zoom : (o.zoom != null ? o.zoom : 0.08);
+      if (Z > 0) {
+        const N = Math.round(L * FPS), z = seg.zoomIn ? `1+${Z}*on/${N}` : `${1 + Z}-${Z}*on/${N}`;
+        v = `[0:v]format=yuv420p,zoompan=z='${z}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s=${W}x${H}:fps=${FPS},setsar=1,trim=duration=${r3(L)},setpts=PTS-STARTPTS`;
+      } else {
+        v = `[0:v]scale=${W}:${H},format=yuv420p,setsar=1,trim=duration=${r3(L)},setpts=PTS-STARTPTS`;
+      }
+    } else {
+      args.push(...(o.hwaccel ? ['-hwaccel', 'auto'] : []), '-ss', r3(seg.start || 0), '-t', r3(L + 0.5), '-i', md.path);
+      const pre = `scale='trunc(iw*sar/2)*2':ih,setsar=1,bwdif=mode=send_frame:parity=auto:deint=interlaced,fps=${FPS}`;
+      const tail = `,format=yuv420p${o.look || ''},tpad=stop_mode=clone:stop_duration=4,trim=duration=${r3(L)},setpts=PTS-STARTPTS`;
+      const srcAr = md.width && md.height ? md.width / md.height : W / H, outAr = W / H;
+      const differ = Math.abs(Math.log(srcAr / outAr)) > 0.35;
+      const blur = o.fit === 'blur' ? differ || srcAr !== outAr : o.fit === 'cover' ? false : differ;
+      if (!blur) {
+        v = `[0:v]${pre},scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},setsar=1${tail}`;
+      } else {
+        const w4 = Math.round(W / 8) * 2, h4 = Math.round(H / 8) * 2;
+        v = `[0:v]${pre},split=2[a0][b0];` +
+          `[a0]scale=${w4}:${h4}:force_original_aspect_ratio=increase,crop=${w4}:${h4},boxblur=8:2,scale=${W}:${H},eq=brightness=-0.07:saturation=0.9[bg];` +
+          `[b0]scale=${W}:${H}:force_original_aspect_ratio=decrease,setsar=1[fg];[bg][fg]overlay=(W-w)/2:(H-h)/2,setsar=1${tail}`;
+      }
+    }
+    if (seg.wm) {
+      args.push('-loop', '1', '-framerate', String(FPS), '-t', r3(L + 0.2), '-i', seg.wm);
+      v += `[pv];[1:v]format=rgba[wm];[pv][wm]overlay=0:0:shortest=1,format=yuv420p[v]`;
+    } else v += '[v]';
+    args.push('-filter_complex', v, '-map', '[v]', '-an', ...INTERMEDIATE, '-t', r3(L), seg.out);
+    return args;
+  };
+
+  // Video final de plantilla: unión, capas (fijas, animadas o parpadeantes), efecto final y música.
+  E.tplFinalArgs = o => {
+    const args = [...BASE];
+    o.inputs.forEach(p => args.push('-i', p));
+    let idx = o.inputs.length;
+    const total = o.total;
+    const layers = (o.layers || []).map(x => {
+      if (x.seq) args.push('-framerate', String(FPS), '-start_number', '0', '-i', x.path);
+      else args.push('-loop', '1', '-framerate', String(FPS), '-t', r3(total), '-i', x.path);
+      return Object.assign({ idx: idx++ }, x);
+    });
+    let au = -1;
+    if (o.audio) { args.push('-ss', r3(o.audio.start || 0), '-t', r3(total), '-i', o.audio.path); au = idx++; }
+    const j = E.joinFilter(o.lens, o.T, o.transitions);
+    let fc = j.fc, cur = 'j';
+    if (o.post) { fc += `;[j]${o.post}[pp]`; cur = 'pp'; }
+    layers.forEach((x, i) => {
+      let f = `[${x.idx}:v]format=rgba`;
+      if (x.seq) f += `,setpts=PTS-STARTPTS+${r3(x.a)}/TB`;
+      if (x.fin) f += `,fade=t=in:st=${r3(x.a)}:d=${r3(x.fin)}:alpha=1`;
+      if (x.fout) f += `,fade=t=out:st=${r3(Math.max(x.a, x.b - x.fout))}:d=${r3(x.fout)}:alpha=1`;
+      const en = x.blink ? `between(t,${r3(x.a)},${r3(x.b)})*lt(mod(t,1),0.55)` : `between(t,${r3(x.a)},${r3(x.b)})`;
+      fc += `;${f}[ly${i}];[${cur}][ly${i}]overlay=0:0:eof_action=pass:enable='${en}'[c${i}]`;
+      cur = `c${i}`;
+    });
+    const fadeIn = o.fadeIn == null ? 0.4 : o.fadeIn;
+    fc += `;[${cur}]${fadeIn ? `fade=t=in:st=0:d=${r3(fadeIn)},` : ''}fade=t=out:st=${r3(Math.max(0, total - 1))}:d=1,format=yuv420p[vout]`;
+    if (au >= 0) fc += `;[${au}:a]${AFMT},asetpts=PTS-STARTPTS,afade=t=in:st=0:d=0.5,afade=t=out:st=${r3(Math.max(0, total - 2.5))}:d=2.5[aout]`;
+    args.push('-filter_complex', fc, '-map', '[vout]');
+    if (au >= 0) args.push('-map', '[aout]', '-c:a', 'aac', '-b:a', '192k');
+    args.push('-t', r3(total), '-r', String(FPS), ...(o.encoderArgs || E.ENCODERS.libx264), '-movflags', '+faststart', o.out);
+    return args;
+  };
+
+  /* Trabajo completo de plantilla.
+   * o: { plan, media, tmp, sep, W, H, look, fit, zoom, hwaccel, wmFor(seg, i) -> ruta|null, layers, post, fadeIn, audio, encoderArgs, out } */
+  E.tplJob = o => {
+    const p = o.plan, T = p.T, sep = o.sep || '/';
+    const J = n => o.tmp + sep + n;
+    const steps = [];
+    const segOuts = p.segments.map((s, i) => {
+      const out = J(`toma_${String(i + 1).padStart(3, '0')}.mp4`);
+      const seg = Object.assign({}, s, { out, wm: o.wmFor ? o.wmFor(s, i) : null });
+      steps.push({ stage: 'toma', n: i + 1, of: p.segments.length, seconds: s.len + T, weight: s.len + T, media: s.m,
+        args: E.tplSegmentArgs(seg, o.media[s.m], Object.assign({}, o, { T })) });
+      return out;
+    });
+    let inputs = segOuts, lens = p.segments.map(s => q(s.len + T)), transitions = p.transitions;
+    if (segOuts.length > 12) {
+      const bIn = [], bLens = [], bTr = [], groups = Math.ceil(segOuts.length / E.BATCH);
+      for (let g = 0; g < groups; g++) {
+        const a = g * E.BATCH, b = Math.min(segOuts.length, a + E.BATCH);
+        const out = J(`grupo_${String(g + 1).padStart(2, '0')}.mp4`);
+        const r = E.batchArgs(segOuts.slice(a, b), lens.slice(a, b), T, transitions.slice(a, b - 1), out);
+        steps.push({ stage: 'grupo', n: g + 1, of: groups, seconds: r.len, weight: r.len * .5, args: r.args });
+        bIn.push(out); bLens.push(r.len);
+        if (b < segOuts.length) bTr.push(transitions[b - 1]);
+      }
+      inputs = bIn; lens = bLens; transitions = bTr;
+    }
+    const total = E.joinFilter(lens, T, transitions).len;
+    const finalOpts = { inputs, lens, T, transitions, total, layers: o.layers, post: o.post, fadeIn: o.fadeIn, audio: o.audio, encoderArgs: o.encoderArgs, out: o.out };
+    steps.push({ stage: 'final', n: 1, of: 1, seconds: total, weight: total * 1.2, final: true, finalOpts, args: E.tplFinalArgs(finalOpts) });
+    return { steps, total };
+  };
+
+  /* ---------- Ritmo de la canción ----------
+   * samples: Float32Array mono; sr: muestras por segundo. Devuelve tiempos de los golpes. */
+  E.songDecodeArgs = (path, start, dur, out) => ['-y', '-hide_banner', '-v', 'error', '-ss', r3(start || 0), '-t', r3(dur), '-i', path,
+    '-vn', '-ac', '1', '-ar', '11025', '-f', 'f32le', out];
+  E.detectBeats = (x, sr) => {
+    const hop = Math.max(32, Math.round(sr * 0.0116)), win = hop * 2;
+    const n = Math.floor((x.length - win) / hop);
+    if (n < 200) return null;
+    const env = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      let s = 0; const o0 = i * hop;
+      for (let k = 0; k < win; k++) { const v = x[o0 + k]; s += v * v; }
+      env[i] = Math.log(1e-9 + s / win);
+    }
+    const fps = sr / hop, on = new Float32Array(n), w = Math.round(fps * 0.4);
+    for (let i = 1; i < n; i++) on[i] = Math.max(0, env[i] - env[i - 1]);
+    // Quita el promedio local para quedarnos con los golpes
+    const sm = new Float32Array(n); let acc = 0;
+    for (let i = 0; i < n; i++) { acc += on[i]; if (i > w) acc -= on[i - w - 1]; sm[i] = acc / Math.min(i + 1, w + 1); }
+    for (let i = 0; i < n; i++) on[i] = Math.max(0, on[i] - sm[i]);
+    const minLag = Math.round(fps * 60 / 190), maxLag = Math.round(fps * 60 / 65);
+    let best = -1, bestLag = 0;
+    const ac = new Float32Array(maxLag + 2);
+    for (let lag = minLag; lag <= maxLag + 1; lag++) {
+      let s = 0;
+      for (let i = 0; i + lag < n; i++) s += on[i] * on[i + lag];
+      ac[lag] = s / (n - lag);
+    }
+    for (let lag = minLag; lag <= maxLag; lag++) {
+      const bpm = 60 * fps / lag, wgt = Math.exp(-0.5 * Math.pow(Math.log2(bpm / 115) / 0.9, 2));
+      const v = ac[lag] * wgt;
+      if (v > best) { best = v; bestLag = lag; }
+    }
+    if (!bestLag) return null;
+    const a = ac[bestLag - 1] || 0, b = ac[bestLag], c = ac[bestLag + 1] || 0;
+    const den = a - 2 * b + c, frac = den ? 0.5 * (a - c) / den : 0;
+    const lagF = bestLag + Math.max(-0.5, Math.min(0.5, frac));
+    // Fase: dónde caen los golpes
+    let bestP = 0, bestS = -1;
+    for (let p = 0; p < bestLag; p++) {
+      let s = 0;
+      for (let t = p; t < n; t += lagF) { const i = Math.round(t); s += Math.max(on[i] || 0, on[i - 1] || 0, on[i + 1] || 0); }
+      if (s > bestS) { bestS = s; bestP = p; }
+    }
+    // Afinar: busca el golpe real cerca de cada tiempo previsto y ajusta una recta (evita que se vaya desfasando).
+    let per = lagF, ph = bestP;
+    for (let it = 0; it < 3; it++) {
+      let sx = 0, sy = 0, sxx = 0, sxy = 0, cnt = 0;
+      for (let k = 0, t = ph; t < n; k++, t = ph + k * per) {
+        const c = Math.round(t), r = Math.max(2, Math.round(per * 0.12));
+        let bi = -1, bv = 0;
+        for (let i = Math.max(0, c - r); i <= Math.min(n - 1, c + r); i++) if (on[i] > bv) { bv = on[i]; bi = i; }
+        if (bi < 0 || bv <= 0) continue;
+        sx += k; sy += bi; sxx += k * k; sxy += k * bi; cnt++;
+      }
+      if (cnt < 8) break;
+      const d = cnt * sxx - sx * sx; if (!d) break;
+      per = (cnt * sxy - sx * sy) / d; ph = (sy - per * sx) / cnt;
+      while (ph < 0) ph += per;
+    }
+    let zero = 0; for (let i = 0; i < n; i++) zero += on[i] * on[i];
+    const lead = hop / sr;   // la ventana de energía detecta el golpe un poco antes
+    const beats = [];
+    for (let t = ph; t < n; t += per) beats.push(Math.round((t / fps + lead) * 1000) / 1000);
+    return { bpm: Math.round(60 * fps / per * 10) / 10, period: per / fps, offset: ph / fps + lead, beats, confidence: zero ? ac[bestLag] / (zero / n) : 0 };
+  };
+
+  /* ---------- Mejores momentos (resumen y reel) ----------
+   * Revisión por segundo: brillo, cambio entre cuadros clave (movimiento), nitidez y volumen. */
+  E.hlArgs = (path, hasAudio) => {
+    const a = ['-hide_banner', '-nostats', '-v', 'info', '-skip_frame', 'nokey', '-i', path, '-map', '0:v:0',
+      '-vf', 'scale=160:-2,signalstats,blurdetect,metadata=print:key=lavfi.signalstats.YAVG,metadata=print:key=lavfi.signalstats.YDIF,metadata=print:key=lavfi.blur',
+      '-f', 'null', '-'];
+    if (hasAudio) a.push('-map', '0:a:0', '-af', 'aresample=8000,asetnsamples=n=8000:p=0,astats=metadata=1:reset=1,ametadata=print:key=lavfi.astats.Overall.RMS_level', '-f', 'null', '-');
+    return a;
+  };
+  E.hlParse = text => {
+    const cur = {}, v = {}, a = [];
+    String(text).split('\n').forEach(line => {
+      const m = /\[(Parsed_a?metadata_\d+) @ [^\]]+\]\s*(.*)$/.exec(line);
+      if (!m) return;
+      const tag = m[1], body = m[2];
+      const pt = /pts_time:([\d.]+)/.exec(body);
+      if (pt) { cur[tag] = +pt[1]; return; }
+      const kv = /^lavfi\.([\w.]+)=(-?[\d.]+|-?inf)/.exec(body);
+      if (!kv || cur[tag] == null) return;
+      const t = cur[tag], val = kv[2].includes('inf') ? -90 : +kv[2];
+      if (kv[1] === 'astats.Overall.RMS_level') a.push([t, val]);
+      else {
+        const k = Math.round(t * 10) / 10, rec = v[k] = v[k] || { t: k };
+        if (kv[1] === 'signalstats.YAVG') rec.y = val;
+        else if (kv[1] === 'signalstats.YDIF') rec.d = val;
+        else if (kv[1] === 'blur') rec.b = val;
+      }
+    });
+    return { v: Object.values(v).sort((x, y) => x.t - y.t).map(r => [r.t, r.y ?? 0, r.d ?? 0, r.b ?? 0]), a };
+  };
+  // Puntaje por medio segundo dentro de [ini, fin]: bien iluminado, nítido, con movimiento y con sonido (aplausos, gritos, risas).
+  E.hlScores = (hl, ini, fin) => {
+    const step = 0.5, out = [];
+    if (!hl || !hl.v || !hl.v.length) { for (let t = ini; t < fin; t += step) out.push(0.5); return { step, ini, s: out }; }
+    const near = (arr, t) => { let b = arr[0]; for (const r of arr) { if (Math.abs(r[0] - t) < Math.abs(b[0] - t)) b = r; if (r[0] > t + 2) break; } return b; };
+    const ds = hl.v.map(r => r[2]).sort((a, b) => a - b), bs = hl.v.map(r => r[3]).sort((a, b) => a - b);
+    const pct = (arr, q2) => arr[Math.min(arr.length - 1, Math.floor(q2 * arr.length))] || 0;
+    const d50 = pct(ds, .5), d95 = pct(ds, .95) || 1, b20 = pct(bs, .2), b80 = pct(bs, .8) || 1;
+    const as = hl.a.map(r => r[1]).sort((a, b) => a - b), a50 = pct(as, .5), a90 = pct(as, .9);
+    for (let t = ini; t < fin; t += step) {
+      const r = near(hl.v, t), y = r[1], d = r[2], b = r[3];
+      const expo = y < 30 ? 0 : 1 - Math.min(1, Math.abs(y - 120) / 110);
+      const sharp = b80 > b20 ? 1 - Math.min(1, Math.max(0, (b - b20) / (b80 - b20))) : 0.6;
+      const motion = d > d95 * 1.2 ? 0.2 : Math.min(1, d / Math.max(1, d50 * 2));
+      let aud = 0.4;
+      if (hl.a.length) { const ar = near(hl.a, t); aud = a90 > a50 ? Math.min(1, Math.max(0, (ar[1] - a50) / (a90 - a50))) : 0.4; }
+      let sc = .35 * expo + .25 * sharp + .2 * motion + .2 * aud;
+      if (t - ini < 1 || fin - t < 1) sc -= 0.3;   // el arranque y el final de una toma suelen moverse
+      out.push(sc);
+    }
+    return { step, ini, s: out };
+  };
+  /* moments: [{ id, clips:[{ id, kind, duration, in, out, hl }] }] → elige tomas de largo `shot`
+   * repartiendo `target` segundos entre momentos, en orden cronológico. */
+  E.pickHighlights = (moments, target, shot) => {
+    const live = moments.filter(m => m.clips.length);
+    if (!live.length) return [];
+    const weight = live.map(m => Math.sqrt(m.clips.reduce((s, c) => s + (c.kind === 'image' ? 4 : (c.out - c.in)), 0) + 1));
+    const W = weight.reduce((a, b) => a + b, 0);
+    const slots = Math.max(live.length, Math.round(target / shot));
+    const alloc = weight.map(w => Math.max(1, Math.round(slots * w / W)));
+    const st = live.map(m => {
+      const cands = [];
+      m.clips.forEach((c, ci) => {
+        if (c.kind === 'image') { cands.push({ ci, start: 0, sc: 0.55, img: true }); return; }
+        const len = c.out - c.in;
+        if (len < shot * 0.8) return;
+        const S = E.hlScores(c.hl, c.in, c.out), k = Math.max(1, Math.round(shot / S.step));
+        for (let i = 0; i + k <= S.s.length; i++) {
+          let s = 0; for (let j = i; j < i + k; j++) s += S.s[j];
+          cands.push({ ci, start: c.in + i * S.step, sc: s / k });
+        }
+      });
+      cands.sort((a, b) => b.sc - a.sc);
+      return { m, cands, picks: [], per: {} };
+    });
+    // Estricto: pocas tomas por archivo y separadas (variedad). Relajado: cuando hay poco material,
+    // se toman más pedazos del mismo archivo, sin que se encimen.
+    const take = (s, strict) => {
+      for (const cd of s.cands) {
+        const c = s.m.clips[cd.ci], len = c.out - c.in;
+        const maxPer = cd.img ? 1 : strict ? Math.max(1, Math.ceil(len / 18)) : Math.max(1, Math.floor(len / shot));
+        if ((s.per[cd.ci] || 0) >= maxPer) continue;
+        const gap = strict ? shot + 2 : shot;
+        if (s.picks.some(p => p.ci === cd.ci && Math.abs(p.start - cd.start) < gap)) continue;
+        s.picks.push(cd); s.per[cd.ci] = (s.per[cd.ci] || 0) + 1;
+        return true;
+      }
+      return false;
+    };
+    st.forEach((s, i) => { while (s.picks.length < alloc[i] && take(s, true)); });
+    st.forEach((s, i) => { while (s.picks.length < alloc[i] && take(s, false)); });
+    // Lo que un momento no alcanzó a llenar se reparte entre los que todavía tienen material.
+    let short = slots - st.reduce((a, s) => a + s.picks.length, 0);
+    const order = st.map((s, i) => i).sort((a, b) => weight[b] - weight[a]);
+    while (short > 0) {
+      let any = false;
+      for (const i of order) if (short > 0 && take(st[i], false)) { short--; any = true; }
+      if (!any) break;
+    }
+    return st.map(s => {
+      s.picks.sort((a, b) => a.ci - b.ci || a.start - b.start);
+      return { id: s.m.id, picks: s.picks.map(p => ({ clip: s.m.clips[p.ci].id, start: Math.round(p.start * 10) / 10, score: p.sc })) };
+    });
   };
 
   // Hora de grabación desde los datos del archivo (los iPhone guardan la hora local con su zona).

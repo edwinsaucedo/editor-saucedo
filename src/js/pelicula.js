@@ -77,7 +77,22 @@
               <div class="song-mini"><span data-el="pSong">Sin canción</span><button class="btn" type="button" data-act="pSong">Elegir</button><button class="link" type="button" data-act="pSongOff" data-el="pSongOff" hidden>Quitar</button></div></div>
           </section>
           <section class="step">
-            <h2><span class="num">4</span>Crear película</h2>
+            <h2><span class="num">4</span>Crear</h2>
+            <div class="field"><span class="lbl">Qué crear</span>
+              <div class="chips" data-el="outputs" role="group" aria-label="Qué crear">
+                <button type="button" class="chip fmt" data-v="pelicula">Película completa</button>
+                <button type="button" class="chip fmt" data-v="resumen">Resumen</button>
+                <button type="button" class="chip fmt" data-v="reel">Reel vertical</button>
+              </div></div>
+            <div class="hl-opts" data-el="hlOpts" hidden>
+              <div class="field" data-el="resOpt"><span class="lbl">Duración del resumen</span><div class="seg" data-el="resDur"><button type="button" data-v="180">3 min</button><button type="button" data-v="240">4 min</button><button type="button" data-v="300">5 min</button></div></div>
+              <div class="field" data-el="reelOpt"><span class="lbl">Duración del reel</span><div class="seg" data-el="reelDur"><button type="button" data-v="30">30 s</button><button type="button" data-v="45">45 s</button><button type="button" data-v="60">60 s</button></div>
+                <span class="lbl">Tomas horizontales en el reel</span><div class="seg" data-el="reelFit"><button type="button" data-v="blur">Completas con fondo</button><button type="button" data-v="cover">Llenar la pantalla</button></div></div>
+              <div class="field"><span class="lbl">Canción del resumen y del reel</span>
+                <div class="song-mini"><span data-el="hlSong">Sin canción</span><button class="btn" type="button" data-act="hlSong">Elegir</button></div>
+                <div class="stepper" data-el="hlStartRow" hidden><span class="lbl">Empieza en</span><button type="button" data-act="hlStart" data-v="-5">−5 s</button><output data-el="hlStart">0:00</output><button type="button" data-act="hlStart" data-v="5">+5 s</button></div>
+                <p class="hint">Se eligen solas las mejores partes de cada momento (bien iluminadas, nítidas, con movimiento y aplausos) y se corta al ritmo de esta canción.</p></div>
+            </div>
             <p class="summary" data-el="summary"></p>
             <button class="primary" type="button" data-act="create" data-el="create">Crear película</button>
             <div class="progress" data-el="progress" hidden>
@@ -153,6 +168,13 @@
       }));
       const seg = (name, key) => SA.ui.seg(this.q(name), '', v => { this.p[key] = v; this.dirty(); this.syncStyle(); this.summary(); });
       seg('mood', 'mood'); seg('style', 'style'); seg('theme', 'theme');
+      $$('[data-el="outputs"] .chip', R).forEach(b => b.addEventListener('click', () => {
+        const set = new Set(this.p.outputs || ['pelicula']); set.has(b.dataset.v) ? set.delete(b.dataset.v) : set.add(b.dataset.v);
+        if (!set.size) { toast('Elige por lo menos una cosa para crear.'); return; }
+        this.p.outputs = ['pelicula', 'resumen', 'reel'].filter(x => set.has(x)); this.dirty(); this.syncOutputs(); this.summary();
+      }));
+      const hseg = (name, key, num) => SA.ui.seg(this.q(name), '', v => { this.hl()[key] = num ? +v : v; this.dirty(); this.syncOutputs(); this.summary(); });
+      hseg('resDur', 'res', true); hseg('reelDur', 'reel', true); hseg('reelFit', 'fit');
       this.q('sendTo').addEventListener('change', e => { const v = e.target.value; e.target.value = ''; if (v) this.sendSelected(v); });
       this.q('newName').addEventListener('keydown', e => { if (e.key === 'Enter') this.act_start(); });
       // Reproductor
@@ -222,7 +244,7 @@
       this.q('stepsOn').hidden = false; this.q('stepsOff').hidden = true;
       $$('[data-pf]', this.root).forEach(inp => { inp.value = p[inp.dataset.pf] || ''; });
       this.q('done').hidden = true;
-      this.remember(); this.syncStyle(); this.renderBoard(); this.renderSources(); this.summary(); this.showDetail();
+      this.remember(); this.syncStyle(); this.syncOutputs(); this.renderBoard(); this.renderSources(); this.summary(); this.showDetail();
       this.q('savedHint').textContent = 'Se guarda solo en ' + this.shown(p.dir);
       // Miniaturas y revisión de lo que falte (las ya hechas vienen de la carpeta de trabajo).
       Object.values(p.clips).forEach(c => this.queue.push(c.id));
@@ -676,8 +698,186 @@
     act_enhance() { this.p.enhance = !this.p.enhance; this.dirty(); this.syncStyle(); }
     act_denoise() { this.p.denoise = !this.p.denoise; this.dirty(); this.syncStyle(); }
     act_wm() { S.wm = !S.wm; SA.brandChanged(); }
-    async act_pSong() { const p = await B.pick('audio', false); if (!p.length) return; const s = await this.readSong(p[0]); if (s) { this.p.music = Object.assign(s, { vol: .7 }); this.dirty(); this.syncStyle(); } }
-    act_pSongOff() { this.p.music = null; this.dirty(); this.syncStyle(); }
+    async act_pSong() { const p = await B.pick('audio', false); if (!p.length) return; const s = await this.readSong(p[0]); if (s) { this.p.music = Object.assign(s, { vol: .7 }); this.dirty(); this.syncStyle(); this.summary(); } }
+    act_pSongOff() { this.p.music = null; this.dirty(); this.syncStyle(); this.summary(); }
+
+    /* ================= Resumen y reel ================= */
+    hl() { return this.p.hl || (this.p.hl = { res: 240, reel: 60, fit: 'blur', music: null }); }
+    syncOutputs() {
+      if (!this.p) return;
+      const outs = this.p.outputs || ['pelicula'], h = this.hl();
+      $$('[data-el="outputs"] .chip', this.root).forEach(b => b.setAttribute('aria-pressed', String(outs.includes(b.dataset.v))));
+      const any = outs.includes('resumen') || outs.includes('reel');
+      this.q('hlOpts').hidden = !any; this.q('resOpt').hidden = !outs.includes('resumen'); this.q('reelOpt').hidden = !outs.includes('reel');
+      SA.ui.setSeg(this.q('resDur'), String(h.res)); SA.ui.setSeg(this.q('reelDur'), String(h.reel)); SA.ui.setSeg(this.q('reelFit'), h.fit);
+      const song = h.music || this.p.music;
+      this.q('hlSong').textContent = song ? `${song.name}${h.music ? '' : ' (la de la portada)'}` : 'Sin canción';
+      this.q('hlStartRow').hidden = !h.music; if (h.music) this.q('hlStart').textContent = fmt(h.music.start || 0);
+      const n = outs.length;
+      if (!this.busy) this.q('create').textContent = n === 1 ? { pelicula: 'Crear película', resumen: 'Crear resumen', reel: 'Crear reel' }[outs[0]] : `Crear ${n} videos`;
+    }
+    async act_hlSong() { const p = await B.pick('audio', false); if (!p.length) return; const s = await this.readSong(p[0]); if (s) { this.hl().music = s; this.dirty(); this.syncOutputs(); this.summary(); } }
+    act_hlStart(b) { const m = this.hl().music; if (!m) return; m.start = Math.max(0, Math.min(Math.floor(m.duration - 20), (m.start || 0) + (+b.dataset.v))); this.dirty(); this.syncOutputs(); }
+    hlMoments() {
+      return this.p.moments.map(m => ({ id: m.id, name: m.name, clips: m.clips.map(id => this.p.clips[id]).filter(c => c && c.ready && !c.excluded) })).filter(m => m.clips.length);
+    }
+    async createHighlights(kinds, chained) {
+      if (this.busy) return;
+      const p = this.p, h = this.hl(), song = h.music || p.music;
+      if (!song) { toast('Elige la canción del resumen y del reel en el paso 4.'); return; }
+      const ms = this.hlMoments();
+      if (!ms.length) { toast('Manda tomas a por lo menos un momento.'); return; }
+      this.flush();
+      this.busy = true; this.cancelled = false; if (!chained) this.t0 = performance.now();
+      const create = this.q('create'); create.disabled = true; create.textContent = 'Creando…';
+      this.q('progress').hidden = false; this.q('done').hidden = true;
+      this.q('progress').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      const outs = [];
+      try {
+        this.encoder = await B.detectEncoder();
+        // 1. Revisar cada toma segundo a segundo (una sola vez; queda guardado)
+        const vids = ms.flatMap(m => m.clips).filter(c => c.kind === 'video' && !c.hl);
+        for (let k = 0; k < vids.length; k++) {
+          if (this.cancelled) break;
+          this.setProgress(k / Math.max(1, vids.length) * .3, `Buscando los mejores momentos: toma ${k + 1} de ${vids.length}`);
+          const r = await B.run('ffmpeg', E.hlArgs(vids[k].path, vids[k].hasAudio), null, true);
+          const hl = E.hlParse(r.stderr || '');
+          vids[k].hl = { v: hl.v.map(x => [Math.round(x[0] * 10) / 10, Math.round(x[1]), Math.round(x[2] * 10) / 10, Math.round(x[3] * 100) / 100]), a: hl.a.map(x => [Math.round(x[0] * 10) / 10, Math.round(x[1] * 10) / 10]) };
+        }
+        this.dirty();
+        // 2. Ritmo de la canción
+        if (!song.beat && !this.cancelled) {
+          this.setProgress(.3, 'Escuchando el ritmo de la canción');
+          const raw = B.join(this.cache, `ritmo_${E.hash(song.path)}.raw`);
+          const r = await B.run('ffmpeg', E.songDecodeArgs(song.path, 0, Math.min(song.duration, 600), raw));
+          if (r.code === 0) {
+            const info = E.detectBeats(new Float32Array(await (await B.readBlob(raw)).arrayBuffer()), 11025);
+            if (info) song.beat = { bpm: info.bpm, period: info.period, beats: info.beats.map(b => Math.round(b * 1000) / 1000) };
+          }
+          this.dirty();
+        }
+        for (let i = 0; i < kinds.length && !this.cancelled; i++) {
+          const out = await this.renderHighlight(kinds[i], song, `${kinds[i] === 'reel' ? 'Reel' : 'Resumen'} · `, i, kinds.length);
+          if (out) outs.push(out);
+        }
+        if (this.cancelled) toast('Se canceló.');
+        else if (outs.length) {
+          this.lastOut = outs[outs.length - 1]; this.q('done').hidden = false;
+          this.q('done').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+          toast(`Listo: ${outs.map(o => B.baseName(o)).join(' y ')} en la carpeta de la película.`, 8000);
+        }
+      } catch (e) {
+        if (!this.cancelled) SA.showError(e.message || 'No se pudo crear el resumen.', e.detail || String(e && e.stack || e));
+      } finally {
+        this.busy = false; create.disabled = false; this.q('progress').hidden = true; this.syncOutputs(); this.dirty();
+      }
+    }
+    async renderHighlight(kind, song, prefix, idx, of) {
+      const p = this.p, h = this.hl(), fk = kind === 'reel' ? 'v' : 'h', { W, H } = E.FORMATS[fk], sep = B.paths.sep;
+      const start = song.start || 0, avail = Math.max(15, song.duration - start);
+      const target = Math.min(kind === 'reel' ? h.reel : h.res, avail);
+      const nb = song.beat && song.beat.beats.find(b => b >= start - .02);
+      const beat = nb != null ? { period: song.beat.period, offset: nb - start } : null;
+      const unit = beat ? E.beatUnit(beat.period, kind === 'reel' ? 2 : 4, kind === 'reel' ? .9 : 1.8, kind === 'reel' ? 2.2 : 3.6) : (kind === 'reel' ? 1.6 : 2.8);
+      const intro = beat ? beat.offset + Math.max(1, Math.round((3.6 - beat.offset) / unit)) * unit : 3.6;
+      const outro = 5;
+      const ms = this.hlMoments();
+      const picked = E.pickHighlights(ms.map(m => ({ id: m.id, clips: m.clips.map(c => ({ id: c.id, kind: c.kind, duration: c.duration, in: c.in || 0, out: c.out || c.duration, hl: c.hl })) })), Math.max(unit * 2, target - intro - outro), unit);
+      const flat = [];
+      picked.forEach((pm, mi) => pm.picks.forEach((pk, j) => flat.push(Object.assign({ moment: ms.find(m => m.id === pm.id), first: j === 0 }, pk))));
+      if (!flat.length) throw new Error('No encontré tomas que se puedan usar. Revisa que los momentos tengan tomas de por lo menos 2 segundos.');
+      // Línea de tiempo: inicio con título, tomas al ritmo y final con el logo
+      const media = [], segments = [], momentAt = [];
+      let t = 0;
+      const push = (pk, len) => {
+        const c = p.clips[pk.clip], out = (c.out || c.duration);
+        const st = c.kind === 'video' ? Math.max(c.in || 0, Math.min(pk.start, out - len)) : 0;
+        media.push({ kind: c.kind, path: c.path, width: c.w, height: c.h, duration: c.duration, name: c.name, clip: c });
+        segments.push({ m: media.length - 1, len: Math.round(len * 30) / 30, start: Math.round(st * 1000) / 1000, zoomIn: segments.length % 2 === 0 });
+        if (pk.first && kind === 'resumen') momentAt.push({ t, name: pk.moment.name });
+        t += Math.round(len * 30) / 30;
+      };
+      // Si hay poco material el video sale más corto (nunca se estira el final para llenar la canción).
+      const room = Math.max(0, Math.floor((target - intro - outro) / unit));
+      const mids = flat.slice(1, 1 + room);
+      let last;
+      if (flat.length > 1 + mids.length) last = flat[1 + mids.length];
+      else if (mids.length) last = mids.pop();
+      else last = flat[0];
+      push(flat[0], intro);
+      mids.forEach(pk => push(pk, unit));
+      push(last, Math.max(outro, Math.min(target - t, outro + unit)));
+      const total = t, lastStart = total - segments[segments.length - 1].len;
+      const plan = { T: 0, total, segments, transitions: [], cuts: [], intro: { a: 0, b: intro }, outro: { a: lastStart, b: total } };
+      const tmp = await B.newJobDir();
+      try {
+        // Fotos y logo
+        for (const m of media) if (m.kind === 'image' && !m.still) {
+          const key = E.hash(JSON.stringify([m.path, m.clip.mtime, W, H, p.enhance, p.style]));
+          m.still = B.join(this.cache, `foto_${key}.jpg`);
+          if (!(await B.exists(m.still))) await this.makeStill(m.clip, W, H, m.still);
+        }
+        const logoKey = SA.logo ? E.hash(SA.logo.src || 'logo') : 'texto';
+        const wmPaths = await this.wmFiles(W, H, logoKey);
+        segments.forEach(sg => { sg.wm = this.wmFor(media[sg.m].clip, W, H, wmPaths); });
+        // Capas: título, nombres de los momentos y créditos
+        const th = Object.assign({ key: p.theme || 'dorado' }, SA.cards.THEMES[p.theme || 'dorado']);
+        const data = { title: p.name, subtitle: kind === 'reel' ? '' : 'Lo mejor de la fiesta', date: SA.ui.parseDate(p.date), place: p.place };
+        const layers = [];
+        const design = kind === 'reel' ? SA.TPL_DESIGNS.impactoIn : SA.TPL_DESIGNS.cineIn;
+        const c = document.createElement('canvas'); c.width = W; c.height = H; const cx = c.getContext('2d');
+        const N = Math.ceil((intro + .3) * E.FPS) + 2;
+        for (let f = 0; f < N; f++) {
+          if (this.cancelled) return null;
+          cx.clearRect(0, 0, W, H); cx.save(); design.draw(cx, W, H, f / E.FPS, intro, data, th); cx.restore();
+          await this.writeCanvas(c, B.join(tmp, `titulo_${String(f).padStart(4, '0')}.png`));
+          if (f % 10 === 0) this.setProgress(.32, `${prefix}Preparando el título`);
+        }
+        layers.push({ path: B.join(tmp, 'titulo_%04d.png'), seq: true, a: 0, b: intro + .3, fout: .5 });
+        for (let i = 0; i < momentAt.length; i++) {
+          const ma = momentAt[i]; if (ma.t < intro - .1 || Math.min(total - outro, ma.t + 3) - (ma.t + .2) < 1.2) continue;
+          cx.clearRect(0, 0, W, H); this.momentLabel(cx, W, H, ma.name, th);
+          const path = B.join(tmp, `momento_${i}.png`); await this.writeCanvas(c, path);
+          layers.push({ path, a: ma.t + .2, b: Math.min(total - outro, ma.t + 3), fin: .35, fout: .45 });
+        }
+        cx.clearRect(0, 0, W, H); cx.drawImage(SA.cards.renderFilmCard('creditos', W, H, data, p.theme || 'dorado'), 0, 0);
+        const cred = B.join(tmp, 'creditos.png'); await this.writeCanvas(c, cred);
+        layers.push({ path: cred, a: lastStart + .6, b: total, fin: 1 });
+        // FFmpeg
+        const look = (p.enhance ? ',eq=contrast=1.05:saturation=1.10' : '') + E.videoColor(false, p.style);
+        const out = await B.freeName(p.dir, `${kind === 'reel' ? 'Reel' : 'Resumen'} ${B.safeName(p.name)}`, 'mp4');
+        const job = E.tplJob({ plan, media, tmp, sep, W, H, look, fit: kind === 'reel' ? h.fit : 'auto', zoom: .06, hwaccel: true, wmFor: sg => sg.wm, layers,
+          post: kind === 'resumen' ? 'vignette=angle=PI/5' : '', audio: { path: song.path, start }, encoderArgs: E.ENCODERS[this.encoder], out });
+        const tot = job.steps.reduce((s, x) => s + x.weight, 0);
+        let done = 0;
+        const base = .34 + .66 * idx / of, span = .66 / of;
+        for (const step of job.steps) {
+          if (this.cancelled) return null;
+          const label = prefix + (step.stage === 'toma' ? `toma ${step.n} de ${step.of}` : step.stage === 'grupo' ? `uniendo parte ${step.n} de ${step.of}` : 'terminando');
+          const onT = tt => this.setProgress(base + span * (done + Math.min(1, tt / step.seconds) * step.weight) / tot, label);
+          onT(0);
+          let r = await B.run('ffmpeg', step.args, onT);
+          if (this.cancelled) return null;
+          if (r.code !== 0 && step.args.includes('-hwaccel')) r = await B.run('ffmpeg', step.args.filter((x, i, arr) => x !== '-hwaccel' && arr[i - 1] !== '-hwaccel'), onT);
+          if (r.code !== 0 && step.final && this.encoder !== 'libx264') { this.encoder = 'libx264'; r = await B.run('ffmpeg', E.tplFinalArgs(Object.assign({}, step.finalOpts, { encoderArgs: E.ENCODERS.libx264 })), onT); }
+          if (this.cancelled) return null;
+          if (r.code !== 0) {
+            const who = step.media != null ? media[step.media].name : null;
+            throw Object.assign(new Error(who ? `No se pudo usar la toma «${who}». Quítala ("No usar esta toma") y vuelve a crear.` : 'FFmpeg no pudo terminar el video. Revisa que haya espacio en el disco.'), { detail: r.stderr });
+          }
+          done += step.weight;
+        }
+        return out;
+      } finally { B.removeJobDir(tmp); }
+    }
+    // Nombre del momento abajo a la izquierda ("El vals"), como en las películas de evento.
+    momentLabel(ctx, W, H, name, th) {
+      const u = Math.min(W, H) / 1080, x = 80 * u, y = H - 110 * u, A = SA.anim;
+      const g = ctx.createLinearGradient(0, H * .6, 0, H); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,.45)');
+      ctx.fillStyle = g; ctx.fillRect(0, H * .6, W * .7, H * .4);
+      ctx.fillStyle = th.accent; ctx.fillRect(x, y - 58 * u, 70 * u, 3 * u);
+      A.text(ctx, name, x, y, { s: 76 * u, f: A.F.script, color: th.text, align: 'left', shadow: 14 * u, maxW: W * .6 });
+    }
 
     /* ================= Resumen y creación ================= */
     units(forReal) {
@@ -705,7 +905,10 @@
         total += lens.reduce((s, l) => s + l, 0) - Math.max(0, lens.length - 1) * T;
       });
       const un = this.unassigned().length;
-      el.innerHTML = moments ? `Duración: <strong>${fmt(total)}</strong> · ${moments} ${moments === 1 ? 'capítulo' : 'capítulos'} · ${clips} tomas` +
+      const outs = this.p.outputs || ['pelicula'], h = this.hl();
+      const extra = [outs.includes('resumen') && `resumen de ${fmt(h.res)}`, outs.includes('reel') && `reel de ${h.reel} s`].filter(Boolean);
+      el.innerHTML = moments ? (outs.includes('pelicula') ? `Película: <strong>${fmt(total)}</strong> · ${moments} ${moments === 1 ? 'capítulo' : 'capítulos'} · ${clips} tomas` : `${moments} ${moments === 1 ? 'momento' : 'momentos'} · ${clips} tomas`) +
+        (extra.length ? `<br>Además: ${extra.join(' y ')}${(h.music || this.p.music) ? '' : ' (<strong>falta elegir la canción</strong>)'}` : '') +
         (un ? `<br><strong>${un} tomas sin acomodar</strong> no van en la película.` : '') + `<br>Se guarda en ${esc(this.shown(this.p.dir))}`
         : 'Manda tomas a por lo menos un momento para crear la película.';
     }
@@ -738,8 +941,35 @@
       await B.writeBlob(out, blob);
     }
 
+    // Logo negro y blanco para un tamaño de video (archivos que se reusan).
+    async wmFiles(W, H, logoKey) {
+      const out = {};
+      if (!S.wm) return out;
+      for (const v of ['negro', 'blanco', 'original']) {
+        if (v === 'original' && !SA.logos.original) continue;
+        const key = E.hash(JSON.stringify([S.pos, S.size, S.alpha, logoKey, W, H, v]));
+        const path = B.join(this.cache, `marca_${v}_${key}.png`);
+        if (!(await B.exists(path))) {
+          const c = document.createElement('canvas'); c.width = W; c.height = H;
+          SA.drawWatermark(c.getContext('2d'), W, H, S, SA.VIDEO_WM_SCALE, v);
+          await this.writeCanvas(c, path);
+        }
+        out[v] = path;
+      }
+      return out;
+    }
+    wmFor(c, W, H, paths, fit) {
+      if (!S.wm || !paths.blanco) return null;
+      if (S.wmColor && S.wmColor !== 'auto') return paths[S.wmColor] || paths.blanco;
+      const rt = this.rt[c.id] || {};
+      const luma = rt.thumb ? SA.wmZoneLuma(rt.thumb, W, H, S, SA.VIDEO_WM_SCALE) : 90;
+      return paths[SA.wmVariantFor(luma)];
+    }
+
     async act_create() {
       if (this.busy || !this.p) return;
+      const outs = this.p.outputs || ['pelicula'];
+      if (!outs.includes('pelicula')) return this.createHighlights(outs);
       if (this.pumping) { toast('Espera a que termine la revisión del material.'); return; }
       const units = this.units();
       if (units.length <= 2) { toast('Manda tomas a por lo menos un momento.'); return; }
@@ -750,6 +980,7 @@
       this.q('progress').hidden = false; this.q('done').hidden = true;
       this.q('progress').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
       this.setProgress(0, 'Revisando la computadora');
+      let chain = null;
       try {
         this.encoder = await B.detectEncoder();
         let interGpu = this.encoder !== 'libx264', out = null;
@@ -766,19 +997,23 @@
           this.q('done').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
           const mins = (performance.now() - this.t0) / 60000;
           toast(`La película quedó lista en ${mins < 1 ? 'menos de un minuto' : Math.round(mins) + ' min'}.`, 8000);
+          chain = outs.filter(o => o !== 'pelicula');
         }
       } catch (e) {
         if (!this.cancelled) SA.showError(e.message || 'No se pudo crear la película.', e.detail || String(e && e.stack || e));
       } finally {
-        this.busy = false; create.disabled = false; create.textContent = 'Crear película'; this.q('progress').hidden = true;
+        this.busy = false; create.disabled = false; this.q('progress').hidden = true; this.syncOutputs();
       }
+      if (chain && chain.length && !this.cancelled) await this.createHighlights(chain, true);
     }
 
     async render(units, interGpu) {
       const W = 1920, H = 1080, cache = this.cache, p = this.p, sep = B.paths.sep;
       const theme = p.theme || 'dorado';
       // 1. Tarjetas, fotos y marca de agua (se reusan si no cambiaron)
-      const logoKey = SA.logo ? E.hash(SA.logo.src) : 'texto';
+      const logoKey = SA.logo ? E.hash(SA.logo.src || 'logo') : 'texto';
+      const wmPaths = await this.wmFiles(W, H, logoKey);
+      const wmOf = c => this.wmFor(c, W, H, wmPaths);
       const prepared = [];
       for (const u of units) {
         const segs = [];
@@ -798,24 +1033,15 @@
               this.setProgress(0, `Preparando la foto ${c.name}`);
               await this.makeStill(c, W, H, still);
             }
-            segs.push({ kind: 'image', still, len: c.len || 4, zoomIn: zoom++ % 2 === 0 });
+            segs.push({ kind: 'image', still, len: c.len || 4, zoomIn: zoom++ % 2 === 0, wm: u.moment ? wmOf(c) : null });
           } else {
             const vol = (c.mute ? 0 : c.vol) * (u.moment ? u.moment.vol : 1);
-            segs.push({ kind: 'video', path: c.path, in: c.in || 0, len: this.clipLen(c), w: c.w, h: c.h, hasAudio: c.hasAudio && vol > 0.001, vol, name: c.name, id: c.id });
+            segs.push({ kind: 'video', path: c.path, in: c.in || 0, len: this.clipLen(c), w: c.w, h: c.h, hasAudio: c.hasAudio && vol > 0.001, vol, name: c.name, id: c.id, wm: u.moment ? wmOf(c) : null });
           }
         }
         prepared.push({ name: u.name, chapter: u.chapter, segments: segs, noWatermark: !u.moment, music: u.music ? { path: u.music.path, start: u.music.start || 0, vol: u.music.vol == null ? .6 : u.music.vol } : null });
       }
-      let watermark = null;
-      if (S.wm) {
-        const key = E.hash(JSON.stringify([S.pos, S.size, S.alpha, logoKey, W, H]));
-        watermark = B.join(cache, `marca_${key}.png`);
-        if (!(await B.exists(watermark))) {
-          const c = document.createElement('canvas'); c.width = W; c.height = H;
-          SA.drawWatermark(c.getContext('2d'), W, H, S, SA.VIDEO_WM_SCALE);
-          await this.writeCanvas(c, watermark);
-        }
-      }
+      const watermark = null;   // ahora cada toma lleva su propia marca (negra o blanca)
       // 2. Pasos de FFmpeg
       const job = E.filmBuild({ W, H, mood: p.mood, enhance: p.enhance, style: p.style, denoise: p.denoise, hwaccel: true, cache, sep, title: p.name,
         watermark, units: prepared, interArgs: interGpu && E.FILM_INTER_GPU[this.encoder] ? E.FILM_INTER_GPU[this.encoder] : E.FILM_INTER,
