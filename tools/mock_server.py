@@ -36,9 +36,14 @@ class H(SimpleHTTPRequestHandler):
                     out += [{'path': f, 'name': os.path.basename(f), 'kind': kind(f)} for f in files if kind(f)]
                 r = out
             elif cmd == 'run_tool':
-                pr = subprocess.run([a['tool']] + a['args'], capture_output=True, text=True)
-                r = {'code': pr.returncode, 'stdout': pr.stdout if a['tool'] == 'ffprobe' else '', 'stderr': '\n'.join(pr.stderr.strip().split('\n')[-40:])}
+                pr = subprocess.run([a['tool']] + a['args'], capture_output=True, text=True, errors='replace')
+                cap = a.get('capture')
+                r = {'code': pr.returncode, 'stdout': pr.stdout if (a['tool'] == 'ffprobe' or cap) else '', 'stderr': pr.stderr if cap else '\n'.join(pr.stderr.strip().split('\n')[-40:])}
             elif cmd == 'cancel_job': r = False
+            elif cmd == 'file_times': r = [os.path.getmtime(x) * 1000 if os.path.exists(x) else None for x in a['paths']]
+            elif cmd == 'allow_preview': r = None
+            elif cmd == 'film_cache_dir':
+                d = os.path.join(CACHE, 'pelicula-' + ''.join(ch for ch in a['id'] if ch.isalnum())); os.makedirs(d, exist_ok=True); r = d
             elif cmd == 'make_dir': os.makedirs(a['path'], exist_ok=True)
             elif cmd == 'path_exists': r = os.path.exists(a['path'])
             elif cmd == 'new_job_dir':
@@ -51,5 +56,22 @@ class H(SimpleHTTPRequestHandler):
             return self.send(200, json.dumps(r).encode())
         except Exception as e:
             return self.send(500, json.dumps(str(e)).encode())
+
+def _get(self):
+    u = urllib.parse.urlparse(self.path)
+    if u.path == '/file':
+        p = urllib.parse.parse_qs(u.query)['path'][0]
+        data = open(p, 'rb').read()
+        ctype = 'video/mp4' if p.endswith('.mp4') else 'application/octet-stream'
+        rng = self.headers.get('Range')
+        if rng:
+            a, b = rng.replace('bytes=', '').split('-'); a = int(a); b = int(b) if b else len(data) - 1
+            self.send_response(206); self.send_header('Content-Range', f'bytes {a}-{b}/{len(data)}'); chunk = data[a:b + 1]
+        else:
+            self.send_response(200); chunk = data
+        self.send_header('Content-Type', ctype); self.send_header('Accept-Ranges', 'bytes'); self.send_header('Content-Length', str(len(chunk))); self.end_headers(); self.wfile.write(chunk)
+        return
+    return SimpleHTTPRequestHandler.do_GET(self)
+H.do_GET = _get
 
 ThreadingHTTPServer(('127.0.0.1', PORT), H).serve_forever()

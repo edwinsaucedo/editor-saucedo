@@ -142,7 +142,8 @@ fn list_media(paths: Vec<String>) -> Vec<MediaEntry> {
 
 /// Corre ffmpeg o ffprobe (incluidos en el programa) y avisa el avance a la interfaz.
 #[tauri::command]
-async fn run_tool(app: AppHandle, jobs: State<'_, Jobs>, tool: String, job: String, args: Vec<String>) -> Result<RunResult, String> {
+async fn run_tool(app: AppHandle, jobs: State<'_, Jobs>, tool: String, job: String, args: Vec<String>, capture: Option<bool>) -> Result<RunResult, String> {
+    let capture = capture.unwrap_or(false);
     if tool != "ffmpeg" && tool != "ffprobe" {
         return Err("Herramienta no permitida".into());
     }
@@ -157,12 +158,13 @@ async fn run_tool(app: AppHandle, jobs: State<'_, Jobs>, tool: String, job: Stri
 
     let mut stdout = String::new();
     let mut tail: VecDeque<String> = VecDeque::new();
+    let mut full = String::new();
     let mut code = None;
     while let Some(ev) = rx.recv().await {
         match ev {
             CommandEvent::Stdout(bytes) => {
                 let s = String::from_utf8_lossy(&bytes);
-                if tool == "ffmpeg" {
+                if tool == "ffmpeg" && !capture {
                     for line in s.lines() {
                         if let Some(v) = line.trim().strip_prefix("out_time_us=") {
                             if let Ok(n) = v.parse::<i64>() {
@@ -178,7 +180,14 @@ async fn run_tool(app: AppHandle, jobs: State<'_, Jobs>, tool: String, job: Stri
                 }
             }
             CommandEvent::Stderr(bytes) => {
-                for line in String::from_utf8_lossy(&bytes).lines() {
+                let text = String::from_utf8_lossy(&bytes);
+                if capture && full.len() < 16 * 1024 * 1024 {
+                    full.push_str(&text);
+                    if !text.ends_with('\n') {
+                        full.push('\n');
+                    }
+                }
+                for line in text.lines() {
                     if line.trim().is_empty() {
                         continue;
                     }
@@ -197,7 +206,8 @@ async fn run_tool(app: AppHandle, jobs: State<'_, Jobs>, tool: String, job: Stri
         }
     }
     jobs.0.lock().unwrap().remove(&job);
-    Ok(RunResult { code, stdout, stderr: tail.into_iter().collect::<Vec<_>>().join("\n") })
+    let stderr = if capture { full } else { tail.into_iter().collect::<Vec<_>>().join("\n") };
+    Ok(RunResult { code, stdout, stderr })
 }
 
 #[tauri::command]
@@ -251,6 +261,36 @@ fn write_file(request: tauri::ipc::Request<'_>) -> Result<(), String> {
     fs::write(&path, data).map_err(|e| format!("No se pudo guardar {}: {e}", path.display()))
 }
 
+/// Fecha de modificación de cada archivo (milisegundos), para ordenar por hora cuando el archivo no trae la suya.
+#[tauri::command]
+fn file_times(paths: Vec<String>) -> Vec<Option<f64>> {
+    paths
+        .iter()
+        .map(|p| {
+            fs::metadata(p)
+                .and_then(|m| m.modified())
+                .ok()
+                .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
+                .map(|d| d.as_millis() as f64)
+        })
+        .collect()
+}
+
+/// Permite que el reproductor de la pantalla abra ese video directamente desde el disco.
+#[tauri::command]
+fn allow_preview(app: AppHandle, path: String) -> Result<(), String> {
+    app.asset_protocol_scope().allow_file(&path).map_err(|e| e.to_string())
+}
+
+/// Carpeta de trabajo de una película (se conserva para poder reanudar).
+#[tauri::command]
+fn film_cache_dir(app: AppHandle, id: String) -> Result<String, String> {
+    let safe: String = id.chars().filter(|c| c.is_ascii_alphanumeric() || *c == '-').collect();
+    let dir = jobs_root(&app)?.join(format!("pelicula-{safe}"));
+    fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    Ok(dir.to_string_lossy().into_owned())
+}
+
 #[tauri::command]
 fn make_dir(path: String) -> Result<(), String> {
     fs::create_dir_all(&path).map_err(|e| format!("No se pudo crear la carpeta {path}: {e}"))
@@ -287,8 +327,11 @@ fn remove_job_dir(app: AppHandle, path: String) -> Result<(), String> {
 fn clean_old_jobs(app: &AppHandle) {
     let Ok(root) = jobs_root(app) else { return };
     let Ok(rd) = fs::read_dir(&root) else { return };
-    let limit = SystemTime::now() - Duration::from_secs(2 * 24 * 3600);
+    let now = SystemTime::now();
     for e in rd.flatten() {
+        // Las películas se guardan 15 días para poder reanudar; lo demás, 2 días.
+        let days = if e.file_name().to_string_lossy().starts_with("pelicula-") { 15 } else { 2 };
+        let limit = now - Duration::from_secs(days * 24 * 3600);
         let old = e.metadata().and_then(|m| m.modified()).map(|t| t < limit).unwrap_or(false);
         if old {
             let _ = fs::remove_dir_all(e.path());
@@ -317,6 +360,7 @@ async fn pick_files(app: AppHandle, kind: String, multiple: bool) -> Vec<String>
         }
         "audio" => d.add_filter("Música", AUDIO_EXT),
         "logo" => d.add_filter("Logo (PNG)", &["png", "webp", "jpg", "jpeg"]),
+        "project" => d.add_filter("Película de Editor Saucedo", &["json"]),
         _ => d,
     };
     let to_s = |f: tauri_plugin_dialog::FilePath| f.into_path().ok().map(|p| p.to_string_lossy().into_owned());
@@ -379,6 +423,9 @@ pub fn run() {
             remove_job_dir,
             app_paths,
             list_media,
+            file_times,
+            allow_preview,
+            film_cache_dir,
             pick_files,
             pick_folder,
             open_path

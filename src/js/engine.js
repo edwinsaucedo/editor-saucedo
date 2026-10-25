@@ -245,7 +245,248 @@
     return { steps, total };
   };
 
-  E.fmtTime = s => { s = Math.max(0, Math.round(s)); const m = Math.floor(s / 60); return `${m}:${String(s % 60).padStart(2, '0')}`; };
+  E.fmtTime = s => {
+    s = Math.max(0, Math.round(s));
+    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), ss = String(s % 60).padStart(2, '0');
+    return h ? `${h}:${String(m).padStart(2, '0')}:${ss}` : `${m}:${ss}`;
+  };
+
+  /* Nombre corto y estable a partir de un texto (para reconocer trabajo ya hecho y no repetirlo). */
+  E.hash = str => {
+    let a = 0x811c9dc5, b = 5381;
+    for (let i = 0; i < str.length; i++) {
+      const c = str.charCodeAt(i);
+      a ^= c; a = Math.imul(a, 0x01000193) >>> 0;
+      b = (Math.imul(b, 33) + c) >>> 0;
+    }
+    return a.toString(16).padStart(8, '0') + b.toString(16).padStart(8, '0');
+  };
+
+  /* =====================================================================
+   * PELÍCULA DEL EVENTO
+   * Cada toma se prepara con su sonido; luego cada capítulo (momento) se une
+   * con transiciones, música que baja sola cuando hay voz y la marca de agua;
+   * al final se pegan los capítulos sin volver a codificar el video y se
+   * empareja el volumen de toda la película (dos pasadas de loudnorm).
+   * Todo archivo intermedio se nombra por su contenido: si se interrumpe,
+   * al volver a crear se salta lo que ya estaba hecho.
+   * ===================================================================== */
+  E.FILM_MOODS = {
+    suave: { T: 0.8, list: ['fade'] },
+    dinamico: { T: 0.5, list: ['fade', 'smoothleft', 'fade', 'circleopen', 'fade', 'smoothright', 'fade', 'slideup'] },
+    corte: { T: 0, list: [] }
+  };
+  E.FILM_INTER = ['-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18', '-pix_fmt', 'yuv420p', '-g', String(FPS)];
+  E.FILM_INTER_GPU = {
+    h264_nvenc: ['-c:v', 'h264_nvenc', '-preset', 'p4', '-rc', 'vbr', '-cq', '18', '-b:v', '0', '-pix_fmt', 'yuv420p', '-g', String(FPS)],
+    h264_qsv: ['-c:v', 'h264_qsv', '-preset', 'fast', '-global_quality', '19', '-pix_fmt', 'nv12', '-g', String(FPS)],
+    h264_amf: ['-c:v', 'h264_amf', '-quality', 'speed', '-rc', 'cqp', '-qp_i', '18', '-qp_p', '19', '-pix_fmt', 'nv12', '-g', String(FPS)]
+  };
+  const PCM = ['-c:a', 'pcm_s16le', '-ar', '48000', '-ac', '2'];
+  const AFMT = 'aresample=48000,aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo';
+
+  // Una toma: video (o foto, o tarjeta de título) + su sonido, al formato de la película.
+  E.filmSegmentArgs = (s, o, out) => {
+    const { W, H } = o, L = q(s.len);
+    const args = [...BASE];
+    let v;
+    if (s.kind === 'video') {
+      args.push(...(o.hwaccel ? ['-hwaccel', 'auto'] : []), '-ss', r3(s.in || 0), '-t', r3(L + 0.3), '-i', s.path);
+      const portraitSrc = s.h > s.w, portraitOut = H > W;
+      const pre = `scale='trunc(iw*sar/2)*2':ih,setsar=1,bwdif=mode=send_frame:parity=auto:deint=interlaced,fps=${FPS}`;
+      const color = E.videoColor(o.enhance, o.style);
+      const tail = `,format=yuv420p${color},tpad=stop_mode=clone:stop_duration=4,trim=duration=${r3(L)},setpts=PTS-STARTPTS[v]`;
+      if (portraitSrc === portraitOut || !s.w) {
+        v = `[0:v]${pre},scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},setsar=1${tail}`;
+      } else {
+        const w4 = Math.round(W / 8) * 2, h4 = Math.round(H / 8) * 2;
+        v = `[0:v]${pre},split=2[a0][b0];` +
+          `[a0]scale=${w4}:${h4}:force_original_aspect_ratio=increase,crop=${w4}:${h4},boxblur=8:2,scale=${W}:${H},eq=brightness=-0.07:saturation=0.9[bg];` +
+          `[b0]scale=${W}:${H}:force_original_aspect_ratio=decrease,setsar=1[fg];[bg][fg]overlay=(W-w)/2:(H-h)/2,setsar=1${tail}`;
+      }
+    } else {
+      args.push('-loop', '1', '-framerate', String(FPS), '-t', r3(L + 0.2), '-i', s.still);
+      if (s.kind === 'image') {
+        const N = Math.round(L * FPS), Z = 0.06;
+        const z = s.zoomIn ? `1+${Z}*on/${N}` : `${1 + Z}-${Z}*on/${N}`;
+        v = `[0:v]format=yuv420p,zoompan=z='${z}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s=${W}x${H}:fps=${FPS},setsar=1,trim=duration=${r3(L)},setpts=PTS-STARTPTS[v]`;
+      } else {
+        v = `[0:v]scale=${W}:${H},format=yuv420p,setsar=1,trim=duration=${r3(L)},setpts=PTS-STARTPTS[v]`;
+      }
+    }
+    let a;
+    const vol = Math.max(0, Math.min(2, s.vol == null ? 1 : s.vol));
+    if (s.kind === 'video' && s.hasAudio && vol > 0.001) {
+      a = `[0:a]${AFMT},volume=${r3(vol)}${o.denoise ? ',afftdn=nf=-28' : ''},apad,atrim=duration=${r3(L)},asetpts=PTS-STARTPTS[a]`;
+    } else {
+      args.push('-f', 'lavfi', '-t', r3(L), '-i', 'anullsrc=r=48000:cl=stereo');
+      a = `[1:a]${AFMT},atrim=duration=${r3(L)},asetpts=PTS-STARTPTS[a]`;
+    }
+    args.push('-filter_complex', `${v};${a}`, '-map', '[v]', '-map', '[a]', '-r', String(FPS), ...(o.interArgs || E.FILM_INTER), ...PCM, '-t', r3(L), out);
+    return args;
+  };
+
+  // Une tomas (o grupos) con transiciones de video y de sonido.
+  E.filmJoinFilter = (lens, T, transitions) => {
+    const n = lens.length, p = [];
+    lens.forEach((_, i) => { p.push(`[${i}:v]settb=AVTB,fps=${FPS},format=yuv420p,setsar=1[v${i}]`, `[${i}:a]${AFMT},asetpts=PTS-STARTPTS[a${i}]`); });
+    if (n === 1) { p.push('[v0]null[jv]', '[a0]anull[ja]'); return { fc: p.join(';'), len: lens[0] }; }
+    if (!T) {
+      p.push(lens.map((_, i) => `[v${i}][a${i}]`).join('') + `concat=n=${n}:v=1:a=1[jv][ja]`);
+      return { fc: p.join(';'), len: q(lens.reduce((s, l) => s + l, 0)) };
+    }
+    let acc = lens[0], pv = 'v0', pa = 'a0';
+    for (let k = 1; k < n; k++) {
+      const last = k === n - 1, ov = last ? 'jv' : `xv${k}`, oa = last ? 'ja' : `xa${k}`;
+      p.push(`[${pv}][v${k}]xfade=transition=${transitions[k - 1] || 'fade'}:duration=${r3(T)}:offset=${r3(acc - T)}[${ov}]`);
+      p.push(`[${pa}][a${k}]acrossfade=d=${r3(T)}:c1=tri:c2=tri[${oa}]`);
+      acc = q(acc + lens[k] - T); pv = ov; pa = oa;
+    }
+    return { fc: p.join(';'), len: acc };
+  };
+
+  // Un capítulo terminado: unión + música con "ducking" + marca de agua + fundido de entrada y salida.
+  E.filmUnitArgs = (inputs, lens, T, transitions, x, out) => {
+    const args = [...BASE];
+    inputs.forEach(f => args.push('-i', f));
+    const j = E.filmJoinFilter(lens, T, transitions);
+    const len = j.len;
+    let fc = j.fc, idx = inputs.length, va = 'jv', aa = 'ja';
+    if (x.music) {
+      args.push('-stream_loop', '-1', '-ss', r3(x.music.start || 0), '-i', x.music.path);
+      const mv = Math.max(0, Math.min(1.5, x.music.vol == null ? .6 : x.music.vol));
+      fc += `;[${idx}:a]${AFMT},volume=${r3(mv)},atrim=duration=${r3(len)},asetpts=PTS-STARTPTS,` +
+        `afade=t=in:st=0:d=1.5,afade=t=out:st=${r3(Math.max(0, len - 2))}:d=2[mu]` +
+        `;[${aa}]asplit=2[sc][vo];[mu][sc]sidechaincompress=threshold=0.015:ratio=12:attack=15:release=700[md]` +
+        `;[vo][md]amix=inputs=2:duration=first:normalize=0[am]`;
+      aa = 'am'; idx++;
+    }
+    if (x.watermark) {
+      args.push('-loop', '1', '-framerate', String(FPS), '-t', r3(len), '-i', x.watermark);
+      const en = x.wmFrom ? `:enable='gte(t,${r3(x.wmFrom)})'` : '';
+      fc += `;[${idx}:v]format=rgba[wm];[${va}][wm]overlay=0:0${en}[vw]`;
+      va = 'vw'; idx++;
+    }
+    if (x.fades) {
+      fc += `;[${va}]fade=t=in:st=0:d=0.5,fade=t=out:st=${r3(Math.max(0, len - 0.6))}:d=0.6[vf]` +
+        `;[${aa}]afade=t=in:st=0:d=0.3,afade=t=out:st=${r3(Math.max(0, len - 0.6))}:d=0.6[af]`;
+      va = 'vf'; aa = 'af';
+    }
+    fc += `;[${va}]format=yuv420p[vo2];[${aa}]${AFMT}[ao2]`;
+    args.push('-filter_complex', fc, '-map', '[vo2]', '-map', '[ao2]', '-r', String(FPS), ...(x.encArgs || E.FILM_INTER), ...PCM, '-t', r3(len), out);
+    return { args, len };
+  };
+
+  /* Arma todos los pasos de la película.
+   * o.units: [{ name, segments:[{kind:'video'|'image'|'card', ...}], music }] en orden (portada, momentos, créditos). */
+  E.filmBuild = o => {
+    const mood = E.FILM_MOODS[o.mood] || E.FILM_MOODS.suave;
+    const T = q(mood.T), sep = o.sep || '/';
+    const J = name => o.cache + sep + name;
+    const steps = [], unitOuts = [], chapters = [];
+    const encKey = (o.encArgs || []).join(' '), interKey = (o.interArgs || E.FILM_INTER).join(' ');
+    let t = 0, tr = 0;
+    o.units.forEach((u, ui) => {
+      const segs = u.segments.filter(s => s.len >= 0.5);
+      if (!segs.length) return;
+      const segFiles = [], lens = [];
+      segs.forEach((s, si) => {
+        const L = q(s.len);
+        const key = E.hash(JSON.stringify([s.kind, s.path || s.still, s.in || 0, L, s.w, s.h, s.hasAudio, s.vol, s.zoomIn, o.W, o.H, o.enhance, o.style, o.denoise, !!o.hwaccel, interKey]));
+        const out = J(`toma_${key}.mkv`);
+        steps.push({ stage: 'toma', unit: ui, unitName: u.name, n: si + 1, of: segs.length, seconds: L, weight: L, out, seg: s,
+          args: E.filmSegmentArgs(Object.assign({}, s, { len: L }), o, out) });
+        segFiles.push(out); lens.push(L);
+      });
+      // Transiciones: la primera después de una tarjeta de título siempre es fundido.
+      const trans = [];
+      for (let k = 1; k < segs.length; k++) trans.push(segs[k - 1].kind === 'card' ? 'fade' : (mood.list[(tr++) % (mood.list.length || 1)] || 'fade'));
+      // Más de 12 tomas: se unen de 10 en 10 para cuidar la memoria.
+      let inputs = segFiles, ilens = lens, itrans = trans;
+      if (segFiles.length > 12) {
+        const gIn = [], gLens = [], gTr = [];
+        for (let a = 0, g = 1; a < segFiles.length; a += E.BATCH, g++) {
+          const b = Math.min(segFiles.length, a + E.BATCH);
+          const sub = segFiles.slice(a, b), subL = lens.slice(a, b), subT = trans.slice(a, b - 1);
+          const key = E.hash(JSON.stringify([sub, subL, T, subT, interKey]));
+          const out = J(`grupo_${key}.mkv`);
+          const r = E.filmUnitArgs(sub, subL, T, subT, { encArgs: o.interArgs || E.FILM_INTER }, out);
+          steps.push({ stage: 'grupo', unit: ui, unitName: u.name, n: g, of: Math.ceil(segFiles.length / E.BATCH), seconds: r.len, weight: r.len * .5, out, args: r.args });
+          gIn.push(out); gLens.push(r.len);
+          if (b < segFiles.length) gTr.push(trans[b - 1]);
+        }
+        inputs = gIn; ilens = gLens; itrans = gTr;
+      }
+      // La marca de agua no va sobre la portada ni los créditos, y en cada capítulo empieza después de su título.
+      const x = { music: u.music || null, watermark: u.noWatermark ? null : (o.watermark || null), fades: true, encArgs: o.encArgs,
+        wmFrom: segs[0].kind === 'card' && segs.length > 1 ? q(segs[0].len) : 0 };
+      const key = E.hash(JSON.stringify([inputs, ilens, T, itrans, x.music, x.watermark, x.wmFrom, encKey]));
+      const out = J(`capitulo_${key}.mkv`);
+      const r = E.filmUnitArgs(inputs, ilens, T, itrans, x, out);
+      steps.push({ stage: 'capitulo', unit: ui, unitName: u.name, n: 1, of: 1, seconds: r.len, weight: r.len * 1.1, out, args: r.args, unitFinal: true });
+      unitOuts.push(out);
+      chapters.push({ title: u.chapter || u.name, start: t, end: t + r.len });
+      t = q(t + r.len);
+    });
+    const list = 'ffconcat version 1.0\n' + unitOuts.map(f => `file '${f.replace(/\\/g, '/').replace(/'/g, "'\\''")}'`).join('\n') + '\n';
+    const meta = ';FFMETADATA1\n' + (o.title ? `title=${E.metaEsc(o.title)}\n` : '') + chapters.map(c =>
+      `[CHAPTER]\nTIMEBASE=1/1000\nSTART=${Math.round(c.start * 1000)}\nEND=${Math.round(c.end * 1000)}\ntitle=${E.metaEsc(c.title)}\n`).join('');
+    return { steps, list, meta, chapters, total: t, listPath: J('lista.ffconcat'), metaPath: J('capitulos.txt') };
+  };
+  E.metaEsc = s => String(s).replace(/([=;#\\\n])/g, '\\$1');
+
+  // Volumen parejo de toda la película: 1) medir, 2) aplicar y guardar el MP4 final.
+  E.LOUD = 'I=-16:TP=-1.5:LRA=11';
+  E.filmMeasureArgs = listPath => ['-hide_banner', '-nostats', '-f', 'concat', '-safe', '0', '-i', listPath, '-vn',
+    '-af', `loudnorm=${E.LOUD}:print_format=json`, '-f', 'null', '-'];
+  E.parseLoudnorm = text => {
+    const m = /\{[^{}]*"input_i"[^{}]*\}/.exec(text || '');
+    if (!m) return null;
+    try { const j = JSON.parse(m[0]); return isFinite(+j.input_i) ? j : null; } catch (e) { return null; }
+  };
+  E.filmFinalArgs = (listPath, metaPath, measured, out) => {
+    let ln = `loudnorm=${E.LOUD}`;
+    if (measured && isFinite(+measured.input_i) && +measured.input_i > -70) {
+      ln += `:measured_I=${measured.input_i}:measured_TP=${measured.input_tp}:measured_LRA=${measured.input_lra}` +
+        `:measured_thresh=${measured.input_thresh}:offset=${measured.target_offset}:linear=true`;
+    }
+    return [...BASE, '-f', 'concat', '-safe', '0', '-i', listPath, '-f', 'ffmetadata', '-i', metaPath,
+      '-map', '0:v', '-map', '0:a', '-map_metadata', '1', '-map_chapters', '1',
+      '-c:v', 'copy', '-af', `${ln},aresample=48000`, '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', out];
+  };
+
+  // Revisión rápida de una toma: brillo en los cuadros clave y volumen promedio.
+  E.scanArgs = (path, hasAudio) => {
+    const a = ['-hide_banner', '-nostats', '-v', 'info', '-skip_frame', 'nokey', '-i', path,
+      '-map', '0:v:0', '-vf', 'scale=160:-2,signalstats,metadata=print:key=lavfi.signalstats.YAVG', '-f', 'null', '-'];
+    if (hasAudio) a.push('-map', '0:a:0', '-af', 'volumedetect', '-f', 'null', '-');
+    return a;
+  };
+  E.parseScan = (text, info) => {
+    const y = [...String(text).matchAll(/lavfi\.signalstats\.YAVG=([\d.]+)/g)].map(m => +m[1]);
+    const mv = /mean_volume:\s*(-?[\d.]+) dB/.exec(text || '');
+    const sorted = y.slice().sort((a, b) => a - b), med = sorted.length ? sorted[Math.floor(sorted.length / 2)] : null;
+    const flags = [];
+    if (y.length && y.filter(v => v < 22).length / y.length >= .7) flags.push('negra');
+    else if (med != null && med < 42) flags.push('oscura');
+    if (info.duration < 2) flags.push('corta');
+    if (info.duration > 300) flags.push('larga');
+    if (!info.hasAudio || (mv && +mv[1] < -50)) flags.push('sinsonido');
+    if (info.height > info.width) flags.push('vertical');
+    return { flags, brightness: med, meanVolume: mv ? +mv[1] : null };
+  };
+
+  // Hora de grabación desde los datos del archivo (los iPhone guardan la hora local con su zona).
+  E.creationTime = probeJson => {
+    const d = typeof probeJson === 'string' ? JSON.parse(probeJson) : probeJson;
+    const tags = Object.assign({}, (d.format && d.format.tags) || {});
+    (d.streams || []).forEach(s => { if (s.tags && s.tags.creation_time && !tags.creation_time) tags.creation_time = s.tags.creation_time; });
+    const apple = tags['com.apple.quicktime.creationdate'];
+    const raw = apple || tags.creation_time;
+    if (!raw) return null;
+    const t = Date.parse(String(raw).replace(/([+-]\d{2})(\d{2})$/, '$1:$2'));
+    return isFinite(t) && t > Date.UTC(2000, 0, 1) ? t : null;
+  };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = E; else root.Engine = E;
 })(typeof window !== 'undefined' ? window : globalThis);

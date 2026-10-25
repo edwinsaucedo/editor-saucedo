@@ -8,7 +8,8 @@ window.__TAURI__ = {
       if (!r.ok) throw new Error(await r.text());
       if (cmd === 'read_file') return await r.arrayBuffer();
       return await r.json();
-    }
+    },
+    convertFileSrc: p => '/file?path=' + encodeURIComponent(p)
   },
   event: { listen: async () => () => {} }
 };

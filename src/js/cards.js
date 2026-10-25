@@ -145,5 +145,57 @@
     SA.drawWatermark(ctx, W, H, SA.settings, SA.VIDEO_WM_SCALE);
   }
 
-  SA.cards = { THEMES, TEMPLATES, renderCard, preview };
+  /* Tarjetas de la Película del evento (fondo negro): portada, capítulo y créditos. */
+  function renderFilmCard(kind, W, H, data, themeKey) {
+    const th = THEMES[themeKey] || THEMES.dorado;
+    const c = document.createElement('canvas'); c.width = W; c.height = H;
+    const ctx = c.getContext('2d');
+    const u = Math.min(W, H) / 1080, cx = W / 2, maxW = W * .84;
+    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+    const g = ctx.createRadialGradient(cx, H / 2, 0, cx, H / 2, Math.max(W, H) * .6);
+    g.addColorStop(0, '#1C1A17'); g.addColorStop(1, '#000');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    ctx.textBaseline = 'alphabetic';
+    const textRow = (text, weight, size, family, ls, color, h, upper) => {
+      if (!text) return null;
+      const t = upper ? text.toLocaleUpperCase('es') : text;
+      const s = fit(ctx, t, weight, size * u, family, ls, maxW);
+      return { h: Math.max(h * u * (s / (size * u)), s * 1.05), draw: y => draw(ctx, t, cx, y, weight, s, family, ls, color) };
+    };
+    const orn = (half, h) => ({ h: h * u, base: .6, draw: y => ornament(ctx, cx, y - 6 * u, half * u, u, th.accent) });
+    const dp = dateParts(data.date);
+    if (kind === 'portada') {
+      stack(ctx, [
+        textRow('Saucedo Video y Fotografía presenta', 600, 22, CAPS, .32, th.soft, 70, true),
+        textRow(data.title, 400, 150, SCRIPT, 0, th.text, 190),
+        orn(150, 44),
+        dp && textRow(dp.line, 600, 30, CAPS, .32, th.accent, 54, true),
+        textRow(data.place, 600, 24, CAPS, .24, th.soft, 46, true)
+      ], H * .5);
+    } else if (kind === 'capitulo') {
+      stack(ctx, [
+        data.num ? textRow(`Capítulo ${data.num}`, 600, 24, CAPS, .42, th.accent, 60, true) : null,
+        textRow(data.name, 400, 150, SCRIPT, 0, th.text, 180),
+        orn(110, 40)
+      ], H * .5);
+    } else {
+      const rows = [textRow('Una producción de', 600, 22, CAPS, .36, th.soft, 70, true)];
+      if (SA.logo) {
+        const ar = SA.logo.naturalWidth / SA.logo.naturalHeight;
+        let lw = Math.min(W * .42, 520 * u * ar), lh = lw / ar;
+        if (lh > 260 * u) { lh = 260 * u; lw = lh * ar; }
+        rows.push({ h: lh + 30 * u, base: 0, draw: y => ctx.drawImage(SA.logo, cx - lw / 2, y + 10 * u, lw, lh) });
+      } else {
+        rows.push(textRow('Saucedo', 400, 170, SCRIPT, 0, th.text, 190));
+        rows.push(textRow('Video y Fotografía', 700, 30, CAPS, .3, th.text, 56, true));
+      }
+      rows.push(orn(150, 50));
+      rows.push(textRow(data.title, 600, 30, SERIF, .04, th.accent, 56));
+      rows.push(dp && textRow(dp.line, 600, 22, CAPS, .32, th.soft, 44, true));
+      stack(ctx, rows, H * .5);
+    }
+    return c;
+  }
+
+  SA.cards = { THEMES, TEMPLATES, renderCard, preview, renderFilmCard };
 })();

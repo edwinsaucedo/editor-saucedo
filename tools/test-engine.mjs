@@ -26,6 +26,20 @@ if (process.argv.includes('--solo-plan')) {
       }
       if (template === 'xv' && Math.abs(job.total - Math.max(30, target)) > .2) throw new Error(`duración ${job.total} ≠ ${target}`);
     }
+  // Película del evento: capítulos con muchas tomas, cortes directos y música
+  for (const mood of ['suave', 'dinamico', 'corte']) {
+    const many = [{ kind: 'card', still: 't.png', len: 3.5 }];
+    for (let k = 0; k < 25; k++) many.push({ kind: k % 5 ? 'video' : 'image', path: 'v.mp4', still: 'f.jpg', in: k, len: 2 + (k % 4), w: k % 3 ? 1920 : 1080, h: k % 3 ? 1080 : 1920, hasAudio: true, vol: .9 });
+    const job = E.filmBuild({ W: 1920, H: 1080, mood, enhance: true, style: 'natural', denoise: true, hwaccel: true, cache: 'cache', sep: '/', title: 'XV; Ana=Sofía',
+      watermark: 'w.png', encArgs: E.ENCODERS.libx264, units: [{ name: 'Portada', segments: [{ kind: 'card', still: 'p.png', len: 6 }], music: { path: 's.mp3', start: 2, vol: .7 } },
+        { name: 'Fiesta', segments: many, music: null }, { name: 'Créditos', segments: [{ kind: 'card', still: 'c.png', len: 6 }], music: null }] });
+    for (const st of job.steps) {
+      if (/NaN|undefined|Infinity/.test(st.args.join(' '))) throw new Error(`película ${mood}: argumento inválido en ${st.stage}`);
+      checks++;
+    }
+    if (!/title=XV\\; Ana\\=Sofía/.test(job.meta) || job.chapters.length !== 3) throw new Error('capítulos mal escritos');
+    if (new Set(job.steps.map(s => s.out)).size !== job.steps.length) throw new Error('nombres de archivo repetidos');
+  }
   console.log(`Plan OK (${checks} pasos revisados)`);
   process.exit(0);
 }

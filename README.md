@@ -7,10 +7,20 @@ Programa para Windows de **Saucedo Video y Fotografía**. Está hecho para que s
 | **Fotos** | Botón "Mejorar colores", 6 estilos (Natural, Boda cálida, Rosa XV, Blanco y negro, Colores vivos, Película) y marca de agua con el logo. Guarda por lote en JPG al tamaño original. |
 | **Save the Date** | Video de 20 a 40 s con fotos y clips, título "Save the Date" con nombres, cierre con la fecha y el lugar, música y logo. |
 | **Videoclip XV** | Video del largo de la canción (o 1, 2 o 3 min) con portada "Mis XV", cierre con frase de agradecimiento, transiciones y logo. |
+| **Película del evento** | La película completa de la fiesta, guiada por momentos (Llegada, Misa, Entrada, Vals, Brindis, Baile sorpresa, Fiesta, Despedida). Se recorta cada toma, se ajusta su sonido y se elige música por momento. |
 
 Los videos salen en **vertical 1080 × 1920**, **horizontal 1920 × 1080** o los dos.
 
 Todo se guarda en `Documentos\Saucedo\<fecha> <plantilla> <nombres>\`.
+
+## Película del evento
+
+1. **Evento:** nombre y fecha. El proyecto se guarda solo en `Documentos\Saucedo\<fecha> <nombre>\Película\proyecto-saucedo.json` y se puede abrir otro día.
+2. **Material:** videos y fotos de la cámara y de los celulares. Se ordenan por la hora de grabación; si una cámara tenía otra hora, se corrige con ±1 h por carpeta. Las tomas separadas por más de 10 minutos quedan en grupos para mandarlas juntas a un momento.
+3. **Revisión automática:** marca tomas en negro (tapa puesta), muy oscuras, muy cortas, muy largas, sin sonido y de celular vertical, y dice qué conviene hacer.
+4. **Momentos:** cada uno trae una recomendación (por ejemplo, en el vals se deja el sonido original y sin música). Cada momento tiene volumen de las tomas, título de capítulo opcional y música que baja sola cuando alguien habla.
+5. **Cada toma:** recorte con "Empieza aquí" / "Termina aquí", volumen de 0 a 150 % o sin sonido, y orden dentro del momento.
+6. **Crear película:** portada, capítulos, créditos con el logo, transiciones (suaves, dinámicas o solo cortes), reducción de ruido del salón, volumen parejo en toda la película (−16 LUFS) y capítulos marcados en el MP4. Si se pausa o se apaga la computadora, al volver a crear sigue donde se quedó.
 
 ## Instalar en la computadora
 
@@ -55,6 +65,7 @@ Pruebas del motor:
 ```bash
 node tools/test-engine.mjs ./.prueba-motor --solo-plan   # revisa la lógica sin FFmpeg
 node tools/test-engine.mjs ./.prueba-motor               # crea videos de prueba con FFmpeg del sistema
+node tools/test-film.mjs ./.prueba-pelicula <material>     # película de prueba (necesita horizontal.mp4, vertical.mp4, hdv.mp4 y cancion.mp3)
 ```
 
 `tools/mock_server.py` y `tools/mock_tauri.js` imitan la parte nativa para probar la interfaz en un navegador normal.

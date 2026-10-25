@@ -39,6 +39,15 @@
   B.newJobDir = () => invoke('new_job_dir');
   B.removeJobDir = path => invoke('remove_job_dir', { path }).catch(() => {});
   B.open = (path, reveal = false) => invoke('open_path', { path, reveal });
+  B.writeText = (path, text) => B.writeBytes(path, new TextEncoder().encode(text));
+  B.readText = async path => new TextDecoder().decode(await invoke('read_file', { path }));
+  B.fileTimes = paths => invoke('file_times', { paths });
+  B.filmCacheDir = id => invoke('film_cache_dir', { id });
+  // Dirección para el reproductor de video (lee directo del disco, sin copiar el archivo).
+  B.previewSrc = async path => {
+    await invoke('allow_preview', { path });
+    return T.core.convertFileSrc(path);
+  };
 
   // Nombre libre en la carpeta: "video.mp4", "video (2).mp4"…
   B.freeName = async (dir, base, ext) => {
@@ -51,11 +60,12 @@
   let seq = 0;
   const handlers = new Map();
   if (B.available) T.event.listen('ff-progress', e => { const h = handlers.get(e.payload.job); if (h) h(e.payload.out_time_us / 1e6); });
-  B.run = async (tool, args, onTime) => {
+  // capture: devuelve todo lo que FFmpeg escribe (para la revisión y para medir el volumen).
+  B.run = async (tool, args, onTime, capture) => {
     const job = `j${++seq}-${Date.now()}`;
     if (onTime) handlers.set(job, onTime);
-    B.current = job;
-    try { return await invoke('run_tool', { tool, job, args }); }
+    if (!capture) B.current = job;
+    try { return await invoke('run_tool', { tool, job, args, capture: !!capture }); }
     finally { handlers.delete(job); if (B.current === job) B.current = null; }
   };
   B.cancel = () => B.current ? invoke('cancel_job', { job: B.current }) : Promise.resolve(false);
