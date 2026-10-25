@@ -648,7 +648,7 @@
   D.ritmoIn = { draw: (ctx, W, H, t, dur, d, th) => {
     const u = U(W, H); A.scrim(ctx, W, H, 'full', .6 * prog(t, 0, .4));
     slam(ctx, W, H, t, (d.title || '').toUpperCase().split(/\s+/).filter(Boolean).slice(0, 4), u, .2, .32);
-    if (d.date) A.text(ctx, dl(d.date).toUpperCase(), W / 2, H * .5 + 260 * u, { w: 700, s: 30 * u, f: F.caps, ls: .35, color: th.accent, alpha: prog(t, 1.4, 1.9) });
+    if (d.date) A.chip(ctx, W / 2 - (A.setFont(ctx, 800, 30 * u, F.caps, .04), ctx.measureText(dl(d.date).toUpperCase()).width + 42 * u) / 2, H * .5 + 370 * u, dl(d.date).toUpperCase(), u, { s: 30, w: 800, bg: th.accent, color: '#1E1D1A', alpha: prog(t, 1.4, 1.9) });
   } };
   D.ritmoOut = { draw: (ctx, W, H, t, dur, d, th) => {
     const u = U(W, H); A.scrim(ctx, W, H, 'full', 1.2 * prog(t, 0, .3));
