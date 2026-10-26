@@ -32,15 +32,17 @@
     ctx.globalAlpha *= o.alpha == null ? 1 : o.alpha;
     ctx.textAlign = o.align || 'center'; ctx.textBaseline = 'alphabetic';
     const dx = (o.align || 'center') === 'center' ? (o.ls || 0) * size / 2 : 0;
-    if (o.shadow) { ctx.shadowColor = o.shadowColor || 'rgba(0,0,0,.55)'; ctx.shadowBlur = o.shadow; ctx.shadowOffsetY = o.shadow * .12; }
+    if (!SA.applyTextShadow(ctx, size) && o.shadow) { ctx.shadowColor = o.shadowColor || 'rgba(0,0,0,.55)'; ctx.shadowBlur = o.shadow; ctx.shadowOffsetY = o.shadow * .12; }
     if (o.glow) { ctx.shadowColor = o.glow[0]; ctx.shadowBlur = o.glow[1]; for (let i = 0; i < (o.glow[2] || 2); i++) { ctx.fillStyle = o.glow[0]; ctx.fillText(text, x + dx, y); } ctx.shadowBlur = o.glow[1] * .35; }
-    if (o.stroke) { ctx.lineWidth = o.stroke[1]; ctx.strokeStyle = o.stroke[0]; ctx.lineJoin = 'round'; ctx.strokeText(text, x + dx, y); }
+    if (o.stroke) { ctx.lineWidth = o.stroke[1]; ctx.strokeStyle = o.stroke[0]; ctx.lineJoin = 'round'; ctx.strokeText(text, x + dx, y); if (SA.textShadow === 'strong') SA.applyTextShadow(ctx, 0); }
     ctx.fillStyle = o.color || '#fff';
     ctx.fillText(text, x + dx, y);
     const w = ctx.measureText(text).width;
     ctx.restore();
     return { size, w };
   };
+  // Dibuja un diseño con la sombra de letras que se eligió (th.shadow).
+  A.draw = (d, ctx, W, H, t, dur, data, th) => SA.withShadow(th && th.shadow, () => d.draw(ctx, W, H, t, dur, data, th));
   A.wrap = (ctx, text, maxW) => {
     const words = String(text).split(/\s+/).filter(Boolean), lines = [];
     let cur = '';

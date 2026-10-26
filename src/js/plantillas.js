@@ -44,6 +44,8 @@
             <h2><span class="num">2</span>Textos</h2>
             <div class="fields" data-el="fields"></div>
             <div class="field"><span class="lbl">Color de las letras</span><div class="chips" data-el="theme" role="radiogroup">${Object.entries(SA.cards.THEMES).map(([k, v]) => `<button type="button" class="chip" data-v="${k}"><span class="sw" style="background:${v.accent}"></span>${v.name}</button>`).join('')}</div></div>
+            <div class="field"><span class="lbl">Sombra de las letras</span><div class="seg" data-el="shadow" role="radiogroup" aria-label="Sombra de las letras">${SA.SHADOWS.map(([k, n]) => `<button type="button" data-v="${k}">${n}</button>`).join('')}</div>
+              <p class="hint">"Marcada" ayuda a que se lean sobre fotos claras o con mucho detalle.</p></div>
           </section>
           <section class="step">
             <h2><span class="num">3</span>Música</h2>
@@ -103,6 +105,7 @@
       });
       SA.ui.seg(this.q('cats'), this.cat, v => { this.cat = v; SA.ui.setSeg(this.q('cats'), v); this.renderGallery(); });
       SA.ui.seg(this.q('theme'), '', v => { this.st.theme = v; this.changed(); });
+      SA.ui.seg(this.q('shadow'), 'auto', v => { this.st.shadow = v; this.changed(); });
       SA.ui.seg(this.q('which'), this.which, v => { this.which = v; this.pt = 0; SA.ui.setSeg(this.q('which'), v); });
       SA.ui.seg(this.q('wmSize'), S.size || 'm', v => { S.size = v; SA.brandChanged(); });
       $$('.fmt', this.q('formats')).forEach(b => b.addEventListener('click', () => {
@@ -150,13 +153,13 @@
     drawLayers(ctx, W, H, t, which, time, data, th) {
       if (t.vignette) { const g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * .35, W / 2, H / 2, Math.max(W, H) * .75); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,.45)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); }
       if (t.grain) this.grain(ctx, W, H);
-      t.layers.filter(l => l.at === 'all').forEach(l => { if (!l.blink || Math.floor(time * 2) % 2 === 0) l.d.draw(ctx, W, H, time, 999, data, th); });
+      t.layers.filter(l => l.at === 'all').forEach(l => { if (!l.blink || Math.floor(time * 2) % 2 === 0) A.draw(l.d, ctx, W, H, time, 999, data, th); });
       const ly = t.layers.find(l => l.at === which);
       if (ly) {
         const dur = which === 'intro' ? t.intro + t.T * .5 : t.outro;
         const c = this._lc && this._lc.width === W && this._lc.height === H ? this._lc : (this._lc = Object.assign(document.createElement('canvas'), { width: W, height: H }));
         const lx = c.getContext('2d'); lx.clearRect(0, 0, W, H); lx.save();
-        ly.d.draw(lx, W, H, ly.d.static ? 3 : Math.min(time, dur), dur, data, th); lx.restore();
+        A.draw(ly.d, lx, W, H, ly.d.static ? 3 : Math.min(time, dur), dur, data, th); lx.restore();
         // Los textos fijos aparecen con fundido (como en el video)
         ctx.save(); if (ly.d.static) ctx.globalAlpha = A.prog(time, 0, .5); ctx.drawImage(c, 0, 0); ctx.restore();
       }
@@ -171,7 +174,7 @@
       const t = SA.TEMPLATES.find(x => x.id === b.dataset.id); if (!t) return;
       this.tpl = t;
       const saved = this.store[t.id] || {};
-      this.st = { theme: saved.theme || t.theme, formats: saved.formats || ['v'], enhance: saved.enhance != null ? saved.enhance : true, target: saved.target || (t.durations ? t.durations[0] : null), beatOn: true, songStart: 0, values: {} };
+      this.st = { theme: saved.theme || t.theme, shadow: saved.shadow || 'auto', formats: saved.formats || ['v'], enhance: saved.enhance != null ? saved.enhance : true, target: saved.target || (t.durations ? t.durations[0] : null), beatOn: true, songStart: 0, values: {} };
       t.fields.forEach(f => { this.st.values[f.key] = (saved.values && saved.values[f.key] != null && !['title', 'date', 'extra'].includes(f.key)) ? saved.values[f.key] : (f.def || ''); });
       this.q('gallery').hidden = true; this.q('editor').hidden = false;
       this.q('tplName').textContent = t.name; this.q('tplDesc').textContent = t.desc;
@@ -189,14 +192,14 @@
     }
     act_back() { this.stopPreview(); this.stopListen(); SA.music.stop(); this.q('editor').hidden = true; this.q('gallery').hidden = false; this.renderGallery(); }
     save() {
-      const { theme, formats, enhance, target, values, song } = this.st;
-      this.store[this.tpl.id] = { theme, formats, enhance, target, values, song };
+      const { theme, shadow, formats, enhance, target, values, song } = this.st;
+      this.store[this.tpl.id] = { theme, shadow, formats, enhance, target, values, song };
       try { localStorage.setItem('saucedo-plantillas', JSON.stringify(this.store)); } catch (e) {}
     }
     changed() { this.save(); this.syncStyle(); this.summary(); }
     syncStyle() {
       if (!this.tpl) return;
-      SA.ui.setSeg(this.q('theme'), this.st.theme);
+      SA.ui.setSeg(this.q('theme'), this.st.theme); SA.ui.setSeg(this.q('shadow'), this.st.shadow || 'auto');
       SA.ui.setSeg(this.q('target'), String(this.st.target));
       $$('.fmt', this.q('formats')).forEach(b => b.setAttribute('aria-pressed', String(this.st.formats.includes(b.dataset.v))));
       const enh = this.root.querySelector('[data-act="enhance"]');
@@ -206,6 +209,7 @@
       this.q('wmTxt').textContent = S.wm ? `Logo en cada toma (${S.wmColor === 'negro' ? 'negro' : S.wmColor === 'blanco' ? 'blanco' : 'negro o blanco según el fondo'})` : 'Sin logo';
       this.q('beatOn').setAttribute('aria-checked', String(this.st.beatOn));
     }
+    theme() { return Object.assign(THEME(this.st.theme), { shadow: this.st.shadow || 'auto' }); }
     act_enhance() { this.st.enhance = !this.st.enhance; this.changed(); }
     act_wm() { S.wm = !S.wm; SA.brandChanged(); this.syncStyle(); }
     act_beatOn() { this.st.beatOn = !this.st.beatOn; this.syncStyle(); this.summary(); }
@@ -518,7 +522,7 @@
         } else C.drawFit(ctx, bg, W, H, 'cover', z);
         ctx.filter = 'none';
       }
-      this.drawLayers(ctx, W, H, t, this.which, time, pd, THEME(this.st.theme));
+      this.drawLayers(ctx, W, H, t, this.which, time, pd, this.theme());
       if (!(t.wmSkip || []).includes(this.which)) SA.drawWatermark(ctx, W, H, S, SA.VIDEO_WM_SCALE);
       ctx.restore();
     }
@@ -582,11 +586,11 @@
     async renderLayer(design, W, H, dur, data, th, path, onFrame) {
       const c = document.createElement('canvas'); c.width = W; c.height = H;
       const ctx = c.getContext('2d');
-      if (design.static) { design.draw(ctx, W, H, 3, dur, data, th); await this.writeCanvas(c, path + '.png'); return { path: path + '.png', seq: false }; }
+      if (design.static) { A.draw(design, ctx, W, H, 3, dur, data, th); await this.writeCanvas(c, path + '.png'); return { path: path + '.png', seq: false }; }
       const N = Math.ceil(dur * E.FPS) + 2;
       for (let f = 0; f < N; f++) {
         if (this.cancelled) return null;
-        ctx.clearRect(0, 0, W, H); ctx.save(); design.draw(ctx, W, H, f / E.FPS, dur, data, th); ctx.restore();
+        ctx.clearRect(0, 0, W, H); ctx.save(); A.draw(design, ctx, W, H, f / E.FPS, dur, data, th); ctx.restore();
         await this.writeCanvas(c, `${path}_${String(f).padStart(4, '0')}.png`);
         if (onFrame) onFrame(f / N);
       }
@@ -645,7 +649,7 @@
       try {
         const list = this.expanded().map(x => ({ kind: x.kind, path: x.src.path, width: x.src.w, height: x.src.h, duration: x.duration || 0, name: x.src.name, src: x.src, ad: x.ad, group: x.group }));
         const plan = this.plan();
-        const data = this.data(), th = THEME(this.st.theme);
+        const data = this.data(), th = this.theme();
         // Pesos para la barra: fotos, capas de texto y pasos de FFmpeg
         const usedImgs = [...new Set(plan.segments.map(s => s.m))].filter(i => list[i].kind === 'image');
         const lyr = t.layers.filter(l => !l.d.static);
@@ -714,7 +718,7 @@
               const r = await this.renderLayer(l.d, W, H, pop, dd, th, B.join(tmp, `capa${li}_${k}`));
               if (!r) return null;
               layers.push(Object.assign({ a, b: Math.min(b, a + pop + 2 / E.FPS) }, r));
-              const cx = cv.getContext('2d'); cx.clearRect(0, 0, W, H); cx.save(); l.d.draw(cx, W, H, 2, b - a, dd, th); cx.restore();
+              const cx = cv.getContext('2d'); cx.clearRect(0, 0, W, H); cx.save(); A.draw(l.d, cx, W, H, 2, b - a, dd, th); cx.restore();
               const still = B.join(tmp, `capa${li}_${k}_fija.png`); await this.writeCanvas(cv, still);
               layers.push({ path: still, seq: false, a: a + pop, b });
             }

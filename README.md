@@ -4,8 +4,9 @@ Programa para Windows de **Eduardo Saucedo · Video & Fotografía**. Está hecho
 
 | Pestaña | Qué hace |
 |---|---|
-| **Fotos** | Botón "Mejorar colores", 6 estilos (Natural, Boda cálida, Rosa XV, Blanco y negro, Colores vivos, Película) y el logo oficial como marca de agua. Guarda por lote en JPG al tamaño original. |
-| **Plantillas de video** | 30 plantillas tipo CapCut, simples y elaboradas, con textos animados, efectos y cortes al ritmo. Cada una ya trae su canción sugerida (se puede cambiar). Vertical, horizontal y cuadrado. |
+| **Fotos** | Botón "Mejorar colores", 6 estilos (Natural, Boda cálida, Rosa XV, Blanco y negro, Colores vivos, Película), ajustes finos (brillo, contraste, saturación, calidez) y el logo oficial como marca de agua. Todo se aplica a **todas las fotos o solo a una** (con giro y lugar del logo propio). Guarda por lote en JPG al tamaño original. |
+| **Plantillas de video** | 30 plantillas tipo CapCut, simples y elaboradas, con textos animados, efectos y cortes al ritmo. Cada una ya trae su canción sugerida (se puede cambiar). Sombra de las letras a elegir. Vertical, horizontal y cuadrado. |
+| **Fotosecuencia** | Fotos con movimiento y transiciones profesionales (automáticas o una por una), letras como en las plantillas, letreros por foto, música al ritmo y tres pesos de archivo. Se ve completa en la pantalla antes de crearla. |
 | **Película del evento** | La película completa de la fiesta, guiada por momentos, más un **resumen** de 3 a 5 min y un **reel** vertical armados solos con las mejores partes. Con edición avanzada: tijeras, acortar la película a la duración que se pida, transición, velocidad, giro y color por toma. |
 
 **Logo:** viene de fábrica el logo oficial en negro y en blanco. En automático se pone negro sobre fondos claros y blanco sobre oscuros, foto por foto y toma por toma. Tamaño chico, mediano o grande desde Fotos, Plantillas o Película (es el mismo ajuste en las tres). Se puede subir otro logo.
@@ -64,11 +65,22 @@ Las plantillas están en `src/js/templates.js`: cada una es una receta (tiempos,
 
 - **✂ Cortar aquí** (tecla **S**): parte una toma en dos donde está el video. Cada pedazo se acomoda, recorta o quita por separado; en la barra se ven los otros pedazos del mismo archivo.
 - **✂ Acortar la película…**: se elige cuánto debe durar (por ejemplo, de 4 h a 2 h) y el programa revisa cada toma segundo a segundo y quita primero lo oscuro, sin movimiento, sin sonido o fuera de foco. Cada toma conserva por lo menos 3 segundos y la ceremonia, el vals y el brindis no se tocan (se puede cambiar). Lo quitado queda en gris en la barra de cada toma: un clic lo regresa.
-- **Opciones avanzadas de cada toma:** transición al empezar (11 tipos con vista previa animada y duración rápida, normal o lenta), velocidad (0.5× cámara lenta a 2×), acercar (115 a 150 %), girar videos grabados de lado, color propio (brillo, contraste, saturación y calidez, o el mismo en todo el momento), estabilizar y un letrero en pantalla ("Los padrinos").
+- **Opciones avanzadas de cada toma:** transición al empezar (18 tipos con muestra animada y duración rápida, normal o lenta), velocidad (0.5× cámara lenta a 2×), acercar (115 a 150 %), girar videos grabados de lado, color propio (brillo, contraste, saturación y calidez, o el mismo en todo el momento), estabilizar y un letrero en pantalla ("Los padrinos").
+- **Doble toma:** otra toma (por ejemplo, la del dron) en un cuadro chico, mediano o grande en cualquier esquina, desde el segundo que se elija, con marco blanco y, si se quiere, con su sonido. Se ve en la vista previa al reproducir.
+- **Transiciones a la vista:** en el tablero, entre toma y toma, se ve qué transición lleva; al tocarla se reproduce en grande con las imágenes reales de las dos tomas. Las muestras de cada transición también usan las tomas reales.
 - **Opciones avanzadas del momento:** una transición para todas sus tomas y si se puede recortar o no.
+- **Sombra de las letras** (como viene, suave, marcada o sin sombra) para los letreros, el resumen y el reel.
 - **↶ Deshacer** (Ctrl+Z) para cualquier cambio, y atajos: I / O marcan inicio y fin, Espacio reproduce, Supr quita la toma.
 - La duración de la película se ve siempre en la barra, ya con las partes quitadas, la velocidad y las transiciones.
 7. **Resumen y reel:** cada toma se revisa segundo a segundo (brillo, nitidez, movimiento y sonido, como aplausos) y se eligen las mejores partes de cada momento. Se cortan al ritmo de la canción, con el título al inicio, el nombre de cada momento y los créditos con el logo. El resumen sale horizontal (3, 4 o 5 min) y el reel vertical (30, 45 o 60 s). Nunca dura más que la canción, y si hay poco material sale más corto en lugar de repetir tomas.
+
+## Fotosecuencia
+
+1. **Fotos:** se agregan o se arrastran; se ordenan como se agregaron o por nombre (como salen de la cámara), y se mueven con ‹ Antes / Después ›.
+2. **Letras:** 12 diseños de las plantillas (Elegante, De cine, Nostalgia, Delicado, Máquina de escribir, Minimal, Neón, Fiesta, Mexicana, Impacto, Navidad, Glitch) o sin letras; título al inicio y despedida al final, color y sombra. Cada foto puede llevar su letrero (elegante o en globo tipo CapCut).
+3. **Transiciones y movimiento:** estilos automáticos (Suave, Elegante, Dinámica o Solo cortes) y, foto por foto, cualquiera de las 18 transiciones con su duración, movimiento (acercar, alejar, recorrer hacia un lado o quieta) y cuánto dura. Entre foto y foto se ve la transición; al tocarla se reproduce ese momento.
+4. **Música:** canciones incluidas (empieza sola en la mejor parte), cambio de foto al ritmo y opción de que dure toda la canción.
+5. **Crear:** horizontal, vertical o cuadrado; peso Ligero (720p, para WhatsApp), Normal (1080p) o Alta calidad. Las fotos se preparan una sola vez al tamaño del video para que FFmpeg trabaje ligero.
 
 ## Música incluida (`tools/musica/`)
 

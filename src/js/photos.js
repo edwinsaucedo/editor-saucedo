@@ -5,11 +5,15 @@
   const { $, esc, toast } = SA.ui;
   const C = SA.color, B = SA.bridge, S = SA.settings;
 
-  function renderTo(cv, src, w, h, stats, cfg, withWm) {
+  // rot: giro de la foto (0, 90, 180 o 270); w y h ya son las medidas de la foto girada.
+  function renderTo(cv, src, w, h, stats, cfg, withWm, rot) {
     cv.width = w; cv.height = h;
     const ctx = cv.getContext('2d', { willReadFrequently: true });
     ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(src, 0, 0, w, h);
+    if (rot) {
+      const side = rot % 180 !== 0, dw = side ? h : w, dh = side ? w : h;
+      ctx.save(); ctx.translate(w / 2, h / 2); ctx.rotate(rot * Math.PI / 180); ctx.drawImage(src, -dw / 2, -dh / 2, dw, dh); ctx.restore();
+    } else ctx.drawImage(src, 0, 0, w, h);
     C.colorCanvas(ctx, w, h, stats, cfg);
     if (withWm) SA.drawWatermark(ctx, w, h, cfg, 1);
   }
@@ -50,21 +54,90 @@
   const lru = [];
   const realItems = () => items.filter(i => !i.sample);
 
+  /* ---------- Para todas o solo para una foto ----------
+   * Cada foto puede tener sus propios ajustes (it.own): color { auto, style, adj }, giro (rot) y logo (wm: 'pos' | 'off', pos). */
+  let scope = 'all';
+  function cfgOf(it) {
+    const o = it && it.own; if (!o) return S;
+    const c = Object.assign({}, S);
+    if (o.color) { c.auto = o.color.auto; c.style = o.color.style; c.adj = o.color.adj; }
+    if (o.wm === 'off') c.wm = false; else if (o.wm === 'pos' && o.pos) c.pos = o.pos;
+    return c;
+  }
+  const rotOf = it => (it && it.own && it.own.rot) || 0;
+  const dims = (it, w, h) => rotOf(it) % 180 ? [h, w] : [w, h];
+  const one = () => scope === 'one' && sel;
+  // Dónde se guarda un cambio de color: en los ajustes de todas o en los de esta foto.
+  function colorTarget() {
+    if (!one()) return S;
+    sel.own = sel.own || {};
+    return sel.own.color = sel.own.color || { auto: S.auto, style: S.style, adj: Object.assign({}, S.adj || {}) };
+  }
+  function tidy(it) { if (it && it.own && !it.own.color && !it.own.rot && !it.own.wm) delete it.own; }
+
   /* ---------- Controles de color ---------- */
   Object.entries(C.STYLES).forEach(([key, st]) => {
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'style'; b.setAttribute('role', 'radio'); b.dataset.style = key;
     b.innerHTML = `<canvas width="180" height="120"></canvas><span>${esc(st.name)}</span>`;
-    b.addEventListener('click', () => { S.style = key; changed(); });
+    b.addEventListener('click', () => { colorTarget().style = key; changed(); });
     el.styles.appendChild(b);
   });
-  el.auto.addEventListener('click', () => { S.auto = !S.auto; changed(true); });
+  el.auto.addEventListener('click', () => { const t = colorTarget(); t.auto = !t.auto; changed(true); });
+  const adjBox = $('#phAdj');
+  adjBox.querySelectorAll('input[data-adj]').forEach(r => {
+    r.addEventListener('input', () => {
+      const t = colorTarget(); t.adj = Object.assign({}, t.adj || {}, { [r.dataset.adj]: +r.value });
+      r.nextElementSibling.textContent = `${+r.value > 0 ? '+' : ''}${r.value}`;
+      clearTimeout(r._t); r._t = setTimeout(() => changed(true), 60);
+    });
+  });
+  $('#phAdjReset').addEventListener('click', () => { colorTarget().adj = {}; changed(true); });
+  SA.ui.seg($('#phScope'), scope, v => { scope = v; syncUI(); });
+  SA.ui.seg($('#phRot'), '0', v => { if (!one()) return; sel.own = sel.own || {}; sel.own.rot = +v || undefined; tidy(sel); changed(true); });
+  SA.ui.seg($('#phOwnWm'), 'same', v => {
+    if (!one()) return; sel.own = sel.own || {};
+    if (v === 'same') { delete sel.own.wm; delete sel.own.pos; } else { sel.own.wm = v; if (v === 'pos') sel.own.pos = sel.own.pos || S.pos; }
+    tidy(sel); changed();
+  });
+  SA.POS.forEach(([key, label]) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.setAttribute('role', 'radio'); b.dataset.v = key; b.setAttribute('aria-label', label); b.title = label;
+    b.addEventListener('click', () => { if (!one()) return; sel.own = sel.own || {}; sel.own.wm = 'pos'; sel.own.pos = key; changed(); });
+    $('#phOwnPos').appendChild(b);
+  });
+  $('#phOwnAll').addEventListener('click', () => {
+    if (!one()) return;
+    const c = cfgOf(sel); S.auto = c.auto; S.style = c.style; S.adj = Object.assign({}, c.adj || {});
+    items.forEach(it => { if (it.own) { delete it.own.color; tidy(it); } });
+    toast('Listo: todas las fotos tienen ahora estos colores.'); changed(true);
+  });
+  $('#phOwnReset').addEventListener('click', () => { if (!sel) return; delete sel.own; toast('Esta foto vuelve a quedar igual que las demás.'); changed(true); });
 
   function syncUI() {
-    el.auto.setAttribute('aria-pressed', S.auto); el.autoState.textContent = S.auto ? 'Activado' : 'Apagado';
-    el.styles.querySelectorAll('.style').forEach(b => b.setAttribute('aria-checked', b.dataset.style === S.style));
+    const c = one() ? cfgOf(sel) : S, adj = c.adj || {};
+    el.auto.setAttribute('aria-pressed', c.auto); el.autoState.textContent = c.auto ? 'Activado' : 'Apagado';
+    el.styles.querySelectorAll('.style').forEach(b => b.setAttribute('aria-checked', b.dataset.style === c.style));
+    adjBox.querySelectorAll('input[data-adj]').forEach(r => { const v = +adj[r.dataset.adj] || 0; r.value = v; r.nextElementSibling.textContent = `${v > 0 ? '+' : ''}${v}`; });
+    SA.ui.setSeg($('#phScope'), scope);
+    const owners = realItems().filter(i => i.own).length;
+    $('#phScopeHint').textContent = one() ? `Los cambios son solo para «${sel.sample ? 'la muestra' : sel.name}». Las demás fotos no cambian.`
+      : owners ? `Los cambios se aplican a todas las fotos, menos ${owners === 1 ? 'la que tiene' : `las ${owners} que tienen`} ajustes propios (marcadas con ★).` : 'Los cambios se aplican a todas las fotos.';
+    $('#phOwnBox').hidden = !one();
+    if (one()) {
+      const o = sel.own || {};
+      SA.ui.setSeg($('#phRot'), String(o.rot || 0)); SA.ui.setSeg($('#phOwnWm'), o.wm || 'same');
+      $('#phOwnPos').hidden = o.wm !== 'pos';
+      $('#phOwnPos').querySelectorAll('button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.v === (o.pos || S.pos))));
+      $('#phOwnReset').hidden = $('#phOwnAll').hidden = !sel.own;
+      $('#phOwnAll').hidden = !(sel.own && sel.own.color);
+    }
   }
-  function changed(cards) { SA.saveSettings(); syncUI(); lastFit = ''; schedulePreview(); rerenderThumbs(); if (cards) renderStyleCards(); }
+  function changed(cards) {
+    SA.saveSettings(); syncUI(); lastFit = ''; schedulePreview();
+    if (one()) renderThumb(sel); else rerenderThumbs();
+    if (cards) renderStyleCards();
+  }
   SA.onBrandChange(() => { lastFit = ''; schedulePreview(); rerenderThumbs(); });
 
   /* ---------- Tira ---------- */
@@ -80,10 +153,13 @@
   function renderThumb(it) {
     if (!it.el || it.status !== 'ok') return;
     if (!it.tcv) it.tcv = document.createElement('canvas');
-    const [tw, th] = C.fitLong(it.src.width, it.src.height, 240);
-    renderTo(it.tcv, it.src, tw, th, it.stats, S, true);
+    const [tw, th] = C.fitLong(...dims(it, it.src.width, it.src.height), 240);
+    renderTo(it.tcv, it.src, tw, th, it.stats, cfgOf(it), true, rotOf(it));
     const pick = it.el.querySelector('.pick');
     if (it.tcv.parentNode !== pick) { pick.textContent = ''; pick.appendChild(it.tcv); }
+    let tag = pick.querySelector('.own-tag');
+    if (it.own && !tag) { tag = document.createElement('span'); tag.className = 'own-tag'; tag.textContent = '★'; tag.title = 'Tiene ajustes propios'; pick.appendChild(tag); }
+    else if (!it.own && tag) tag.remove();
     pick.setAttribute('aria-label', it.sample ? 'Muestra' : it.name);
   }
   function renumber() {
@@ -105,8 +181,8 @@
     el.styles.querySelectorAll('.style').forEach(b => {
       const cv = b.querySelector('canvas');
       if (!sel || sel.status !== 'ok') { cv.getContext('2d').clearRect(0, 0, cv.width, cv.height); return; }
-      const [tw, th] = C.fitLong(sel.src.width, sel.src.height, 240);
-      renderTo(cv, sel.src, tw, th, sel.stats, Object.assign({}, S, { style: b.dataset.style }), false);
+      const [tw, th] = C.fitLong(...dims(sel, sel.src.width, sel.src.height), 240);
+      renderTo(cv, sel.src, tw, th, sel.stats, Object.assign({}, one() ? cfgOf(sel) : S, { style: b.dataset.style }), false, rotOf(sel));
     });
   }
 
@@ -116,20 +192,19 @@
   function drawPreview() {
     updateStage();
     if (!sel || sel.status !== 'ok') return;
-    const pv = sel.preview || sel.src, ar = pv.width / pv.height;
+    const pv = sel.preview || sel.src, rot = rotOf(sel), [rw, rh] = dims(sel, pv.width, pv.height), ar = rw / rh;
     const r = el.stage.getBoundingClientRect();
     if (r.width < 50) return;
     const maxW = Math.max(120, r.width - 48), maxH = Math.max(120, r.height - 48);
     let fw = maxW, fh = fw / ar; if (fh > maxH) { fh = maxH; fw = fh * ar; }
-    const key = [sel.id, Math.round(fw), Math.round(fh), pv.width].join('|');
+    const key = [sel.id, Math.round(fw), Math.round(fh), pv.width, rot].join('|');
     el.frame.style.width = fw + 'px'; el.frame.style.height = fh + 'px';
     if (key === lastFit) return;
     lastFit = key;
     const dpr = Math.min(2, window.devicePixelRatio || 1);
-    const pw = Math.max(1, Math.round(Math.min(pv.width, fw * dpr))), ph = Math.max(1, Math.round(pw / ar));
-    renderTo(el.cvA, pv, pw, ph, sel.stats, S, true);
-    el.cvB.width = pw; el.cvB.height = ph;
-    const bc = el.cvB.getContext('2d'); bc.imageSmoothingQuality = 'high'; bc.drawImage(pv, 0, 0, pw, ph);
+    const pw = Math.max(1, Math.round(Math.min(rw, fw * dpr))), ph = Math.max(1, Math.round(pw / ar));
+    renderTo(el.cvA, pv, pw, ph, sel.stats, cfgOf(sel), true, rot);
+    renderTo(el.cvB, pv, pw, ph, null, { auto: false, style: 'natural' }, false, rot);
   }
   function updateStage() {
     const none = items.length === 0;
@@ -162,7 +237,7 @@
     if (it.el) it.el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     el.name.textContent = it.sample ? 'Muestra: carta de color (no se guarda)' : it.name;
     el.sub.textContent = (it.w ? `${it.w} × ${it.h} px · ` : '') + 'Desliza sobre la foto para comparar antes y después';
-    lastFit = ''; renderStyleCards(); drawPreview();
+    lastFit = ''; renderStyleCards(); drawPreview(); syncUI();
     if (it.status !== 'ok') return;
     const tok = ++selTok;
     if (!it.preview) el.busy.hidden = false;
@@ -298,8 +373,8 @@
       for (const it of list) {
         if (saving.cancel) break;
         const bmp = await decode(it.path);
-        const c = document.createElement('canvas');
-        renderTo(c, bmp, bmp.width, bmp.height, it.stats, cfg, true);
+        const c = document.createElement('canvas'), [ow, oh] = dims(it, bmp.width, bmp.height);
+        renderTo(c, bmp, ow, oh, it.stats, it.own ? cfgOf(it) : cfg, true, rotOf(it));
         bmp.close && bmp.close();
         const blob = await new Promise((res, rej) => c.toBlob(b => b ? res(b) : rej(new Error('No se pudo crear el JPG')), 'image/jpeg', .92));
         c.width = c.height = 0;

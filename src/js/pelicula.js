@@ -26,9 +26,9 @@
   };
   const MIN_LEN = 1.5;
   // Edición avanzada: transiciones que se pueden elegir (nombre de FFmpeg → nombre para el usuario).
-  const TRANS = [['auto', 'Automática'], ['corte', 'Corte directo'], ['fade', 'Fundido'], ['fadeblack', 'Fundido a negro'], ['fadewhite', 'Destello blanco'],
-    ['smoothleft', 'Deslizar ←'], ['smoothright', 'Deslizar →'], ['smoothup', 'Subir'], ['circleopen', 'Círculo'], ['zoomin', 'Acercamiento'], ['hblur', 'Desenfoque'], ['wiperight', 'Barrido']];
-  const TDUR = [[0.4, 'Rápida'], [0.8, 'Normal'], [1.5, 'Lenta']];
+  const TRANS = SA.trans.TYPES, TDUR = SA.trans.DURS;
+  const PIP_SIZES = [['s', 'Chico'], ['m', 'Mediano'], ['l', 'Grande']];
+  const PIP_POS = [['tl', 'Arriba a la izquierda'], ['tr', 'Arriba a la derecha'], ['bl', 'Abajo a la izquierda'], ['br', 'Abajo a la derecha']];
   const SPEEDS = [[0.5, '0.5×'], [0.75, '0.75×'], [1, 'Normal'], [1.5, '1.5×'], [2, '2×']];
   const ROTS = [[0, 'Normal'], [90, '↻ 90°'], [180, '180°'], [270, '↺ 90°']];
   const ZOOMS = [[1, 'Normal'], [1.15, '115 %'], [1.3, '130 %'], [1.5, '150 %']];
@@ -83,6 +83,7 @@
             <div class="field"><span class="lbl">Estilo de color</span><div class="chips" data-el="style" role="radiogroup">${styles}</div></div>
             <div class="sw-row"><button class="switch" type="button" role="switch" data-act="denoise" data-el="denoise" aria-labelledby="pDenoise"></button><span class="sw-state" id="pDenoise">Reducir el ruido del salón</span></div>
             <div class="field"><span class="lbl">Color de las letras</span><div class="chips" data-el="theme" role="radiogroup">${themes}</div></div>
+            <div class="field"><span class="lbl">Sombra de las letras (letreros, resumen y reel)</span><div class="seg" data-el="shadow" role="radiogroup">${SA.SHADOWS.map(([k, n]) => `<button type="button" data-v="${k}">${n}</button>`).join('')}</div></div>
             <div class="sw-row"><button class="switch" type="button" role="switch" data-act="wm" data-el="wm" aria-labelledby="pWm"></button><span class="sw-state" id="pWm">Marca de agua</span></div>
             <div class="field" data-el="wmSizeBox"><span class="lbl">Tamaño del logo</span><div class="seg" data-el="wmSize" role="radiogroup" aria-label="Tamaño del logo"><button type="button" data-v="s">Chico</button><button type="button" data-v="m">Mediano</button><button type="button" data-v="l">Grande</button></div></div>
             <div class="field"><span class="lbl">Canción de la portada y los créditos</span>
@@ -139,7 +140,9 @@
               <div class="screen" data-el="screen">
                 <video data-el="video" controls preload="metadata"></video>
                 <img data-el="img" alt="" hidden>
+                <video class="pip-prev" data-el="pipVid" muted playsinline preload="auto" hidden></video>
                 <p class="lbl-prev" data-el="lblPrev" hidden></p>
+                <canvas class="tprev" data-el="tprev" hidden></canvas>
                 <p class="screen-msg" data-el="screenMsg">Elige una toma de abajo para verla aquí.</p>
               </div>
               <div class="trim" data-el="trimBox" hidden>
@@ -191,7 +194,7 @@
       }));
       const seg = (name, key) => SA.ui.seg(this.q(name), '', v => { this.p[key] = v; this.dirty(); this.syncStyle(); this.summary(); });
       SA.ui.seg(this.q('wmSize'), S.size || 'm', v => { S.size = v; SA.brandChanged(); });
-      seg('mood', 'mood'); seg('style', 'style'); seg('theme', 'theme'); seg('quality', 'quality');
+      seg('mood', 'mood'); seg('style', 'style'); seg('theme', 'theme'); seg('quality', 'quality'); seg('shadow', 'shadow');
       $$('[data-el="outputs"] .chip', R).forEach(b => b.addEventListener('click', () => {
         const set = new Set(this.p.outputs || ['pelicula']); set.has(b.dataset.v) ? set.delete(b.dataset.v) : set.add(b.dataset.v);
         if (!set.size) { toast('Elige por lo menos una cosa para crear.'); return; }
@@ -214,6 +217,7 @@
         v.currentTime = Math.max(0, Math.min(c.duration, (e.clientX - r.left) / r.width * c.duration));
       });
       v.addEventListener('loadedmetadata', () => this.applyPreviewLook());
+      ['play', 'pause', 'seeked'].forEach(ev => v.addEventListener(ev, () => this.syncPip()));
       // Video girado (sin controles): un clic reproduce o pausa.
       v.addEventListener('click', () => { if (!v.controls) v.paused ? v.play() : v.pause(); });
       if (window.ResizeObserver) new ResizeObserver(() => { if (this.focus) this.applyPreviewLook(); }).observe(this.q('screen'));
@@ -436,7 +440,7 @@
         const dur = cs.reduce((s, c) => s + this.clipLen(c), 0);
         cols.push(`<div class="col${this.panel === m.id ? ' on' : ''}"><button class="col-h" type="button" data-act="openMoment" data-m="${m.id}">
           <strong>${i + 1}. ${esc(m.name)}</strong><span>${cs.length} tomas · ${fmt(dur)}${m.music ? ' · ♪' : ''}</span></button>
-          <div class="col-b">${cs.map(c => this.cardHtml(c)).join('') || '<p class="col-empty">Selecciona tomas y usa "Mandar a".</p>'}</div></div>`);
+          <div class="col-b">${cs.map((c, k) => (k ? this.joinHtml(c, m) : '') + this.cardHtml(c)).join('') || '<p class="col-empty">Selecciona tomas y usa "Mandar a".</p>'}</div></div>`);
       });
       const ex = Object.values(this.p.clips).filter(c => c.excluded);
       cols.push(`<div class="col ex"><div class="col-h"><strong>No se usan</strong><span>${ex.length} tomas</span></div><div class="col-b">${ex.map(c => this.cardHtml(c)).join('') || '<p class="col-empty">Las tomas que quites quedan aquí.</p>'}</div></div>`);
@@ -455,6 +459,24 @@
         ${c.mute || (c.kind === 'video' && !c.hasAudio && c.ready) ? '<span class="cc-m" title="Sin sonido">🔇</span>' : ''}
         ${this.badges(c)}</button>`;
     }
+    // Entre dos tomas del tablero: qué transición lleva (toca para verla y cambiarla).
+    transOf(c, m) {
+      const t = (c.trans && c.trans.type) || (m && m.trans && m.trans.type);
+      if (t) return { type: t, own: true, dur: (c.trans && c.trans.type ? c.trans.dur : m.trans.dur) || .8 };
+      const mood = E.FILM_MOODS[this.p.mood] || E.FILM_MOODS.suave;
+      return { type: mood.T ? (mood.list[0] || 'fade') : 'corte', own: false, dur: mood.T || .8, mood: this.p.mood };
+    }
+    joinHtml(c, m) {
+      const t = this.transOf(c, m), name = !t.own && t.mood === 'dinamico' ? 'Dinámica' : SA.trans.name(t.type);
+      return `<button class="tj${t.own ? ' own' : ''}" type="button" data-act="tjoin" data-id="${c.id}" title="Transición: ${esc(name)}. Toca para verla o cambiarla.">⇄ ${esc(name)}</button>`;
+    }
+    act_tjoin(b) {
+      this.focusClip(b.dataset.id);
+      const d = this.q('detail'), adv = d.querySelector('[data-el="adv"]');
+      if (adv && !adv.open) { adv.open = true; this.advOpen(true); }
+      const g = d.querySelector('.trans-grid'); if (g) g.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      setTimeout(() => this.act_previewTrans(), 250);
+    }
     // Marcas pequeñas en la tarjeta: partes quitadas, velocidad, letrero, transición propia.
     badges(c) {
       const b = [];
@@ -462,6 +484,7 @@
       if (c.speed && c.speed !== 1) b.push(`<span class="cc-b" title="Velocidad">${c.speed}×</span>`);
       if (c.label) b.push('<span class="cc-b" title="Letrero en pantalla">T</span>');
       if (c.trans && c.trans.type && c.trans.type !== 'auto') b.push('<span class="cc-b" title="Transición propia">⇄</span>');
+      if (c.pip) b.push('<span class="cc-b" title="Doble toma">▣</span>');
       return b.length ? `<span class="cc-bs">${b.join('')}</span>` : '';
     }
     refreshCard(id) {
@@ -582,7 +605,31 @@
         <button class="link" type="button" data-act="restoreAllCuts">Regresar todas las partes quitadas</button>`;
     }
     transGrid(cur, act) {
-      return `<div class="trans-grid">${TRANS.map(([k, t]) => `<button type="button" class="tr${(cur || 'auto') === k ? ' on' : ''}" data-act="${act}" data-v="${k}" aria-pressed="${(cur || 'auto') === k}"><span class="tp tp-${k}"><i></i><b></b></span><span class="tn">${t}</span></button>`).join('')}</div>`;
+      return SA.trans.gridHtml(TRANS, cur, act) + '<button class="btn small-btn" type="button" data-act="previewTrans">▶ Ver la transición en grande</button>';
+    }
+    // Imágenes para las muestras: la toma anterior y esta (o las dos primeras del momento).
+    transImgs(c) {
+      const th = id => this.rt[id] && this.rt[id].thumb || null;
+      if (this.panel) { const m = this.curMoment(); return { a: th(m.clips[0]), b: th(m.clips[1] || m.clips[0]), auto: this.transOf({}, m).type }; }
+      const m = this.momentOf(c.id), i = m ? m.clips.indexOf(c.id) : -1;
+      return { a: i > 0 ? th(m.clips[i - 1]) : null, b: th(c.id), auto: this.transOf(Object.assign({}, c, { trans: null }), m).type };
+    }
+    act_previewTrans() {
+      const c = this.clip(this.focus), cv = this.q('tprev'), sc = this.q('screen');
+      const m = this.panel ? this.curMoment() : c && this.momentOf(c.id);
+      if (!c && !m) return;
+      const im = this.transImgs(c || {}), t = this.panel ? this.transOf({}, m) : this.transOf(c, m);
+      if (this.stopTP) this.stopTP();
+      const r = sc.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1);
+      let w = r.width, h = w * 9 / 16; if (h > r.height) { h = r.height; w = h * 16 / 9; }
+      cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); cv.style.width = w + 'px'; cv.style.height = h + 'px';
+      cv.hidden = false; this.q('video').pause();
+      const nm = !t.own && t.mood === 'dinamico' ? 'Dinámica (cambia en cada toma)' : SA.trans.name(t.type);
+      this.stopTP = SA.trans.play(cv, im.a, im.b, t.type, t.type === 'corte' ? 0 : t.dur, { times: 2, label: (x, W, H) => {
+        x.save(); x.font = `700 ${Math.round(H * .055)}px "SA Body",sans-serif`; x.fillStyle = 'rgba(0,0,0,.55)';
+        const tw = x.measureText(nm).width; x.fillRect(W * .03, H * .04, tw + H * .06, H * .1); x.fillStyle = '#fff'; x.textBaseline = 'middle'; x.fillText(nm, W * .03 + H * .03, H * .09); x.restore();
+      }, onEnd: () => { cv.hidden = true; this.stopTP = null; } });
+      cv.onclick = () => { if (this.stopTP) this.stopTP(); cv.hidden = true; };
     }
     advSeg(name, list, val) {
       return `<div class="seg small" data-cv="${name}" role="radiogroup">${list.map(([v, t]) => `<button type="button" data-v="${v}" aria-checked="${String(v) === String(val)}">${t}</button>`).join('')}</div>`;
@@ -599,9 +646,26 @@
         <div class="field"><span class="lbl">Color de esta toma</span>
           ${[['b', 'Brillo'], ['c', 'Contraste'], ['s', 'Saturación'], ['w', 'Calidez']].map(([k, t]) => `<label class="cslider"><span>${t}</span><input type="range" min="-100" max="100" step="5" value="${col[k]}" data-col="${k}" aria-label="${t}"><output>${col[k] > 0 ? '+' : ''}${col[k]}</output></label>`).join('')}
           <div class="links"><button class="link" type="button" data-act="colorReset">Restablecer</button><button class="link" type="button" data-act="colorAll">Igual en todo el momento</button></div></div>
-        <div class="sw-row"><button class="switch" type="button" role="switch" data-act="stab" aria-checked="${!!c.stab}" aria-label="Estabilizar"></button><span>Estabilizar (quita el temblor; tarda un poco más)</span></div>` : ''}
+        <div class="sw-row"><button class="switch" type="button" role="switch" data-act="stab" aria-checked="${!!c.stab}" aria-label="Estabilizar"></button><span>Estabilizar (quita el temblor; tarda un poco más)</span></div>
+        ${this.pipHtml(c)}` : ''}
         <label class="field"><span class="lbl">Letrero en pantalla (opcional)</span><input class="input" type="text" data-cv="label" maxlength="40" placeholder="Ej. Los padrinos" value="${esc(c.label || '')}" autocomplete="off"></label>
       </details>`;
+    }
+    pipHtml(c) {
+      const P = c.pip;
+      if (!P) return `<div class="field"><span class="lbl">Doble toma</span><p class="hint">Pon otra toma en un cuadro encima de esta, por ejemplo la del dron o la de otra cámara.</p>
+        <button class="btn" type="button" data-act="pipAdd">+ Agregar doble toma</button></div>`;
+      const st = (act, step, val) => `<div class="stepper"><button type="button" data-act="${act}" data-v="-${step}">−${step} s</button><output>${val}</output><button type="button" data-act="${act}" data-v="${step}">+${step} s</button></div>`;
+      return `<div class="field pipbox"><span class="lbl">Doble toma</span>
+        <div class="pip-row"><canvas class="pip-th" width="112" height="63" data-el="pipTh"></canvas><div class="pip-n"><strong>${esc(P.name)}</strong><span>${fmt(P.dur)}${P.hasAudio ? '' : ' · sin sonido'}</span></div><button class="link" type="button" data-act="pipAdd">Cambiar</button></div>
+        <span class="lbl">Tamaño del cuadro</span>${this.advSeg('pipSize', PIP_SIZES, P.size || 'm')}
+        <span class="lbl">Lugar</span><div class="pos four" data-el="pipPos" role="radiogroup">${PIP_POS.map(([k, t]) => `<button type="button" data-act="pipPos" data-v="${k}" aria-label="${t}" title="${t}" aria-checked="${(P.pos || 'tr') === k}"></button>`).join('')}</div>
+        <span class="lbl">Aparece en el segundo</span>${st('pipAt', 1, fmt(P.at))}<button class="link" type="button" data-act="pipHere">Que aparezca donde va el video</button>
+        <span class="lbl">Cuánto dura</span>${st('pipLen', 1, Math.round(P.len) + ' s')}
+        <span class="lbl">Qué parte de la doble toma se ve</span>${st('pipFrom', 2, 'desde ' + fmt(P.from))}
+        <div class="sw-row"><button class="switch" type="button" role="switch" data-act="pipFrame" aria-checked="${P.frame !== false}" aria-label="Marco blanco"></button><span>Marco blanco</span></div>
+        ${P.hasAudio ? `<div class="sw-row"><button class="switch" type="button" role="switch" data-act="pipAudio" aria-checked="${!!P.audio}" aria-label="Sonido de la doble toma"></button><span>Usar también su sonido</span></div>` : ''}
+        <button class="link danger" type="button" data-act="pipOff">Quitar doble toma</button></div>`;
     }
     advOpen(v) {
       if (v != null) { try { localStorage.setItem('saucedo-avanzado', v ? '1' : '0'); } catch (e) {} return v; }
@@ -611,11 +675,13 @@
       const adv = d.querySelector('[data-el="adv"]');
       if (!adv) return;
       adv.addEventListener('toggle', () => this.advOpen(adv.open));
+      SA.trans.animate(adv, () => this.transImgs(c));
       $$('.seg[data-cv]', adv).forEach(g => g.addEventListener('click', e => {
         const b = e.target.closest('button[data-v]'); if (!b) return;
         this.snap();
-        const k = g.dataset.cv, v = +b.dataset.v;
+        const k = g.dataset.cv, v = k === 'pipSize' ? 0 : +b.dataset.v;
         if (k === 'tdur') c.trans = Object.assign({}, c.trans, { dur: v });
+        else if (k === 'pipSize') { c.pip.size = b.dataset.v; }
         else if (k === 'rot') c.rot = v || undefined;
         else c[k] = v === 1 ? undefined : v;
         this.changedClip(c);
@@ -634,13 +700,15 @@
       lb.addEventListener('focus', () => this.snap(), { once: true });
       lb.addEventListener('input', () => { c.label = lb.value.trim() || undefined; this.applyPreviewLook(); this.dirty(); });
       lb.addEventListener('change', () => this.refreshCard(c.id));
+      const ph = adv.querySelector('[data-el="pipTh"]');
+      if (ph && c.pip) { const t = c.pip.clip && this.rt[c.pip.clip] && this.rt[c.pip.clip].thumb; if (t) C.drawFit(ph.getContext('2d'), t, ph.width, ph.height, 'cover'); else this.pipThumb(c.pip).then(im => { if (im && ph.isConnected) C.drawFit(ph.getContext('2d'), im, ph.width, ph.height, 'cover'); }); }
     }
     changedClip(c) { this.dirty(); this.showDetail(); this.refreshCard(c.id); this.summary(); }
     act_setTrans(b) {
       const c = this.clip(this.focus); if (!c) return;
       this.snap();
       c.trans = b.dataset.v === 'auto' ? undefined : { type: b.dataset.v, dur: (c.trans && c.trans.dur) || 0.8 };
-      this.changedClip(c);
+      this.changedClip(c); this.renderBoard();
     }
     act_stab() { const c = this.clip(this.focus); this.snap(); c.stab = !c.stab || undefined; this.changedClip(c); }
     act_colorReset() { const c = this.clip(this.focus); this.snap(); c.color = undefined; this.changedClip(c); }
@@ -654,9 +722,11 @@
     // Vista previa: color, giro, acercamiento, velocidad y letrero sobre el reproductor.
     applyPreviewLook() {
       const c = this.clip(this.focus), v = this.q('video'), lp = this.q('lblPrev');
-      const plain = () => { v.style.filter = v.style.transform = v.style.clipPath = ''; v.controls = true; };
+      const plain = () => { v.style.filter = v.style.transform = v.style.clipPath = ''; v.controls = true; this.syncPip(); };
       if (!c) { plain(); lp.hidden = true; return; }
       lp.hidden = !c.label; lp.textContent = c.label || '';
+      const sh = this.p.shadow || 'auto';
+      lp.style.textShadow = sh === 'none' ? 'none' : sh === 'strong' ? '3px 4px 4px rgba(0,0,0,.9)' : sh === 'soft' ? '0 2px 14px rgba(0,0,0,.7)' : '';
       if (c.kind !== 'video') { plain(); return; }
       const col = Object.assign({}, COLOR0, c.color || {}), f = [];
       if (col.b) f.push(`brightness(${(1 + col.b / 250).toFixed(3)})`);
@@ -674,6 +744,129 @@
       v.style.transform = rot || z !== 1 ? `rotate(${rot}deg) scale(${sc.toFixed(4)})` : '';
       v.controls = !rot;
       try { v.playbackRate = c.speed || 1; v.preservesPitch = true; } catch (e) {}
+      this.syncPip();
+    }
+
+    /* ---------- Doble toma ---------- */
+    // Ventana elegida para elegir la otra toma: videos del proyecto o uno de la computadora.
+    pickPip(c) {
+      return new Promise(resolve => {
+        const vids = Object.values(this.p.clips).filter(x => x.kind === 'video' && x.ready && x.path !== c.path).sort((a, b) => this.time(a) - this.time(b));
+        const wrap = document.createElement('div');
+        wrap.className = 'modal pippick'; wrap.setAttribute('role', 'dialog'); wrap.setAttribute('aria-modal', 'true');
+        wrap.innerHTML = `<div class="modal-card">
+          <div class="mp-head"><h2>Elige la doble toma</h2><button class="mp-x" type="button" data-pk="close" aria-label="Cerrar">×</button></div>
+          <p class="hint">Se verá en un cuadro encima de «${esc(c.name)}». Por ejemplo, la toma del dron o la de otra cámara en el mismo momento.</p>
+          <div class="pk-grid">${vids.map(x => `<button type="button" class="pk" data-pk="${x.id}"><canvas width="192" height="108"></canvas><strong>${esc(x.name)}</strong><span>${hhmm(this.time(x))} · ${fmt(x.duration)}</span></button>`).join('') || '<p class="hint">No hay otros videos en esta película.</p>'}</div>
+          <div class="mp-foot"><button class="btn" type="button" data-pk="file">Usar un video de mi computadora…</button><button class="btn" type="button" data-pk="close">Cancelar</button></div></div>`;
+        document.body.appendChild(wrap);
+        $$('.pk', wrap).forEach(b => { const t = this.rt[b.dataset.pk] && this.rt[b.dataset.pk].thumb, cv = b.querySelector('canvas'); if (t) C.drawFit(cv.getContext('2d'), t, cv.width, cv.height, 'cover'); });
+        const done = v => { document.removeEventListener('keydown', onKey); wrap.remove(); resolve(v); };
+        const onKey = e => { if (e.key === 'Escape') done(null); };
+        document.addEventListener('keydown', onKey);
+        wrap.addEventListener('click', async e => {
+          if (e.target === wrap) return done(null);
+          const b = e.target.closest('[data-pk]'); if (!b) return;
+          const k = b.dataset.pk;
+          if (k === 'close') return done(null);
+          if (k === 'file') {
+            const ps = await B.pick('media', false); if (!ps || !ps.length) return;
+            try {
+              const pr = await B.probe(ps[0]); if (!pr.hasVideo) throw new Error('sin video');
+              return done({ path: ps[0], name: B.baseName(ps[0]), w: pr.width, h: pr.height, dur: pr.duration, hasAudio: pr.hasAudio, from: 0 });
+            } catch (err) { toast('Ese archivo no se pudo leer como video.'); return; }
+          }
+          const x = this.p.clips[k];
+          done({ clip: x.id, path: x.path, name: x.name, w: x.w, h: x.h, dur: x.duration, hasAudio: !!x.hasAudio, from: x.in || 0 });
+        });
+      });
+    }
+    async act_pipAdd() {
+      const c = this.clip(this.focus); if (!c || c.kind !== 'video') return;
+      const r = await this.pickPip(c); if (!r) return;
+      this.snap();
+      const v = this.q('video'), a0 = c.in || 0, b0 = c.out || c.duration;
+      const at = c.pip ? c.pip.at : (v.currentTime > a0 && v.currentTime < b0 - 2 ? Math.round(v.currentTime) : a0);
+      c.pip = Object.assign({ size: 'm', pos: 'tr', frame: true, audio: false }, c.pip ? { size: c.pip.size, pos: c.pip.pos, frame: c.pip.frame } : {}, r, { at });
+      c.pip.len = Math.max(1, Math.min(c.pip.len || 8, b0 - at, r.dur - r.from));
+      if (r.clip && !this.p.clips[r.clip].excluded) toast('Listo. Si no quieres que esa toma salga también sola en la película, tócala y usa "No usar esta toma".', 7000);
+      this.changedClip(c);
+    }
+    pipFix(c) {
+      const P = c.pip, a0 = c.in || 0, b0 = c.out || c.duration;
+      P.at = Math.max(a0, Math.min(b0 - 1, P.at));
+      P.from = Math.max(0, Math.min(P.dur - 1, P.from));
+      P.len = Math.max(1, Math.min(P.len, b0 - P.at, P.dur - P.from));
+    }
+    pipStep(key, b) { const c = this.clip(this.focus); if (!c || !c.pip) return; this.snap(); c.pip[key] = (c.pip[key] || 0) + (+b.dataset.v); this.pipFix(c); this.changedClip(c); }
+    act_pipAt(b) { this.pipStep('at', b); }
+    act_pipLen(b) { this.pipStep('len', b); }
+    act_pipFrom(b) { this.pipStep('from', b); }
+    act_pipHere() { const c = this.clip(this.focus); if (!c || !c.pip) return; this.snap(); c.pip.at = Math.round(this.q('video').currentTime * 10) / 10; this.pipFix(c); this.changedClip(c); }
+    act_pipPos(b) { const c = this.clip(this.focus); this.snap(); c.pip.pos = b.dataset.v; this.changedClip(c); }
+    act_pipFrame() { const c = this.clip(this.focus); this.snap(); c.pip.frame = c.pip.frame === false; this.changedClip(c); }
+    act_pipAudio() { const c = this.clip(this.focus); this.snap(); c.pip.audio = !c.pip.audio; this.changedClip(c); }
+    act_pipOff() { const c = this.clip(this.focus); this.snap(); c.pip = undefined; this.changedClip(c); }
+    async pipThumb(P) {
+      try {
+        const out = B.join(this.cache, `cuadro_${E.hash(P.path + '@pip')}.jpg`);
+        if (!(await B.exists(out))) await B.run('ffmpeg', ['-y', '-hide_banner', '-v', 'error', '-ss', String(Math.min(P.dur * .3, (P.from || 0) + 1)), '-i', P.path, '-frames:v', '1', '-vf', 'scale=240:-2', out]);
+        return await createImageBitmap(await B.readBlob(out, 'image/jpeg'));
+      } catch (e) { return null; }
+    }
+    // Copia ligera para ver un video que el reproductor no abre (.MTS, HEVC…).
+    async proxyFor(path, dur, onMsg) {
+      const out = B.join(this.cache, `vista_${E.hash(path)}.mp4`);
+      if (await B.exists(out)) return out;
+      const r = await B.run('ffmpeg', ['-y', '-hide_banner', '-nostats', '-progress', 'pipe:1', '-i', path, '-vf', 'scale=-2:540,format=yuv420p', '-r', '30',
+        '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '28', '-c:a', 'aac', '-b:a', '96k', '-ac', '2', '-movflags', '+faststart', out],
+        t => onMsg && onMsg(Math.min(99, Math.round(t / Math.max(1, dur) * 100))));
+      return r.code === 0 ? out : null;
+    }
+    // La doble toma en la vista previa: un segundo video en la esquina, al mismo tiempo que la toma.
+    async syncPip() {
+      const c = this.clip(this.focus), v = this.q('video'), pv = this.q('pipVid'), P = c && c.kind === 'video' ? c.pip : null;
+      if (!P) { if (!pv.hidden) { pv.hidden = true; pv.pause(); } return; }
+      if (pv.dataset.path !== P.path) {
+        pv.dataset.path = P.path; pv.dataset.ok = '';
+        let src = null;
+        const prox = B.join(this.cache, `vista_${E.hash(P.path)}.mp4`);
+        try { src = await B.previewSrc((await B.exists(prox)) ? prox : P.path); } catch (e) {}
+        pv.onerror = async () => { if (pv.dataset.fixing) return; pv.dataset.fixing = '1'; const o = await this.proxyFor(P.path, P.dur); if (o && pv.dataset.path === P.path) pv.src = await B.previewSrc(o); };
+        if (src) pv.src = src;
+        pv.onloadeddata = () => { pv.dataset.ok = '1'; this.syncPip(); };
+        return;
+      }
+      const t = v.currentTime, inside = t >= P.at && t < P.at + P.len;
+      // Tamaño y lugar sobre la imagen (no sobre las franjas negras)
+      const sc = this.q('screen'), ew = sc.clientWidth, eh = sc.clientHeight, ar = (v.videoWidth || 16) / (v.videoHeight || 9);
+      const vw = Math.min(ew, eh * ar), vh = vw / ar, x0 = (ew - vw) / 2, y0 = (eh - vh) / 2, m = Math.min(vw, vh) * .045;
+      const par = (pv.videoWidth || P.w || 16) / (pv.videoHeight || P.h || 9);
+      let w = vw * (E.PIP_SIZES[P.size] || .38), h = w / par; if (h > vh * .62) { h = vh * .62; w = h * par; }
+      const pos = P.pos || 'tr';
+      Object.assign(pv.style, { width: w + 'px', height: h + 'px', left: (pos[1] === 'l' ? x0 + m : x0 + vw - m - w) + 'px', top: (pos[0] === 't' ? y0 + m : y0 + vh - m - h) + 'px',
+        outline: P.frame === false ? 'none' : `${Math.max(2, Math.round(Math.min(vw, vh) * .006))}px solid #fff` });
+      pv.hidden = !inside || !pv.dataset.ok || !!c.rot;
+      if (!inside || pv.hidden) { pv.pause(); return; }
+      const want = P.from + (t - P.at);
+      if (Math.abs(pv.currentTime - want) > .35) pv.currentTime = want;
+      if (!v.paused && pv.paused) pv.play().catch(() => {}); else if (v.paused && !pv.paused) pv.pause();
+    }
+    // Para crear: en qué parte de cada pedazo (sin las partes quitadas) va la doble toma.
+    pipWindows(c) {
+      const P = c.pip; if (!P || !P.path) return [];
+      const sp = c.speed || 1, A0 = P.at, A1 = P.at + P.len;
+      let elapsed = 0;
+      return E.keptRanges(c).map(([r0, r1]) => {
+        const o0 = Math.max(A0, r0), o1 = Math.min(A1, r1);
+        if (o1 - o0 < .3) return null;
+        const a = (o0 - r0) / sp, from = (P.from || 0) + elapsed;
+        let b = (o1 - r0) / sp;
+        if (from + (b - a) > P.dur) b = a + Math.max(0, P.dur - from);
+        elapsed += b - a;
+        return b - a < .3 ? null : { path: P.path, from: Math.round(from * 1000) / 1000, a: Math.round(a * 1000) / 1000, b: Math.round(b * 1000) / 1000,
+          size: P.size || 'm', pos: P.pos || 'tr', frame: P.frame !== false, audio: !!P.audio, hasAudio: !!P.hasAudio };
+      });
     }
 
     /* ---------- Acortar la película ---------- */
@@ -884,12 +1077,13 @@
       if (mv) mv.addEventListener('input', () => { m.music.vol = mv.value / 100; mv.nextElementSibling.textContent = `${mv.value} %`; if (this.audio) this.audio.volume = Math.min(1, m.music.vol); this.dirty(); });
       const adv = d.querySelector('[data-el="adv"]');
       adv.addEventListener('toggle', () => this.advOpen(adv.open));
+      SA.trans.animate(adv, () => this.transImgs({}));
       const md = adv.querySelector('[data-cv="mtdur"]');
       if (md) md.addEventListener('click', e => { const b = e.target.closest('button[data-v]'); if (!b) return; this.snap(); m.trans = Object.assign({}, m.trans, { dur: +b.dataset.v }); this.dirty(); this.showDetail(); this.summary(); });
       this.q('trimBox').hidden = true;
     }
     isProtected(m) { return m.protect != null ? !!m.protect : PROTECT.includes(m.key); }
-    act_setMTrans(b) { const m = this.curMoment(); this.snap(); m.trans = b.dataset.v === 'auto' ? undefined : { type: b.dataset.v, dur: (m.trans && m.trans.dur) || 0.8 }; this.dirty(); this.showDetail(); this.summary(); }
+    act_setMTrans(b) { const m = this.curMoment(); this.snap(); m.trans = b.dataset.v === 'auto' ? undefined : { type: b.dataset.v, dur: (m.trans && m.trans.dur) || 0.8 }; this.dirty(); this.showDetail(); this.summary(); this.renderBoard(); }
     act_mProtect() { const m = this.curMoment(); m.protect = !this.isProtected(m); this.dirty(); this.showDetail(); }
     curMoment() { return this.p.moments.find(x => x.id === this.panel); }
     act_mTitle() { const m = this.curMoment(); m.title = !m.title; this.dirty(); this.showDetail(); this.summary(); }
@@ -942,6 +1136,7 @@
     async loadPlayer() {
       const c = this.clip(this.focus), v = this.q('video'), img = this.q('img'), msg = this.q('screenMsg');
       this.stopAudio(); this.playRange = false;
+      if (this.stopTP) { this.stopTP(); this.stopTP = null; } this.q('tprev').hidden = true;
       if (!c) return;
       msg.hidden = true;
       if (c.kind === 'image') {
@@ -1013,6 +1208,7 @@
       if (!c || c.kind !== 'video' || !c.duration) return;
       this.q('head').style.left = (v.currentTime / c.duration * 100) + '%';
       if (this.playRange && v.currentTime >= (c.out || c.duration)) { v.pause(); this.playRange = false; }
+      this.syncPip();
       // "Ver lo que se usa" se brinca las partes quitadas, como quedará en la película
       if (this.playRange && !v.paused) { const r = (c.cuts || []).find(x => v.currentTime >= x[0] && v.currentTime < x[1] - .05); if (r) v.currentTime = Math.min(r[1], c.out || c.duration); }
     }
@@ -1040,7 +1236,7 @@
     /* ================= Estilo ================= */
     syncStyle() {
       if (!this.p) return;
-      SA.ui.setSeg(this.q('mood'), this.p.mood); SA.ui.setSeg(this.q('style'), this.p.style); SA.ui.setSeg(this.q('theme'), this.p.theme);
+      SA.ui.setSeg(this.q('mood'), this.p.mood); SA.ui.setSeg(this.q('style'), this.p.style); SA.ui.setSeg(this.q('theme'), this.p.theme); SA.ui.setSeg(this.q('shadow'), this.p.shadow || 'auto');
       const enh = this.root.querySelector('[data-act="enhance"]');
       enh.setAttribute('aria-pressed', String(this.p.enhance)); this.q('enhState').textContent = this.p.enhance ? 'Activado' : 'Apagado';
       this.q('denoise').setAttribute('aria-checked', String(this.p.denoise));
@@ -1181,7 +1377,7 @@
         const wmPaths = await this.wmFiles(W, H, logoKey);
         segments.forEach(sg => { sg.wm = this.wmFor(media[sg.m].clip, W, H, wmPaths); });
         // Capas: título, nombres de los momentos y créditos
-        const th = Object.assign({ key: p.theme || 'dorado' }, SA.cards.THEMES[p.theme || 'dorado']);
+        const th = Object.assign({ key: p.theme || 'dorado', shadow: p.shadow || 'auto' }, SA.cards.THEMES[p.theme || 'dorado']);
         const data = { title: p.name, subtitle: kind === 'reel' ? '' : 'Lo mejor de la fiesta', date: SA.ui.parseDate(p.date), place: p.place };
         const layers = [];
         const design = kind === 'reel' ? SA.TPL_DESIGNS.impactoIn : SA.TPL_DESIGNS.cineIn;
@@ -1189,7 +1385,7 @@
         const N = Math.ceil((intro + .3) * E.FPS) + 2;
         for (let f = 0; f < N; f++) {
           if (this.cancelled) return null;
-          cx.clearRect(0, 0, W, H); cx.save(); design.draw(cx, W, H, f / E.FPS, intro, data, th); cx.restore();
+          cx.clearRect(0, 0, W, H); cx.save(); SA.anim.draw(design, cx, W, H, f / E.FPS, intro, data, th); cx.restore();
           await this.writeCanvas(c, B.join(tmp, `titulo_${String(f).padStart(4, '0')}.png`));
           if (f % 10 === 0) this.setProgress(.32, `${prefix}Preparando el título`);
         }
@@ -1231,7 +1427,8 @@
       } finally { B.removeJobDir(tmp); }
     }
     // Nombre del momento abajo a la izquierda ("El vals"), como en las películas de evento.
-    momentLabel(ctx, W, H, name, th) {
+    momentLabel(ctx, W, H, name, th) { SA.withShadow(th && th.shadow, () => this.momentLabel0(ctx, W, H, name, th)); }
+    momentLabel0(ctx, W, H, name, th) {
       const u = Math.min(W, H) / 1080, x = 80 * u, y = H - 110 * u, A = SA.anim;
       const g = ctx.createLinearGradient(0, H * .6, 0, H); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,.45)');
       ctx.fillStyle = g; ctx.fillRect(0, H * .6, W * .7, H * .4);
@@ -1392,11 +1589,11 @@
     async render(units, interGpu) {
       const Q = QUALITY[this.p.quality || '1080'] || QUALITY['1080'];
       const W = Q.W, H = Q.H, cache = this.cache, p = this.p, sep = B.paths.sep;
-      const theme = p.theme || 'dorado', th = Object.assign({ key: theme }, SA.cards.THEMES[theme]);
+      const theme = p.theme || 'dorado', th = Object.assign({ key: theme, shadow: p.shadow || 'auto' }, SA.cards.THEMES[theme]);
       // Letrero de una toma ("Los padrinos"), con el estilo de los nombres de los momentos.
       const labelFor = async text => {
         if (!text) return '';
-        const path = B.join(cache, `letrero_${E.hash(JSON.stringify([text, theme, W, H, 1]))}.png`);
+        const path = B.join(cache, `letrero_${E.hash(JSON.stringify([text, theme, W, H, 1].concat(th.shadow !== 'auto' ? [th.shadow] : [])))}.png`);
         if (!(await B.exists(path))) {
           const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
           this.momentLabel(cv.getContext('2d'), W, H, text, th);
@@ -1433,9 +1630,10 @@
             const vol = (c.mute ? 0 : c.vol) * (u.moment ? u.moment.vol : 1), sp = c.speed || 1;
             const tr = c.trans || (u.moment && u.moment.trans) || null, label = await labelFor(c.label);
             // Una toma con partes quitadas se arma con sus pedazos, unidos con un fundido muy corto.
+            const pips = this.pipWindows(c);
             E.keptRanges(c).forEach((r, k) => segs.push({ kind: 'video', path: c.path, in: r[0], len: (r[1] - r[0]) / sp, w: c.w, h: c.h, hasAudio: c.hasAudio && vol > 0.001, vol,
               name: c.name, id: c.id, wm: u.moment ? wmOf(c) : null, speed: sp, rot: c.rot || 0, zoom: c.zoom || 1, color: c.color || null, stab: !!c.stab,
-              label: k ? '' : label, trans: k ? null : tr, join: k > 0 }));
+              label: k ? '' : label, trans: k ? null : tr, join: k > 0, pip: pips[k] || null }));
           }
         }
         prepared.push({ name: u.name, chapter: u.chapter, segments: segs, noWatermark: !u.moment, music: u.music ? { path: u.music.path, start: u.music.start || 0, vol: u.music.vol == null ? .6 : u.music.vol } : null });

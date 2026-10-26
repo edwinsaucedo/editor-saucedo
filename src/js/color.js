@@ -42,10 +42,13 @@
     return { lo, hi, g };
   }
 
+  // cfg.adj: ajustes finos { b brillo, c contraste, s saturación, w calidez } de -100 a 100.
   function makeParams(stats, cfg) {
     const st = STYLES[cfg.style] || {};
     const auto = cfg.auto && stats;
-    if (!auto && (cfg.style || 'natural') === 'natural') return null;
+    const adj = cfg.adj || {}, ab = (+adj.b || 0) / 100, ac = (+adj.c || 0) / 100, as = (+adj.s || 0) / 100, aw = (+adj.w || 0) / 100;
+    if (!auto && (cfg.style || 'natural') === 'natural' && !ab && !ac && !as && !aw) return null;
+    const ge = Math.pow(2, -ab * .85), wg = [1 + aw * .07, 1 + aw * .012, 1 - aw * .09];
     const L = [new Uint8ClampedArray(256), new Uint8ClampedArray(256), new Uint8ClampedArray(256)];
     for (let c = 0; c < 3; c++) for (let v = 0; v < 256; v++) {
       let x = v / 255;
@@ -58,9 +61,12 @@
       }
       x = clamp01(x);
       if (st.lift) x = st.lift + x * (1 - st.lift);
+      if (ab) x = Math.pow(x, ge);
+      if (ac) x = clamp01(x + ac * .7 * (ss(x) - x) * (ac > 0 ? 1 : 1.3));
+      if (aw && !st.bw) x = clamp01(x * wg[c]);
       L[c][v] = Math.round(x * 255);
     }
-    return { L, bw: !!st.bw, sat: st.sat || 0, vib: (auto ? .16 : 0) + (st.vib || 0) };
+    return { L, bw: !!st.bw, sat: (st.sat || 0) + as * (as < 0 ? 1 : .8), vib: (auto ? .16 : 0) + (st.vib || 0) };
   }
 
   function applyColor(d, P) {

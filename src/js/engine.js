@@ -159,18 +159,20 @@
   };
 
   /* ---------- Unir con transiciones ---------- */
+  // T: un número (igual en todas las uniones) o una lista con la duración de cada unión (0 = corte directo).
   E.joinFilter = (lens, T, transitions) => {
     const parts = lens.map((_, i) => `[${i}:v]settb=AVTB,fps=${FPS},format=yuv420p,setsar=1[s${i}]`);
     if (lens.length === 1) return { fc: parts[0].replace('[s0]', '[j]'), len: lens[0] };
-    if (!T) {   // cortes directos (por ejemplo, al ritmo de la canción)
+    const all0 = Array.isArray(T) ? T.slice(0, lens.length - 1).every(x => !x) : !T;
+    if (all0) {   // cortes directos (por ejemplo, al ritmo de la canción)
       parts.push(lens.map((_, i) => `[s${i}]`).join('') + `concat=n=${lens.length}:v=1:a=0[j]`);
       return { fc: parts.join(';'), len: q(lens.reduce((a, b) => a + b, 0)) };
     }
     let acc = lens[0], prev = 's0';
     for (let k = 1; k < lens.length; k++) {
-      const out = k === lens.length - 1 ? 'j' : `x${k}`;
-      parts.push(`[${prev}][s${k}]xfade=transition=${transitions[k - 1] || 'fade'}:duration=${r3(T)}:offset=${r3(acc - T)}[${out}]`);
-      acc = q(acc + lens[k] - T);
+      const out = k === lens.length - 1 ? 'j' : `x${k}`, t = E.joinDur(T, k - 1), d = q(Math.max(1 / FPS, t));
+      parts.push(`[${prev}][s${k}]xfade=transition=${t ? (transitions[k - 1] || 'fade') : 'fade'}:duration=${r3(d)}:offset=${r3(acc - d)}[${out}]`);
+      acc = q(acc + lens[k] - d);
       prev = out;
     }
     return { fc: parts.join(';'), len: acc };
@@ -309,6 +311,8 @@
     if (w) p.push(`colorbalance=rm=${r3(w * .12)}:gm=${r3(w * .02)}:bm=${r3(-w * .12)}`);
     return p.length ? ',' + p.join(',') : '';
   };
+  // Doble toma: ancho del cuadro (parte del ancho del video).
+  E.PIP_SIZES = { s: .28, m: .38, l: .5 };
   // Cuánto se lee del archivo para una toma de L segundos en pantalla.
   E.srcLen = (s, L) => L * spd(s);
 
@@ -352,6 +356,23 @@
       args.push('-f', 'lavfi', '-t', r3(L), '-i', 'anullsrc=r=48000:cl=stereo');
       a = `[1:a]${AFMT},atrim=duration=${r3(L)},asetpts=PTS-STARTPTS[a]`;
       next = 2;
+    }
+    // Doble toma: otra toma (por ejemplo, la del dron) en un cuadro encima, de a a b segundos.
+    if (s.pip && s.pip.path && s.pip.b - s.pip.a > 0.2) {
+      const P = s.pip, d = q(Math.min(L, P.b) - P.a), a0 = q(P.a), k = next++;
+      const short = Math.min(W, H), m = Math.round(short * .045), bw = P.frame === false ? 0 : Math.max(2, Math.round(short * .006));
+      const pw = Math.round(W * (E.PIP_SIZES[P.size] || E.PIP_SIZES.m) / 2) * 2, ph = Math.round(H * .62 / 2) * 2;
+      args.push(...(o.hwaccel ? ['-hwaccel', 'auto'] : []), '-ss', r3(P.from || 0), '-t', r3(d + 0.3), '-i', P.path);
+      const fd = Math.min(.35, d / 4);
+      const chain = `[${k}:v]scale='trunc(iw*sar/2)*2':ih,setsar=1,fps=${FPS},scale=${pw}:${ph}:force_original_aspect_ratio=decrease,scale='trunc(iw/2)*2':'trunc(ih/2)*2'` +
+        (bw ? `,pad=iw+${2 * bw}:ih+${2 * bw}:${bw}:${bw}:white` : '') +
+        `,format=yuva420p,trim=duration=${r3(d)},fade=t=in:st=0:d=${r3(fd)}:alpha=1,fade=t=out:st=${r3(Math.max(0, d - fd))}:d=${r3(fd)}:alpha=1,setpts=PTS-STARTPTS+${r3(a0)}/TB[pp]`;
+      const pos = P.pos || 'br', ox = pos[1] === 'l' ? String(m) : `W-w-${m}`, oy = pos[0] === 't' ? String(m) : `H-h-${m}`;
+      v = v.replace(/\[v\]$/, '[bv]') + `;${chain};[bv][pp]overlay=x=${ox}:y=${oy}:eof_action=pass:enable='between(t,${r3(a0)},${r3(a0 + d)})',format=yuv420p[v]`;
+      if (P.audio && P.hasAudio) {
+        a = a.replace(/\[a\]$/, '[a0]') + `;[${k}:a]${AFMT},atrim=duration=${r3(d)},afade=t=in:d=0.3,afade=t=out:st=${r3(Math.max(0, d - .4))}:d=0.4,adelay=${Math.round(a0 * 1000)}:all=1,apad[pa];` +
+          `[a0][pa]amix=inputs=2:duration=first:normalize=0,atrim=duration=${r3(L)}[a]`;
+      }
     }
     // Letrero de la toma ("Los padrinos"): aparece al inicio unos segundos.
     if (s.label) {
@@ -443,8 +464,8 @@
       segs.forEach((s, si) => {
         const L = q(s.len);
         // Ajustes avanzados en la clave solo si los hay: así las tomas ya hechas con versiones anteriores se aprovechan.
-        const adv = [+s.speed || 1, +s.rot || 0, +s.zoom || 1, s.color || null, !!s.stab, s.label || ''];
-        const plain = adv[0] === 1 && !adv[1] && adv[2] === 1 && !adv[3] && !adv[4] && !adv[5];
+        const adv = [+s.speed || 1, +s.rot || 0, +s.zoom || 1, s.color || null, !!s.stab, s.label || ''].concat(s.pip ? [s.pip] : []);
+        const plain = adv[0] === 1 && !adv[1] && adv[2] === 1 && !adv[3] && !adv[4] && !adv[5] && !s.pip;
         const key = E.hash(JSON.stringify([s.kind, s.path || s.still, s.in || 0, L, s.w, s.h, s.hasAudio, s.vol, s.zoomIn, s.wm || '', o.W, o.H, o.enhance, o.style, o.denoise, !!o.hwaccel, interKey].concat(plain ? [] : [adv])));
         const out = J(`toma_${key}.mkv`);
         steps.push({ stage: 'toma', unit: ui, unitName: u.name, n: si + 1, of: segs.length, seconds: L, weight: L, out, seg: s,
@@ -696,8 +717,16 @@
     let v;
     if (md.kind === 'image') {
       args.push('-loop', '1', '-framerate', String(FPS), '-t', r3(L + 0.2), '-i', md.still);
-      const Z = md.zoom != null ? md.zoom : (o.zoom != null ? o.zoom : 0.08);
-      if (Z > 0) {
+      const Z = md.zoom != null ? md.zoom : (o.zoom != null ? o.zoom : 0.08), mv = seg.move;
+      if (mv && mv !== 'none' && Z > 0) {
+        // Fotosecuencia: acercar, alejar o recorrer la foto hacia un lado.
+        const N = Math.round(L * FPS), pr = `on/${N}`;
+        let z = `${1 + Z}`, x = 'iw/2-(iw/zoom/2)', y = 'ih/2-(ih/zoom/2)';
+        if (mv === 'in') z = `1+${Z}*${pr}`; else if (mv === 'out') z = `${1 + Z}-${Z}*${pr}`;
+        else if (mv === 'left') x = `(iw-iw/zoom)*${pr}`; else if (mv === 'right') x = `(iw-iw/zoom)*(1-${pr})`;
+        else if (mv === 'up') y = `(ih-ih/zoom)*${pr}`; else if (mv === 'down') y = `(ih-ih/zoom)*(1-${pr})`;
+        v = `[0:v]format=yuv420p,zoompan=z='${z}':x='${x}':y='${y}':d=1:s=${W}x${H}:fps=${FPS},setsar=1,trim=duration=${r3(L)},setpts=PTS-STARTPTS`;
+      } else if (Z > 0 && mv !== 'none') {
         const N = Math.round(L * FPS), z = seg.zoomIn ? `1+${Z}*on/${N}` : `${1 + Z}-${Z}*on/${N}`;
         v = `[0:v]format=yuv420p,zoompan=z='${z}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s=${W}x${H}:fps=${FPS},setsar=1,trim=duration=${r3(L)},setpts=PTS-STARTPTS`;
       } else {
@@ -761,9 +790,119 @@
     fc += `;[${cur}]${fadeIn ? `fade=t=in:st=0:d=${r3(fadeIn)},` : ''}fade=t=out:st=${r3(Math.max(0, total - 1))}:d=1,format=yuv420p[vout]`;
     if (au >= 0) fc += `;[${au}:a]${AFMT},asetpts=PTS-STARTPTS,afade=t=in:st=0:d=0.5,afade=t=out:st=${r3(Math.max(0, total - 2.5))}:d=2.5[aout]`;
     args.push('-filter_complex', fc, '-map', '[vout]');
-    if (au >= 0) args.push('-map', '[aout]', '-c:a', 'aac', '-b:a', '192k');
+    if (au >= 0) args.push('-map', '[aout]', '-c:a', 'aac', '-b:a', o.audioBitrate || '192k');
     args.push('-t', r3(total), '-r', String(FPS), ...(o.encoderArgs || E.ENCODERS.libx264), '-movflags', '+faststart', o.out);
     return args;
+  };
+
+  /* ---------- Fotosecuencia ----------
+   * o: { photos:[{ dur, trans:{type,dur}|null, move }], dur, style:{ list, T }, beat:{period, offset}|null, fit: segundos|null, introMin, outroMin }
+   * Cada foto se ve `dur` segundos; la transición se reparte mitad y mitad entre las dos fotos. */
+  E.FS_STYLES = {
+    suave: { name: 'Suave', T: 1.2, list: ['fade', 'fade', 'hblur', 'fade', 'fadeblack'] },
+    elegante: { name: 'Elegante', T: 1, list: ['fade', 'smoothleft', 'circleopen', 'fade', 'smoothright', 'fadewhite', 'smoothup', 'hblur'] },
+    dinamica: { name: 'Dinámica', T: .5, list: ['slideleft', 'zoomin', 'smoothup', 'wiperight', 'fadewhite', 'radial', 'slideright', 'circleopen', 'horzopen'] },
+    cortes: { name: 'Solo cortes', T: 0, list: [] }
+  };
+  E.FS_MOVES = ['in', 'left', 'out', 'right', 'in', 'up', 'out', 'down'];
+  E.fsPlan = o => {
+    const n = o.photos.length;
+    if (!n) throw new Error('Agrega por lo menos una foto.');
+    let d = o.photos.map(ph => +ph.dur || +o.dur || 4);
+    const iMin = o.introMin || 0, oMin = o.outroMin || 0;
+    if (n === 1) d[0] = Math.max(d[0], iMin, oMin, 5);
+    else { d[0] = Math.max(d[0], iMin); d[n - 1] = Math.max(d[n - 1], oMin); }
+    // Ajustar a la canción: las fotos de en medio se estiran o se encogen (nunca menos de 1.5 s).
+    if (o.fit && n > 2) {
+      const ends = d[0] + d[n - 1], mid = d.slice(1, -1).reduce((s, x) => s + x, 0), want = Math.max(1.5 * (n - 2), o.fit - ends);
+      d = d.map((x, i) => i === 0 || i === n - 1 ? x : Math.max(1.5, x * want / mid));
+    } else if (o.fit && n <= 2) d = d.map(x => Math.max(x, o.fit / n));
+    // Al ritmo: cada cambio de foto cae en un golpe de la canción.
+    if (o.beat && o.beat.period > .25) {
+      const P = o.beat.period < .75 ? o.beat.period * 2 : o.beat.period, off = o.beat.offset || 0, minStep = 1.2;
+      let c = 0, prev = 0;
+      d = d.map((x, i) => {
+        if (i === n - 1) return x;
+        c += x;
+        let s = off + Math.round((c - off) / P) * P;
+        if (s < prev + minStep) s = off + Math.ceil((prev + minStep - off) / P - 1e-6) * P;
+        const out = s - prev; prev = s; return out;
+      });
+    }
+    d = d.map(q);
+    const types = [], Ts = [];
+    for (let k = 0; k < n - 1; k++) {
+      const tr = o.photos[k + 1].trans && o.photos[k + 1].trans.type && o.photos[k + 1].trans.type !== 'auto' ? o.photos[k + 1].trans : null;
+      const list = o.style.list || [], T0 = o.style.T || 0;
+      let type = tr ? tr.type : (list.length ? list[k % list.length] : 'corte');
+      let dd = type === 'corte' ? 0 : tr ? (+tr.dur || T0 || .8) : T0;
+      if (!list.length && !tr) dd = 0;
+      dd = q(Math.min(dd, Math.min(d[k], d[k + 1]) * .45));
+      types.push(type === 'corte' || !dd ? 'fade' : type); Ts.push(dd);
+    }
+    const all0 = Ts.every(x => !x), eff = Ts.map(t => all0 ? 0 : q(Math.max(1 / FPS, t)));
+    const lens = d.map((x, i) => q(x + (i > 0 ? Ts[i - 1] / 2 : 0) + (i < n - 1 ? Ts[i] / 2 : 0)));
+    let moveI = 0;
+    const segments = lens.map((len, i) => {
+      const m = o.photos[i].move && o.photos[i].move !== 'auto' ? o.photos[i].move : (o.move === 'none' ? 'none' : o.move === 'in' ? 'in' : E.FS_MOVES[moveI++ % E.FS_MOVES.length]);
+      return { m: i, len, move: m, start: 0 };
+    });
+    // Tiempos en el video: dónde empieza cada foto, cuándo se ve completa y dónde cae cada cambio.
+    const starts = [0], cuts = [];
+    let acc = lens[0];
+    for (let k = 1; k < n; k++) { starts.push(q(acc - eff[k - 1])); cuts.push(q(acc - eff[k - 1] / 2)); acc = q(acc + lens[k] - eff[k - 1]); }
+    const total = acc;
+    const shown = segments.map((_, i) => ({ a: i ? q(starts[i] + eff[i - 1]) : 0, b: i < n - 1 ? starts[i + 1] : total }));
+    return { segments, transitions: types, Ts, eff, lens, starts, cuts, shown, total, dur: d,
+      intro: { a: 0, b: n > 1 ? q(starts[1] + eff[0] / 2) : q(total * .5) }, outro: n > 1 ? { a: q(starts[n - 1] + eff[n - 2] * .6), b: total } : null };
+  };
+  // Pasos de FFmpeg de la fotosecuencia (fotos con movimiento, uniones con su transición, letras, logo y música).
+  E.fsJob = o => {
+    const p = o.plan, sep = o.sep || '/', J = n => o.tmp + sep + n, steps = [];
+    const segOuts = p.segments.map((s, i) => {
+      const out = J(`foto_${String(i + 1).padStart(3, '0')}.mp4`);
+      const seg = Object.assign({}, s, { out, wm: o.wmFor ? o.wmFor(s, i) : null });
+      steps.push({ stage: 'toma', n: i + 1, of: p.segments.length, seconds: s.len, weight: s.len, media: s.m,
+        args: E.tplSegmentArgs(seg, o.media[s.m], Object.assign({}, o, { T: 0 })) });
+      return out;
+    });
+    let inputs = segOuts, lens = p.lens.slice(), trans = p.transitions.slice(), Ds = p.Ts.slice();
+    for (let level = 1; inputs.length > 12; level++) {
+      const gIn = [], gL = [], gT = [], gD = [], ng = Math.ceil(inputs.length / E.BATCH);
+      for (let a = 0, g = 1; a < inputs.length; a += E.BATCH, g++) {
+        const b = Math.min(inputs.length, a + E.BATCH);
+        if (b - a === 1) { gIn.push(inputs[a]); gL.push(lens[a]); }
+        else {
+          const out = J(`grupo_${level}_${String(g).padStart(2, '0')}.mp4`);
+          const r = E.batchArgs(inputs.slice(a, b), lens.slice(a, b), Ds.slice(a, b - 1), trans.slice(a, b - 1), out);
+          steps.push({ stage: 'grupo', n: g, of: ng, seconds: r.len, weight: r.len * .5, args: r.args });
+          gIn.push(out); gL.push(r.len);
+        }
+        if (b < inputs.length) { gT.push(trans[b - 1]); gD.push(Ds[b - 1]); }
+      }
+      inputs = gIn; lens = gL; trans = gT; Ds = gD;
+    }
+    const total = E.joinFilter(lens, Ds, trans).len;
+    const finalOpts = { inputs, lens, T: Ds, transitions: trans, total, layers: o.layers, post: o.post, fadeIn: o.fadeIn, audio: o.audio,
+      encoderArgs: o.encoderArgs, audioBitrate: o.audioBitrate, out: o.out };
+    steps.push({ stage: 'final', n: 1, of: 1, seconds: total, weight: total * 1.2, final: true, finalOpts, args: E.tplFinalArgs(finalOpts) });
+    return { steps, total };
+  };
+  // Peso del archivo: 'ligero' (720p para WhatsApp), 'normal' o 'alta'.
+  E.WEIGHTS = {
+    ligero: { name: 'Ligero', H: 720, mbMin: 15, audio: '128k' },
+    normal: { name: 'Normal', H: 1080, mbMin: 45, audio: '192k' },
+    alta: { name: 'Alta calidad', H: 1080, mbMin: 110, audio: '256k' }
+  };
+  E.encoderFor = (name, weight) => {
+    if (weight === 'ligero') return ['-c:v', 'libx264', '-preset', 'veryfast', '-crf', '26', '-maxrate', '2M', '-bufsize', '4M', '-profile:v', 'high', '-pix_fmt', 'yuv420p'];
+    if (weight === 'alta') return ({
+      h264_nvenc: ['-c:v', 'h264_nvenc', '-preset', 'p6', '-rc', 'vbr', '-cq', '17', '-b:v', '0', '-maxrate', '40M', '-bufsize', '80M', '-profile:v', 'high', '-pix_fmt', 'yuv420p'],
+      h264_qsv: ['-c:v', 'h264_qsv', '-preset', 'slow', '-global_quality', '18', '-pix_fmt', 'nv12'],
+      h264_amf: ['-c:v', 'h264_amf', '-quality', 'quality', '-rc', 'cqp', '-qp_i', '17', '-qp_p', '19', '-pix_fmt', 'nv12'],
+      libx264: ['-c:v', 'libx264', '-preset', 'fast', '-crf', '17', '-maxrate', '20M', '-bufsize', '40M', '-profile:v', 'high', '-pix_fmt', 'yuv420p']
+    })[name] || E.ENCODERS.libx264;
+    return E.ENCODERS[name] || E.ENCODERS.libx264;
   };
 
   /* Trabajo completo de plantilla.

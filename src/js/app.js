@@ -28,6 +28,7 @@
     if (name === 'fotos') SA.photos.refresh();
     else if (name === 'pelicula') { if (tabs.pelicula) tabs.pelicula.renderBoard(); }
     else if (name === 'plantillas' && tabs.plantillas) tabs.plantillas.sizePreview();
+    else if (name === 'fotosec' && tabs.fotosec) tabs.fotosec.sizePreview();
   }
   $$('.tab').forEach(t => t.addEventListener('click', () => show(t.dataset.tab)));
 
@@ -55,6 +56,7 @@
     await SA.loadStoredLogo();
     SA.photos.init();
     tabs.plantillas = new SA.Plantillas($('#view-plantillas'));
+    tabs.fotosec = new SA.Fotosecuencia($('#view-fotosec'));
     tabs.pelicula = new SA.Pelicula($('#view-pelicula'));
     if (B.available) tabs.pelicula.tryReopenLast().catch(() => {});
     const overlay = $('#overlay');

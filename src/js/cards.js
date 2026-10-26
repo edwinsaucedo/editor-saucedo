@@ -15,6 +15,20 @@
     xv: { name: 'Videoclip XV', file: 'XV' }
   };
 
+  /* Sombra de las letras, elegida por el usuario: 'auto' (como viene el diseño), 'soft', 'strong' o 'none'.
+   * Se pone solo mientras se dibuja un diseño (SA.withShadow), así no se mezcla entre pestañas. */
+  SA.SHADOWS = [['auto', 'Como viene'], ['soft', 'Suave'], ['strong', 'Marcada'], ['none', 'Sin sombra']];
+  SA.textShadow = 'auto';
+  SA.withShadow = (mode, fn) => { const prev = SA.textShadow; SA.textShadow = mode || 'auto'; try { return fn(); } finally { SA.textShadow = prev; } };
+  // Aplica la sombra elegida para letras de tamaño `size`. Devuelve false si se deja la del diseño.
+  SA.applyTextShadow = (ctx, size) => {
+    const m = SA.textShadow;
+    if (m === 'none') { ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetX = ctx.shadowOffsetY = 0; return true; }
+    if (m === 'soft') { ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = size * .22; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = size * .04; return true; }
+    if (m === 'strong') { ctx.shadowColor = 'rgba(0,0,0,.9)'; ctx.shadowBlur = size * .09; ctx.shadowOffsetX = size * .04; ctx.shadowOffsetY = size * .06; return true; }
+    return false;
+  };
+
   function setFont(ctx, weight, size, family, ls) {
     ctx.font = `${weight} ${size}px ${family}`;
     if ('letterSpacing' in ctx) ctx.letterSpacing = (ls || 0) * size + 'px';
@@ -30,7 +44,9 @@
     setFont(ctx, weight, size, family, ls);
     ctx.fillStyle = color;
     ctx.textAlign = 'center';
+    ctx.save(); SA.applyTextShadow(ctx, size);
     ctx.fillText(text, cx + (ls || 0) * size / 2, y);
+    ctx.restore();
   }
   function ornament(ctx, cx, y, half, u, color) {
     ctx.save();
