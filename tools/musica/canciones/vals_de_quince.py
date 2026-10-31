@@ -2,6 +2,7 @@
 from lib import Song, prog, mel, check_melody, riser
 from arr import at, tr_chords, arp, pad, roots, melody, roll, swell
 
+SF2 = 'musescore'   # banco MuseScore General: piano y cuerdas grabados
 META = dict(id='vals-de-quince', name='Vals de quince', mood='Vals', desc='Vals de orquesta para la entrada y el baile.',
             tags=['xv', 'vals', 'boda', 'elegante'])
 
@@ -163,4 +164,14 @@ def build():
     cambio = s.marks[[n for _, n in s.marks].index('cambio')][0]
     s.master = dict(tone='orquesta', reverbs={'sala': dict(seconds=3.0, predelay=0.03, bright=0.85)}, tail=5.0,
                     extras=[('audio', s.sec(cambio + 6) - 2.6, riser(2.6, 0.045, f0=1500, f1=12000))])
+    # Interpretación: menos "robot" (dinámica por frase, acordes escalonados, cuerdas que respiran, final más lento)
+    from expr import perform
+    for t in s.tracks.values():
+        t.human = (t.human[0], min(t.human[1], 2))
+        if t.program in (0, 46):
+            t.roll = 8
+    last = max(b for t in s.tracks.values() for b, d, p, v in t.notes)
+    s.rit(last - 2 * s.meter, 2 * s.meter, 0.84, back=False)
+    perform(s, phrase_bars=4, lead=('melodia', 'flauta'), sustained=('cuerdas', 'cornos', 'coro'), viennese=('piano',))
+    s.master['tone_max'] = 3.0
     return s, warns

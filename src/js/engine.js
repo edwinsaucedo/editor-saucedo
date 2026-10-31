@@ -20,10 +20,27 @@
     h264_nvenc: ['-c:v', 'h264_nvenc', '-preset', 'p5', '-rc', 'vbr', '-cq', '21', '-b:v', '0', '-maxrate', '25M', '-bufsize', '50M', '-profile:v', 'high', '-pix_fmt', 'yuv420p'],
     h264_qsv: ['-c:v', 'h264_qsv', '-preset', 'medium', '-global_quality', '22', '-pix_fmt', 'nv12'],
     h264_amf: ['-c:v', 'h264_amf', '-quality', 'balanced', '-rc', 'cqp', '-qp_i', '20', '-qp_p', '22', '-pix_fmt', 'nv12'],
-    libx264: ['-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-profile:v', 'high', '-pix_fmt', 'yuv420p']
+    libx264: ['-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-profile:v', 'high', '-pix_fmt', 'yuv420p'],
+    // H.265 (HEVC): la misma calidad en cerca de la mitad del peso. Medido con fotos reales en 1080p:
+    // H.264 veryfast crf 20 = 2.33 MB, SSIM 0.9675; H.265 faster crf 22 = 1.13 MB, SSIM 0.9696.
+    hevc_nvenc: ['-c:v', 'hevc_nvenc', '-preset', 'p5', '-rc', 'vbr', '-cq', '23', '-b:v', '0', '-maxrate', '20M', '-bufsize', '40M', '-profile:v', 'main', '-pix_fmt', 'yuv420p', '-tag:v', 'hvc1'],
+    hevc_qsv: ['-c:v', 'hevc_qsv', '-preset', 'medium', '-global_quality', '23', '-pix_fmt', 'nv12', '-tag:v', 'hvc1'],
+    hevc_amf: ['-c:v', 'hevc_amf', '-quality', 'balanced', '-rc', 'cqp', '-qp_i', '21', '-qp_p', '23', '-pix_fmt', 'nv12', '-tag:v', 'hvc1'],
+    libx265: ['-c:v', 'libx265', '-preset', 'faster', '-crf', '22', '-pix_fmt', 'yuv420p', '-tag:v', 'hvc1', '-x265-params', 'log-level=error']
   };
-  E.ENCODER_NAMES = { h264_nvenc: 'tarjeta NVIDIA', h264_qsv: 'gráficos Intel', h264_amf: 'tarjeta AMD', libx264: 'procesador' };
+  E.ENCODER_NAMES = { h264_nvenc: 'tarjeta NVIDIA', h264_qsv: 'gráficos Intel', h264_amf: 'tarjeta AMD', libx264: 'procesador',
+    hevc_nvenc: 'tarjeta NVIDIA', hevc_qsv: 'gráficos Intel', hevc_amf: 'tarjeta AMD', libx265: 'procesador' };
   E.ENCODER_ORDER = ['h264_nvenc', 'h264_qsv', 'h264_amf', 'libx264'];
+  // Compresión del archivo final: 'h264' se ve en todos lados; 'h265' pesa la mitad con la misma calidad.
+  E.CODECS = {
+    h264: { name: 'Compatible (H.264)', order: E.ENCODER_ORDER, cpu: 'libx264' },
+    h265: { name: 'Más ligero (H.265)', order: ['hevc_nvenc', 'hevc_qsv', 'hevc_amf', 'libx265'], cpu: 'libx265' }
+  };
+  E.isHevc = name => /hevc|265/.test(String(name || ''));
+  E.isHevcArgs = args => (args || []).some(a => /^(hevc_|libx265)/.test(String(a)));
+  E.cpuEncoder = name => E.isHevc(name) ? 'libx265' : 'libx264';
+  // Para las tomas intermedias se usa H.264 de la misma tarjeta (son temporales y se vuelven a codificar).
+  E.interEncoder = name => String(name || '').replace(/^hevc_/, 'h264_');
   E.encoderTestArgs = name => ['-hide_banner', '-nostats', '-f', 'lavfi', '-i', 'color=c=black:s=1280x720:r=30:d=0.4',
     ...E.ENCODERS[name], '-f', 'null', '-'];
   // Tomas intermedias: rápidas y casi sin pérdida; se vuelven a codificar al final.
@@ -159,6 +176,14 @@
   };
 
   /* ---------- Unir con transiciones ---------- */
+  // 'luz' no es de FFmpeg: es un fundido con un destello cálido y suave encima (se hace con eq solo durante la unión,
+  // así casi no tarda más; la versión con expresión propia de xfade era 13 veces más lenta).
+  E.xfType = tr => tr === 'luz' ? 'fade' : (tr || 'fade');
+  E.xfPost = (tr, off, d) => {
+    if (tr !== 'luz' || !(d > 0)) return '';
+    const u = `pow(sin(PI*clip((t-${r3(off)})/${r3(d)},0,1)),2)`;
+    return `,eq=brightness='0.15*${u}':gamma_r='1+0.22*${u}':gamma_b='1-0.18*${u}':eval=frame:enable='between(t,${r3(off)},${r3(off + d)})'`;
+  };
   // T: un número (igual en todas las uniones) o una lista con la duración de cada unión (0 = corte directo).
   E.joinFilter = (lens, T, transitions) => {
     const parts = lens.map((_, i) => `[${i}:v]settb=AVTB,fps=${FPS},format=yuv420p,setsar=1[s${i}]`);
@@ -171,7 +196,8 @@
     let acc = lens[0], prev = 's0';
     for (let k = 1; k < lens.length; k++) {
       const out = k === lens.length - 1 ? 'j' : `x${k}`, t = E.joinDur(T, k - 1), d = q(Math.max(1 / FPS, t));
-      parts.push(`[${prev}][s${k}]xfade=transition=${t ? (transitions[k - 1] || 'fade') : 'fade'}:duration=${r3(d)}:offset=${r3(acc - d)}[${out}]`);
+      const tt = t ? (transitions[k - 1] || 'fade') : 'fade';
+      parts.push(`[${prev}][s${k}]xfade=transition=${E.xfType(tt)}:duration=${r3(d)}:offset=${r3(acc - d)}${E.xfPost(tt, acc - d, d)}[${out}]`);
       acc = q(acc + lens[k] - d);
       prev = out;
     }
@@ -278,10 +304,27 @@
    * al volver a crear se salta lo que ya estaba hecho.
    * ===================================================================== */
   E.FILM_MOODS = {
-    suave: { T: 0.8, list: ['fade'] },
-    dinamico: { T: 0.5, list: ['fade', 'smoothleft', 'fade', 'circleopen', 'fade', 'smoothright', 'fade', 'slideup'] },
-    corte: { T: 0, list: [] }
+    suave: { name: 'Suaves', T: 0.8, list: ['fade'] },
+    elegante: { name: 'Elegantes', T: 1.2, list: ['fade', 'fadeslow', 'luz', 'fade', 'hblur', 'fadeslow', 'fade', 'vertopen'] },
+    momento: { name: 'Según el momento', T: 1, list: ['fade'], byMoment: true },
+    dinamico: { name: 'Dinámicas', T: 0.5, list: ['fade', 'smoothleft', 'fade', 'circleopen', 'fade', 'smoothright', 'fade', 'slideup'] },
+    corte: { name: 'Solo cortes', T: 0, list: [] }
   };
+  // "Según el momento": lentas y cálidas en la ceremonia y el vals, con apertura en la entrada, ágiles en la fiesta
+  // y nostálgicas en la despedida. Los momentos que agregue el usuario usan 'otro'.
+  E.MOMENT_MOODS = {
+    portada: { T: 1, list: ['fade'], desc: 'fundido' },
+    llegada: { T: 1, list: ['fade', 'smoothleft', 'fadeslow', 'smoothright'], desc: 'fundidos y deslizamientos suaves' },
+    ceremonia: { T: 1.5, list: ['fadeslow', 'fade', 'fadeslow', 'hblur'], desc: 'fundidos lentos' },
+    entrada: { T: 1, list: ['vertopen', 'fade', 'luz', 'fade'], desc: 'apertura y luz cálida' },
+    vals: { T: 1.6, list: ['fadeslow', 'luz', 'fadeslow', 'fade'], desc: 'lentas con luz cálida' },
+    brindis: { T: 0.8, list: ['fade'], desc: 'fundido' },
+    sorpresa: { T: 0.5, list: ['fade', 'smoothleft', 'circleopen', 'smoothright'], desc: 'ágiles' },
+    fiesta: { T: 0.45, list: ['fade', 'smoothleft', 'fadewhite', 'smoothright', 'circleopen', 'smoothup'], desc: 'ágiles' },
+    despedida: { T: 1.4, list: ['fadeslow', 'fadegrays', 'fade', 'fadeslow'], desc: 'lentas, con gris suave' },
+    otro: { T: 1, list: ['fade', 'fadeslow'], desc: 'fundidos' }
+  };
+  E.momentMood = key => E.MOMENT_MOODS[key] || E.MOMENT_MOODS.otro;
   E.FILM_INTER = ['-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18', '-pix_fmt', 'yuv420p', '-g', String(FPS)];
   E.FILM_INTER_GPU = {
     h264_nvenc: ['-c:v', 'h264_nvenc', '-preset', 'p4', '-rc', 'vbr', '-cq', '18', '-b:v', '0', '-pix_fmt', 'yuv420p', '-g', String(FPS)],
@@ -409,7 +452,7 @@
     for (let k = 1; k < n; k++) {
       const last = k === n - 1, ov = last ? 'jv' : `xv${k}`, oa = last ? 'ja' : `xa${k}`;
       const d = q(Math.max(CUT, E.joinDur(T, k - 1))), tr = E.joinDur(T, k - 1) ? (transitions[k - 1] || 'fade') : 'fade';
-      p.push(`[${pv}][v${k}]xfade=transition=${tr}:duration=${r3(d)}:offset=${r3(acc - d)}[${ov}]`);
+      p.push(`[${pv}][v${k}]xfade=transition=${E.xfType(tr)}:duration=${r3(d)}:offset=${r3(acc - d)}${E.xfPost(tr, acc - d, d)}[${ov}]`);
       p.push(`[${pa}][a${k}]acrossfade=d=${r3(d)}:c1=tri:c2=tri[${oa}]`);
       acc = q(acc + lens[k] - d); pv = ov; pa = oa;
     }
@@ -451,8 +494,8 @@
   /* Arma todos los pasos de la película.
    * o.units: [{ name, segments:[{kind:'video'|'image'|'card', ...}], music }] en orden (portada, momentos, créditos). */
   E.filmBuild = o => {
-    const mood = E.FILM_MOODS[o.mood] || E.FILM_MOODS.suave;
-    const T = q(mood.T), sep = o.sep || '/';
+    const mood0 = E.FILM_MOODS[o.mood] || E.FILM_MOODS.suave;
+    const sep = o.sep || '/';
     const J = name => o.cache + sep + name;
     const steps = [], unitOuts = [], chapters = [];
     const encKey = (o.encArgs || []).join(' '), interKey = (o.interArgs || E.FILM_INTER).join(' ');
@@ -460,6 +503,9 @@
     o.units.forEach((u, ui) => {
       const segs = u.segments.filter(s => s.len >= 0.5);
       if (!segs.length) return;
+      // Cada capítulo puede tener su propio estilo de transiciones (u.mood: nombre o { T, list }).
+      const mood = (u.mood && (typeof u.mood === 'object' ? u.mood : E.FILM_MOODS[u.mood])) || mood0, T = q(mood.T);
+      if (mood !== mood0) tr = 0;
       const segFiles = [], lens = [];
       segs.forEach((s, si) => {
         const L = q(s.len);
@@ -535,7 +581,7 @@
     if (!m) return null;
     try { const j = JSON.parse(m[0]); return isFinite(+j.input_i) ? j : null; } catch (e) { return null; }
   };
-  E.filmFinalArgs = (listPath, metaPath, measured, out) => {
+  E.filmFinalArgs = (listPath, metaPath, measured, out, hevc) => {
     let ln = `loudnorm=${E.LOUD}`;
     if (measured && isFinite(+measured.input_i) && +measured.input_i > -70) {
       ln += `:measured_I=${measured.input_i}:measured_TP=${measured.input_tp}:measured_LRA=${measured.input_lra}` +
@@ -543,7 +589,7 @@
     }
     return [...BASE, '-f', 'concat', '-safe', '0', '-i', listPath, '-f', 'ffmetadata', '-i', metaPath,
       '-map', '0:v', '-map', '0:a', '-map_metadata', '1', '-map_chapters', '1',
-      '-c:v', 'copy', '-af', `${ln},aresample=48000`, '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', out];
+      '-c:v', 'copy', ...(hevc ? ['-tag:v', 'hvc1'] : []), '-af', `${ln},aresample=48000`, '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', out];
   };
 
   // Revisión rápida de una toma: brillo en los cuadros clave y volumen promedio.
@@ -799,8 +845,8 @@
    * o: { photos:[{ dur, trans:{type,dur}|null, move }], dur, style:{ list, T }, beat:{period, offset}|null, fit: segundos|null, introMin, outroMin }
    * Cada foto se ve `dur` segundos; la transición se reparte mitad y mitad entre las dos fotos. */
   E.FS_STYLES = {
-    suave: { name: 'Suave', T: 1.2, list: ['fade', 'fade', 'hblur', 'fade', 'fadeblack'] },
-    elegante: { name: 'Elegante', T: 1, list: ['fade', 'smoothleft', 'circleopen', 'fade', 'smoothright', 'fadewhite', 'smoothup', 'hblur'] },
+    suave: { name: 'Suave', T: 1.3, list: ['fade', 'fadeslow', 'hblur', 'fade', 'luz', 'fadeslow'] },
+    elegante: { name: 'Elegante', T: 1.1, list: ['fade', 'smoothleft', 'luz', 'fadeslow', 'smoothright', 'vertopen', 'fade', 'hblur'] },
     dinamica: { name: 'Dinámica', T: .5, list: ['slideleft', 'zoomin', 'smoothup', 'wiperight', 'fadewhite', 'radial', 'slideright', 'circleopen', 'horzopen'] },
     cortes: { name: 'Solo cortes', T: 0, list: [] }
   };
@@ -895,6 +941,16 @@
     alta: { name: 'Alta calidad', H: 1080, mbMin: 110, audio: '256k' }
   };
   E.encoderFor = (name, weight) => {
+    if (E.isHevc(name)) {
+      if (weight === 'ligero') return ['-c:v', 'libx265', '-preset', 'faster', '-crf', '27', '-maxrate', '1200k', '-bufsize', '2400k', '-pix_fmt', 'yuv420p', '-tag:v', 'hvc1', '-x265-params', 'log-level=error'];
+      if (weight === 'alta') return ({
+        hevc_nvenc: ['-c:v', 'hevc_nvenc', '-preset', 'p6', '-rc', 'vbr', '-cq', '19', '-b:v', '0', '-maxrate', '30M', '-bufsize', '60M', '-profile:v', 'main', '-pix_fmt', 'yuv420p', '-tag:v', 'hvc1'],
+        hevc_qsv: ['-c:v', 'hevc_qsv', '-preset', 'slow', '-global_quality', '19', '-pix_fmt', 'nv12', '-tag:v', 'hvc1'],
+        hevc_amf: ['-c:v', 'hevc_amf', '-quality', 'quality', '-rc', 'cqp', '-qp_i', '18', '-qp_p', '20', '-pix_fmt', 'nv12', '-tag:v', 'hvc1'],
+        libx265: ['-c:v', 'libx265', '-preset', 'fast', '-crf', '19', '-maxrate', '14M', '-bufsize', '28M', '-pix_fmt', 'yuv420p', '-tag:v', 'hvc1', '-x265-params', 'log-level=error']
+      })[name] || E.ENCODERS.libx265;
+      return E.ENCODERS[name] || E.ENCODERS.libx265;
+    }
     if (weight === 'ligero') return ['-c:v', 'libx264', '-preset', 'veryfast', '-crf', '26', '-maxrate', '2M', '-bufsize', '4M', '-profile:v', 'high', '-pix_fmt', 'yuv420p'];
     if (weight === 'alta') return ({
       h264_nvenc: ['-c:v', 'h264_nvenc', '-preset', 'p6', '-rc', 'vbr', '-cq', '17', '-b:v', '0', '-maxrate', '40M', '-bufsize', '80M', '-profile:v', 'high', '-pix_fmt', 'yuv420p'],

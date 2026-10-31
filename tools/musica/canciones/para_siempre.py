@@ -2,6 +2,7 @@
 from lib import Song, prog, mel, check_melody, riser
 from arr import at, tr_chords, arp, pad, roots, melody, counter, pedal, roll, swell
 
+SF2 = 'musescore'   # banco MuseScore General: piano y cuerdas grabados
 META = dict(id='para-siempre', name='Para siempre', mood='Romántica', desc='Piano y cuerdas, tierna y elegante.',
             tags=['boda', 'xv', 'save the date', 'agradecimiento', 'resumen'])
 
@@ -129,4 +130,14 @@ def build():
     }
     s.master = dict(tone='balada', reverbs={'sala': dict(seconds=2.9, predelay=0.025, bright=0.8)}, tail=5.0,
                     extras=[('audio', s.sec(s.marks[[n for _, n in s.marks].index('coro3')][0]) - 3.0, riser(3.0, 0.05, f0=1500, f1=12000))])
+    # Interpretación: menos "robot" (dinámica por frase, acordes escalonados, cuerdas que respiran, final más lento)
+    from expr import perform
+    for t in s.tracks.values():
+        t.human = (t.human[0], min(t.human[1], 2))
+        if t.program in (0, 46):
+            t.roll = 8
+    last = max(b for t in s.tracks.values() for b, d, p, v in t.notes)
+    s.rit(last - 2 * s.meter, 2 * s.meter, 0.84, back=False)
+    perform(s, phrase_bars=4, lead=('melodia', 'contra'), sustained=('cuerdas', 'contra', 'coro'))
+    s.master['tone_max'] = 3.0
     return s, warns

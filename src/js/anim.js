@@ -6,7 +6,9 @@
   const SA = window.SA;
   const A = SA.anim = {};
   const F = { script: '"SA Script","Brush Script MT",cursive', serif: '"SA Serif",Georgia,serif', caps: '"SA Caps","Arial Narrow",Arial,sans-serif',
-    body: '"SA Body",Verdana,sans-serif', vhs: '"SA VHS","Courier New",monospace' };
+    body: '"SA Body",Verdana,sans-serif', vhs: '"SA VHS","Courier New",monospace',
+    // Plantillas elegantes: sans delgada moderna (Jost 300) y Garamond fina y cursiva (Cormorant Garamond).
+    fina: '"SA Fina","Century Gothic",sans-serif', garamond: '"SA Garamond",Georgia,serif' };
   A.F = F;
 
   /* ---------- Movimiento ---------- */

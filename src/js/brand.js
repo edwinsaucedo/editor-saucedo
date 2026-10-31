@@ -5,7 +5,7 @@
 
   /* ---------- Ajustes que se recuerdan entre usos ---------- */
   const KEY = 'saucedo-ajustes-v1', LOGO_KEY = 'saucedo-logo-v1';
-  const DEF = { auto: true, style: 'natural', wm: true, pos: 'br', size: 'm', alpha: 'normal', wmColor: 'auto' };
+  const DEF = { auto: true, style: 'natural', wm: true, pos: 'br', size: 'm', alpha: 'normal', wmColor: 'auto', codec: 'h264' };
   const S = Object.assign({}, DEF);
   try { Object.assign(S, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) {}
   SA.settings = S;
@@ -155,6 +155,26 @@
     ui.setSeg(el, value);
   };
   ui.setSeg = (el, value) => ui.$$('button', el).forEach(b => b.setAttribute('aria-checked', String(b.dataset.v === String(value))));
+
+  /* Compresión del archivo final, la misma en las pestañas de video (se recuerda). */
+  const CODEC_HINT = {
+    h264: 'H.264: se abre en cualquier celular, computadora, tele y WhatsApp.',
+    h265: 'H.265: misma calidad y cerca de la mitad del peso en video de cámara y fotos (4 GB quedan en unos 2 GB). Tarda un poco más si no hay tarjeta de video. Se ve en celulares, teles recientes, YouTube, Facebook y VLC; algunas computadoras con Windows piden instalar la "Extensión de video HEVC".'
+  };
+  ui.codecHtml = () => `<div class="field"><span class="lbl">Compresión del archivo</span><div class="seg" data-el="codec" role="radiogroup" aria-label="Compresión del archivo">` +
+    `<button type="button" data-v="h264">Compatible · H.264</button><button type="button" data-v="h265">Más ligero · H.265</button></div><p class="hint" data-el="codecHint"></p></div>`;
+  const syncCodec = () => ui.$$('[data-el="codec"]').forEach(el => {
+    ui.setSeg(el, S.codec);
+    const h = el.parentElement && el.parentElement.querySelector('[data-el="codecHint"]');
+    if (h) h.textContent = CODEC_HINT[S.codec] || CODEC_HINT.h264;
+  });
+  ui.codec = (root, onChange) => {
+    const el = root.querySelector('[data-el="codec"]');
+    if (!el) return;
+    ui.seg(el, S.codec, v => { S.codec = v === 'h265' ? 'h265' : 'h264'; SA.saveSettings(); syncCodec(); if (onChange) onChange(S.codec); });
+    syncCodec();
+  };
+  ui.syncCodec = syncCodec;
   ui.fmtDuration = s => window.Engine.fmtTime(s);
   ui.MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
   ui.parseDate = v => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v || ''); return m ? { y: +m[1], m: +m[2], d: +m[3] } : null; };

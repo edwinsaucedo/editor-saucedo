@@ -20,6 +20,12 @@
   // El ritmo se conoce de fábrica (la canción se compuso a ese tempo): no hay que analizarla.
   M.beat = id => {
     const t = M.get(id); if (!t) return null;
+    // Valses y baladas con rubato: cada tiempo ya viene medido (no están parejos).
+    if (t.beats && t.beats.length > 8) {
+      const bs = t.beats.filter(x => x <= M.len(t) - .05), df = bs.slice(1).map((x, i) => x - bs[i]).sort((a, b) => a - b);
+      const period = df[Math.floor(df.length / 2)];
+      return { bpm: 60 / period, period, beats: bs, meter: t.meter || 4 };
+    }
     const period = 60 / t.bpm, beats = [];
     for (let x = 0; x < M.len(t) - 0.05; x += period) beats.push(Math.round(x * 1000) / 1000);
     return { bpm: t.bpm, period, beats, meter: t.meter || 4 };
@@ -27,9 +33,13 @@
   // Dónde empezar para un video corto: en la parte más pegajosa (el coro), al inicio de un compás.
   M.bestStart = (id, len) => {
     const t = M.get(id); if (!t || !t.hot) return 0;
-    const bar = 60 / t.bpm * (t.meter || 4);
+    const meter = t.meter || 4, bar = 60 / t.bpm * meter;
     let s = t.hot;
     if (s + len > M.len(t) - 2) s = Math.max(0, M.len(t) - 2 - len);
+    if (t.beats && t.beats.length > 8) {   // al inicio de un compás, según los tiempos medidos
+      let i = 0; while (i + 1 < t.beats.length && t.beats[i + 1] <= s + 1e-3) i++;
+      return t.beats[Math.floor(i / meter) * meter] || 0;
+    }
     return Math.max(0, Math.floor(s / bar + 1e-6) * bar);
   };
   // Si el programa se instaló en otra carpeta, la ruta guardada se actualiza.
@@ -124,9 +134,9 @@
 
   // Sugerencias por momento de la película.
   M.forMoment = key => ({
-    llegada: ['domingo-feliz', 'brillar', 'cafe-de-la-tarde'], ceremonia: ['para-siempre', 'nuestra-historia'],
-    entrada: ['nuestra-historia', 'vals-de-quince', 'brillar'], vals: ['vals-de-quince', 'para-siempre'],
-    brindis: ['para-siempre', 'cafe-de-la-tarde'], sorpresa: ['noche-de-neon', 'impacto', 'dia-de-fiesta'],
-    fiesta: ['fiesta-en-el-pueblo', 'dia-de-fiesta', 'noche-de-neon'], despedida: ['para-siempre', 'brillar'],
-  }[key] || ['para-siempre', 'brillar', 'dia-de-fiesta']);
+    llegada: ['nuestro-momento', 'domingo-feliz', 'brillar'], ceremonia: ['promesa', 'para-siempre', 'eternamente'],
+    entrada: ['vals-de-las-rosas', 'eternamente', 'nuestra-historia'], vals: ['vals-de-la-luna', 'vals-de-quince', 'vals-de-las-rosas'],
+    brindis: ['primer-baile', 'para-siempre', 'nuestro-momento'], sorpresa: ['noche-de-neon', 'impacto', 'dia-de-fiesta'],
+    fiesta: ['fiesta-en-el-pueblo', 'dia-de-fiesta', 'noche-de-neon'], despedida: ['eternamente', 'promesa', 'para-siempre'],
+  }[key] || ['primer-baile', 'para-siempre', 'eternamente']);
 })();

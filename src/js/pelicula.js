@@ -78,7 +78,8 @@
           </section>
           <section class="step">
             <h2><span class="num">3</span>Estilo</h2>
-            <div class="field"><span class="lbl">Transiciones</span><div class="seg" data-el="mood"><button type="button" data-v="suave">Suaves</button><button type="button" data-v="dinamico">Dinámicas</button><button type="button" data-v="corte">Solo cortes</button></div></div>
+            <div class="field"><span class="lbl">Transiciones</span><div class="seg wrap" data-el="mood">${['momento', 'elegante', 'suave', 'dinamico', 'corte'].map(k => `<button type="button" data-v="${k}">${E.FILM_MOODS[k].name}</button>`).join('')}</div>
+              <p class="hint" data-el="moodHint"></p></div>
             <button class="big" type="button" data-act="enhance"><span class="t">Mejorar colores</span><span class="pill" data-el="enhState">Activado</span></button>
             <div class="field"><span class="lbl">Estilo de color</span><div class="chips" data-el="style" role="radiogroup">${styles}</div></div>
             <div class="sw-row"><button class="switch" type="button" role="switch" data-act="denoise" data-el="denoise" aria-labelledby="pDenoise"></button><span class="sw-state" id="pDenoise">Reducir el ruido del salón</span></div>
@@ -108,6 +109,7 @@
             </div>
             <div class="field" data-el="qualityBox"><span class="lbl">Calidad del archivo de la película</span><div class="seg" data-el="quality">${Object.entries(QUALITY).map(([k, v]) => `<button type="button" data-v="${k}">${v.name}</button>`).join('')}</div>
               <p class="hint" data-el="qualityHint"></p></div>
+            ${SA.ui.codecHtml()}
             <p class="summary" data-el="summary"></p>
             <button class="primary" type="button" data-act="create" data-el="create">Crear película</button>
             <div class="progress" data-el="progress" hidden>
@@ -194,7 +196,9 @@
       }));
       const seg = (name, key) => SA.ui.seg(this.q(name), '', v => { this.p[key] = v; this.dirty(); this.syncStyle(); this.summary(); });
       SA.ui.seg(this.q('wmSize'), S.size || 'm', v => { S.size = v; SA.brandChanged(); });
-      seg('mood', 'mood'); seg('style', 'style'); seg('theme', 'theme'); seg('quality', 'quality'); seg('shadow', 'shadow');
+      SA.ui.seg(this.q('mood'), '', v => { this.p.mood = v; this.dirty(); this.syncStyle(); this.summary(); this.renderBoard(); });
+      seg('style', 'style'); seg('theme', 'theme'); seg('quality', 'quality'); seg('shadow', 'shadow');
+      SA.ui.codec(R);
       $$('[data-el="outputs"] .chip', R).forEach(b => b.addEventListener('click', () => {
         const set = new Set(this.p.outputs || ['pelicula']); set.has(b.dataset.v) ? set.delete(b.dataset.v) : set.add(b.dataset.v);
         if (!set.size) { toast('Elige por lo menos una cosa para crear.'); return; }
@@ -249,7 +253,7 @@
       const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
       const dir = B.join(B.paths.documents, 'Saucedo', `${date} ${B.safeName(name)}`, 'Película');
       this.load({
-        v: 1, id, name, date, place: '', theme: 'dorado', mood: 'suave', enhance: true, style: 'natural', denoise: true, music: null,
+        v: 1, id, name, date, place: '', theme: 'dorado', mood: 'momento', enhance: true, style: 'natural', denoise: true, music: null,
         sources: {}, clips: {},
         moments: MOMENTS.map(m => ({ id: m.key, key: m.key, name: m.name, title: true, vol: m.vol, music: null, clips: [], manual: false })),
         path: B.join(dir, 'proyecto-saucedo.json'), dir
@@ -463,11 +467,19 @@
     transOf(c, m) {
       const t = (c.trans && c.trans.type) || (m && m.trans && m.trans.type);
       if (t) return { type: t, own: true, dur: (c.trans && c.trans.type ? c.trans.dur : m.trans.dur) || .8 };
+      const mood = this.moodOf(m);
+      return { type: mood.T ? (mood.list[0] || 'fade') : 'corte', own: false, dur: mood.T || .8, mood: this.p.mood, varies: new Set(mood.list).size > 1 };
+    }
+    // Estilo de transiciones de un momento: el de la película, o el que le toca al momento con "Según el momento".
+    moodOf(m) {
       const mood = E.FILM_MOODS[this.p.mood] || E.FILM_MOODS.suave;
-      return { type: mood.T ? (mood.list[0] || 'fade') : 'corte', own: false, dur: mood.T || .8, mood: this.p.mood };
+      return mood.byMoment ? E.momentMood(m && m.key) : mood;
+    }
+    autoTransName(t, m) {
+      return t.mood === 'momento' ? `Según el momento (${E.momentMood(m && m.key).desc})` : t.mood === 'elegante' ? 'Elegante (cambia en cada toma)' : t.mood === 'dinamico' ? 'Dinámica (cambia en cada toma)' : SA.trans.name(t.type);
     }
     joinHtml(c, m) {
-      const t = this.transOf(c, m), name = !t.own && t.mood === 'dinamico' ? 'Dinámica' : SA.trans.name(t.type);
+      const t = this.transOf(c, m), name = !t.own && t.varies ? this.autoTransName(t, m).replace(/ \(.*\)$/, '') : SA.trans.name(t.type);
       return `<button class="tj${t.own ? ' own' : ''}" type="button" data-act="tjoin" data-id="${c.id}" title="Transición: ${esc(name)}. Toca para verla o cambiarla.">⇄ ${esc(name)}</button>`;
     }
     act_tjoin(b) {
@@ -624,7 +636,7 @@
       let w = r.width, h = w * 9 / 16; if (h > r.height) { h = r.height; w = h * 16 / 9; }
       cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); cv.style.width = w + 'px'; cv.style.height = h + 'px';
       cv.hidden = false; this.q('video').pause();
-      const nm = !t.own && t.mood === 'dinamico' ? 'Dinámica (cambia en cada toma)' : SA.trans.name(t.type);
+      const nm = !t.own && t.varies ? this.autoTransName(t, m) : SA.trans.name(t.type);
       this.stopTP = SA.trans.play(cv, im.a, im.b, t.type, t.type === 'corte' ? 0 : t.dur, { times: 2, label: (x, W, H) => {
         x.save(); x.font = `700 ${Math.round(H * .055)}px "SA Body",sans-serif`; x.fillStyle = 'rgba(0,0,0,.55)';
         const tw = x.measureText(nm).width; x.fillRect(W * .03, H * .04, tw + H * .06, H * .1); x.fillStyle = '#fff'; x.textBaseline = 'middle'; x.fillText(nm, W * .03 + H * .03, H * .09); x.restore();
@@ -1236,7 +1248,10 @@
     /* ================= Estilo ================= */
     syncStyle() {
       if (!this.p) return;
-      SA.ui.setSeg(this.q('mood'), this.p.mood); SA.ui.setSeg(this.q('style'), this.p.style); SA.ui.setSeg(this.q('theme'), this.p.theme); SA.ui.setSeg(this.q('shadow'), this.p.shadow || 'auto');
+      SA.ui.setSeg(this.q('mood'), this.p.mood);
+      this.q('moodHint').textContent = { momento: 'Cada momento con lo suyo: fundidos lentos y luz cálida en la ceremonia y el vals, apertura en la entrada, más ágiles en la fiesta y en gris suave en la despedida.',
+        elegante: 'Fundidos lentos, luz cálida, desenfoque y apertura, alternados: para bodas y XV años.', suave: 'Fundido sencillo entre todas las tomas.',
+        dinamico: 'Deslizamientos y círculos más rápidos: para fiestas y eventos casuales.', corte: 'Cambio directo de una toma a otra.' }[this.p.mood] || ''; SA.ui.setSeg(this.q('style'), this.p.style); SA.ui.setSeg(this.q('theme'), this.p.theme); SA.ui.setSeg(this.q('shadow'), this.p.shadow || 'auto');
       const enh = this.root.querySelector('[data-act="enhance"]');
       enh.setAttribute('aria-pressed', String(this.p.enhance)); this.q('enhState').textContent = this.p.enhance ? 'Activado' : 'Apagado';
       this.q('denoise').setAttribute('aria-checked', String(this.p.denoise));
@@ -1254,7 +1269,7 @@
     act_denoise() { this.p.denoise = !this.p.denoise; this.dirty(); this.syncStyle(); }
     act_wm() { S.wm = !S.wm; SA.brandChanged(); }
     async act_pSong() {
-      const s = await this.chooseSong({ title: 'Música de la portada y los créditos', forName: 'la película', suggest: ['para-siempre', 'vals-de-quince', 'nuestra-historia', 'brillar'], current: this.p.music });
+      const s = await this.chooseSong({ title: 'Música de la portada y los créditos', forName: 'la película', suggest: ['eternamente', 'primer-baile', 'para-siempre', 'vals-de-la-luna', 'nuestra-historia'], current: this.p.music });
       if (s) { this.p.music = Object.assign(s, { vol: .7 }); this.dirty(); this.syncStyle(); this.summary(); }
     }
     act_pSongOff() { this.p.music = null; this.dirty(); this.syncStyle(); this.summary(); }
@@ -1277,7 +1292,7 @@
       if (!this.busy) this.q('create').textContent = n === 1 ? { pelicula: 'Crear película', resumen: 'Crear resumen', reel: 'Crear reel' }[outs[0]] : `Crear ${n} videos`;
     }
     async act_hlSong() {
-      const s = await this.chooseSong({ title: 'Música del resumen y del reel', forName: 'el resumen y el reel', suggest: ['brillar', 'dia-de-fiesta', 'nuestra-historia', 'para-siempre', 'noche-de-neon'], current: this.hl().music });
+      const s = await this.chooseSong({ title: 'Música del resumen y del reel', forName: 'el resumen y el reel', suggest: ['brillar', 'eternamente', 'primer-baile', 'dia-de-fiesta', 'nuestra-historia', 'noche-de-neon'], current: this.hl().music });
       if (s) { this.hl().music = s; this.dirty(); this.syncOutputs(); this.summary(); }
     }
     act_hlStart(b) { const m = this.hl().music; if (!m) return; m.start = Math.max(0, Math.min(Math.floor(m.duration - 20), (m.start || 0) + (+b.dataset.v))); this.dirty(); this.syncOutputs(); }
@@ -1297,7 +1312,7 @@
       this.q('progress').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
       const outs = [];
       try {
-        this.encoder = await B.detectEncoder();
+        this.encoder = await B.detectEncoder(S.codec);
         // 1. Revisar cada toma segundo a segundo (una sola vez; queda guardado)
         await this.analyzeHl(ms.flatMap(m => m.clips), (f, k, n) => this.setProgress(f * .3, `Buscando los mejores momentos: toma ${k + 1} de ${n}`), () => this.cancelled);
         this.dirty();
@@ -1415,7 +1430,7 @@
           let r = await B.run('ffmpeg', step.args, onT);
           if (this.cancelled) return null;
           if (r.code !== 0 && step.args.includes('-hwaccel')) r = await B.run('ffmpeg', step.args.filter((x, i, arr) => x !== '-hwaccel' && arr[i - 1] !== '-hwaccel'), onT);
-          if (r.code !== 0 && step.final && this.encoder !== 'libx264') { this.encoder = 'libx264'; r = await B.run('ffmpeg', E.tplFinalArgs(Object.assign({}, step.finalOpts, { encoderArgs: E.ENCODERS.libx264 })), onT); }
+          if (r.code !== 0 && step.final && this.encoder !== E.cpuEncoder(this.encoder)) { this.encoder = E.cpuEncoder(this.encoder); r = await B.run('ffmpeg', E.tplFinalArgs(Object.assign({}, step.finalOpts, { encoderArgs: E.ENCODERS[this.encoder] })), onT); }
           if (this.cancelled) return null;
           if (r.code !== 0) {
             const who = step.media != null ? media[step.media].name : null;
@@ -1454,9 +1469,9 @@
     // Duración de la película: cada toma (sin partes quitadas) menos lo que se encima en cada transición.
     filmLen(units) {
       units = units || this.units();
-      const T = (E.FILM_MOODS[this.p.mood] || E.FILM_MOODS.suave).T;
       let total = 0;
       units.forEach(u => {
+        const T = this.moodOf(u.moment || { key: 'portada' }).T;
         const parts = [];
         if (u.card) parts.push({ len: u.card.len, card: true });
         u.clips.forEach(c => {
@@ -1561,12 +1576,13 @@
       this.setProgress(0, 'Revisando la computadora');
       let chain = null;
       try {
-        this.encoder = await B.detectEncoder();
-        let interGpu = this.encoder !== 'libx264', out = null;
+        this.encoder = await B.detectEncoder(S.codec);
+        const cpu = E.cpuEncoder(this.encoder);
+        let interGpu = this.encoder !== cpu, out = null;
         for (let attempt = 0; attempt < 3 && !out && !this.cancelled; attempt++) {
           try { out = await this.render(units, interGpu); }
           catch (e) {
-            if (e.retryCpu && (interGpu || this.encoder !== 'libx264')) { interGpu = false; this.encoder = 'libx264'; continue; }
+            if (e.retryCpu && (interGpu || this.encoder !== cpu)) { interGpu = false; this.encoder = cpu; continue; }
             throw e;
           }
         }
@@ -1636,12 +1652,12 @@
               label: k ? '' : label, trans: k ? null : tr, join: k > 0, pip: pips[k] || null }));
           }
         }
-        prepared.push({ name: u.name, chapter: u.chapter, segments: segs, noWatermark: !u.moment, music: u.music ? { path: u.music.path, start: u.music.start || 0, vol: u.music.vol == null ? .6 : u.music.vol } : null });
+        prepared.push({ name: u.name, chapter: u.chapter, segments: segs, noWatermark: !u.moment, mood: this.moodOf(u.moment || { key: 'portada' }), music: u.music ? { path: u.music.path, start: u.music.start || 0, vol: u.music.vol == null ? .6 : u.music.vol } : null });
       }
       const watermark = null;   // ahora cada toma lleva su propia marca (negra o blanca)
       // 2. Pasos de FFmpeg
       const job = E.filmBuild({ W, H, mood: p.mood, enhance: p.enhance, style: p.style, denoise: p.denoise, hwaccel: true, cache, sep, title: p.name,
-        watermark, units: prepared, interArgs: interGpu && E.FILM_INTER_GPU[this.encoder] ? E.FILM_INTER_GPU[this.encoder] : E.FILM_INTER,
+        watermark, units: prepared, interArgs: interGpu && E.FILM_INTER_GPU[E.interEncoder(this.encoder)] ? E.FILM_INTER_GPU[E.interEncoder(this.encoder)] : E.FILM_INTER,
         encArgs: E.ENCODERS[this.encoder] });
       const total = job.steps.reduce((s, x) => s + x.weight, 0) + job.total * .25;
       let done = 0;
@@ -1657,7 +1673,7 @@
         if (this.cancelled) return null;
         if (r.code !== 0) {
           // Si falló con la tarjeta de video, se intenta otra vez con el procesador.
-          if (interGpu || (st.stage === 'capitulo' && this.encoder !== 'libx264')) throw Object.assign(new Error('No se pudo usar la tarjeta de video.'), { retryCpu: true, detail: r.stderr });
+          if (interGpu || (st.stage === 'capitulo' && this.encoder !== E.cpuEncoder(this.encoder))) throw Object.assign(new Error('No se pudo usar la tarjeta de video.'), { retryCpu: true, detail: r.stderr });
           const who = st.seg && st.seg.name;
           throw Object.assign(new Error(who ? `No se pudo usar la toma «${who}» de "${st.unitName}". Puede estar dañada o en un formato poco común. Quítala ("No usar esta toma") y vuelve a crear: lo ya hecho no se repite.`
             : 'FFmpeg no pudo terminar un paso de la película. Revisa que haya espacio en el disco y vuelve a intentar: lo ya hecho no se repite.'), { detail: r.stderr });
@@ -1673,7 +1689,7 @@
       const measured = E.parseLoudnorm(meas.stderr);
       await B.mkdir(p.dir);
       const out = await B.freeName(p.dir, `Película ${B.safeName(p.name)}`, 'mp4');
-      const fin = await B.run('ffmpeg', E.filmFinalArgs(job.listPath, job.metaPath, measured, out),
+      const fin = await B.run('ffmpeg', E.filmFinalArgs(job.listPath, job.metaPath, measured, out, E.isHevc(this.encoder)),
         t => this.setProgress((done + Math.min(1, t / job.total) * job.total * .25) / total, 'Guardando la película'));
       if (this.cancelled) return null;
       if (fin.code !== 0) throw Object.assign(new Error('No se pudo guardar la película final. Revisa que haya espacio en el disco.'), { detail: fin.stderr });

@@ -5,18 +5,21 @@
   const SA = window.SA;
   const T = SA.trans = {};
   // [clave de FFmpeg, nombre para el usuario]. 'auto' y 'corte' no son de FFmpeg: los resuelve el programa.
+  // Primero las suaves y elegantes (para ceremonia, vals y momentos emotivos), después las de movimiento.
   T.TYPES = [
-    ['auto', 'Automática'], ['corte', 'Corte directo'], ['fade', 'Fundido'], ['fadeblack', 'Fundido a negro'], ['fadewhite', 'Destello blanco'],
-    ['hblur', 'Desenfoque'], ['smoothleft', 'Deslizar ←'], ['smoothright', 'Deslizar →'], ['smoothup', 'Subir'], ['smoothdown', 'Bajar'],
+    ['auto', 'Automática'], ['corte', 'Corte directo'], ['fade', 'Fundido'], ['fadeslow', 'Fundido lento'], ['luz', 'Luz cálida'],
+    ['hblur', 'Desenfoque'], ['fadegrays', 'Recuerdo en gris'], ['fadeblack', 'Fundido a negro'], ['fadewhite', 'Destello blanco'],
+    ['vertopen', 'Apertura'], ['circlecrop', 'Iris de cine'], ['smoothleft', 'Deslizar ←'], ['smoothright', 'Deslizar →'], ['smoothup', 'Subir'], ['smoothdown', 'Bajar'],
     ['slideleft', 'Empujar ←'], ['slideright', 'Empujar →'], ['circleopen', 'Círculo'], ['circleclose', 'Círculo al centro'], ['zoomin', 'Acercamiento'],
     ['wiperight', 'Barrido'], ['radial', 'Reloj'], ['horzopen', 'Cortina']
   ];
   T.name = k => (T.TYPES.find(x => x[0] === k) || [k, k])[1];
-  T.DURS = [[0.4, 'Rápida'], [0.8, 'Normal'], [1.5, 'Lenta']];
+  T.DURS = [[0.4, 'Rápida'], [0.8, 'Normal'], [1.5, 'Lenta'], [2.2, 'Muy lenta']];
 
   const clamp = x => x < 0 ? 0 : x > 1 ? 1 : x;
   const ss = (a, b, x) => { const t = clamp((x - a) / (b - a)); return t * t * (3 - 2 * t); };
   const eio = x => x < .5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2;
+  const slow = x => { x = clamp(x); return x * x * x * (x * (x * 6 - 15) + 10); };   // más lenta al empezar y al terminar
   // Dibuja la imagen cubriendo todo el cuadro (como en el video).
   const cover = (ctx, img, W, H, z) => {
     if (!img) { ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H); return; }
@@ -56,6 +59,24 @@
       case 'fadeblack': case 'fadewhite':
         ctx.fillStyle = type === 'fadewhite' ? '#fff' : '#000'; ctx.fillRect(0, 0, W, H);
         ctx.globalAlpha = p < .5 ? 1 - p * 2 : p * 2 - 1; cover(ctx, p < .5 ? a : b, W, H); break;
+      case 'fadeslow': cover(ctx, a, W, H); ctx.globalAlpha = slow(p); cover(ctx, b, W, H); break;
+      case 'luz': {   // fundido con un destello cálido en medio
+        cover(ctx, a, W, H); ctx.globalAlpha = eio(p); cover(ctx, b, W, H);
+        const g = Math.pow(Math.sin(p * Math.PI), 2);
+        ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'screen';
+        const rg = ctx.createRadialGradient(W * .5, H * .45, 0, W * .5, H * .45, R * 1.1);
+        rg.addColorStop(0, `rgba(255,226,180,${(.62 * g).toFixed(3)})`); rg.addColorStop(1, `rgba(255,196,140,${(.38 * g).toFixed(3)})`);
+        ctx.fillStyle = rg; ctx.fillRect(0, 0, W, H); break;
+      }
+      case 'fadegrays': {   // las fotos pierden el color, cambian y lo recuperan
+        const g = 1 - Math.abs(2 * p - 1);
+        ctx.filter = `grayscale(${g.toFixed(3)})`; cover(ctx, a, W, H); ctx.globalAlpha = ss(.25, .75, p); cover(ctx, b, W, H); break;
+      }
+      case 'vertopen': cover(ctx, a, W, H); clipDraw(ctx, W, H, b, () => ctx.rect(W / 2 * (1 - eio(p)), 0, W * eio(p), H)); break;
+      case 'circlecrop':   // iris de cine: se cierra en negro y se abre la siguiente
+        if (p < .5) clipDraw(ctx, W, H, a, () => ctx.arc(W / 2, H / 2, R * (1 - eio(p * 2)), 0, Math.PI * 2));
+        else clipDraw(ctx, W, H, b, () => ctx.arc(W / 2, H / 2, R * eio(p * 2 - 1), 0, Math.PI * 2));
+        break;
       case 'hblur': {
         const k = Math.sin(p * Math.PI) * W * .02;
         ctx.filter = `blur(${k.toFixed(1)}px)`; cover(ctx, a, W, H); ctx.globalAlpha = eio(p); cover(ctx, b, W, H); break;
@@ -89,11 +110,13 @@
     if (!tiles.length) return;
     const t0 = performance.now();
     const paint = (cv, p) => { const btn = cv.closest('.tr'), k = btn.dataset.v, im = imgs(); T.draw(cv.getContext('2d'), cv.width, cv.height, im.a, im.b, k === 'auto' ? (im.auto || 'fade') : k, p); };
-    tiles.forEach(cv => paint(cv, .5));
+    // Cuadro quieto de la muestra: a la mitad, menos en las que a la mitad se ven todas negras o blancas.
+    const still = cv => ({ fadeblack: .3, fadewhite: .3, circlecrop: .32 })[cv.closest('.tr').dataset.v] || .5;
+    tiles.forEach(cv => paint(cv, still(cv)));
     const loop = now => {
       if (!root.isConnected) return;
       const cyc = ((now - t0) / 1000) % 2.2, p = cyc < .5 ? 0 : cyc > 1.7 ? 1 : (cyc - .5) / 1.2;
-      tiles.forEach(cv => { const btn = cv.closest('.tr'); if (btn.matches(':hover') || btn.classList.contains('on')) { paint(cv, p); btn._moving = true; } else if (btn._moving) { paint(cv, .5); btn._moving = false; } });
+      tiles.forEach(cv => { const btn = cv.closest('.tr'); if (btn.matches(':hover') || btn.classList.contains('on')) { paint(cv, p); btn._moving = true; } else if (btn._moving) { paint(cv, still(cv)); btn._moving = false; } });
       requestAnimationFrame(loop);
     };
     requestAnimationFrame(loop);

@@ -2,6 +2,7 @@
 from lib import Song, prog, mel, check_melody, riser, impact
 from arr import at, arp, pad, roots, melody, roll, swell, drums, chord_at
 
+SF2 = 'musescore'   # banco MuseScore General: piano y cuerdas grabados
 META = dict(id='nuestra-historia', name='Nuestra historia', mood='De película', desc='Cuerdas, cornos y tambores que crecen, como tráiler de cine.',
             tags=['save the date', 'boda', 'cuenta regresiva', 'resumen', 'película'])
 
@@ -132,4 +133,14 @@ def build():
     s.master = dict(tone='orquesta', reverbs={'sala': dict(seconds=3.2, predelay=0.03, bright=0.8)}, tail=6.0, glue=(-15, 2.0, 0.03, 0.3, 6),
                     extras=[('audio', s.sec(cumbre) - 3, riser(3, 0.06)), ('audio', s.sec(final) - 3, riser(3, 0.07)),
                             ('audio', s.sec(cumbre), impact(0.22)), ('audio', s.sec(cierre), impact(0.3))])
+    # Interpretación: menos "robot" (dinámica por frase, acordes escalonados, cuerdas que respiran, final más lento)
+    from expr import perform
+    for t in s.tracks.values():
+        t.human = (t.human[0], min(t.human[1], 2))
+        if t.program in (0, 46):
+            t.roll = 8
+    last = max(b for t in s.tracks.values() for b, d, p, v in t.notes)
+    s.rit(last - 2 * s.meter, 2 * s.meter, 0.84, back=False)
+    perform(s, phrase_bars=4, lead=('melodia', 'violines'), sustained=('cuerdas', 'violines', 'coro'))
+    s.master['tone_max'] = 3.0
     return s, warns

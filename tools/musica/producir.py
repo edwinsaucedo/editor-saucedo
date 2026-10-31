@@ -18,6 +18,7 @@ ROOT = os.path.abspath(os.path.join(HERE, '..', '..'))
 OUT = os.path.join(ROOT, 'src-tauri', 'musica')
 WORK = os.environ.get('SAUCEDO_TMP', os.path.join(HERE, '.trabajo'))
 META_DIR = os.path.join(HERE, 'meta')
+MS_SF2 = os.environ.get('SAUCEDO_MS_SF2', '/usr/share/sounds/sf2/MuseScore_General_Full.sf2')
 
 
 def songs():
@@ -35,7 +36,10 @@ def make(modname):
     os.makedirs(WORK, exist_ok=True)
     os.makedirs(OUT, exist_ok=True)
     wav = os.path.join(WORK, f'{song.id}.wav')
-    info = lib.produce(song, wav, WORK)
+    sf2 = MS_SF2 if getattr(mod, 'SF2', None) == 'musescore' else None
+    if sf2 and not os.path.exists(sf2):
+        sys.exit(f'Falta el banco MuseScore General: {sf2} (apt install musescore-general-soundfont-lossless)')
+    info = lib.produce(song, wav, WORK, sf2=sf2)
     mp3 = os.path.join(OUT, f'{song.id}.mp3')
     subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', wav, '-c:a', 'libmp3lame', '-b:a', '160k', '-ar', '44100',
                     '-metadata', f'title={meta["name"]}', '-metadata', 'artist=Editor Saucedo',
@@ -45,6 +49,9 @@ def make(modname):
                 hot=round(song.sec(hot), 3) if hot is not None else 0,
                 sections=[{'name': n, 't': round(song.sec(b), 3)} for b, n in song.marks],
                 end=round(song.sec(song.end_beat), 3) if song.end_beat else info['duration'])
+    # Con rubato los tiempos no están parejos: se guarda dónde cae cada uno (para cortar al ritmo).
+    if len(song.tempo_map()) > 1:
+        meta['beats'] = song.beat_times()
     os.makedirs(META_DIR, exist_ok=True)
     with open(os.path.join(META_DIR, f'{song.id}.json'), 'w', encoding='utf8') as f:
         json.dump(meta, f, ensure_ascii=False, indent=1)

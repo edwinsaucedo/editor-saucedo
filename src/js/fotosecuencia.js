@@ -100,6 +100,7 @@
         <section class="step">
           <h2><span class="num">6</span>Crear video</h2>
           <div class="field"><span class="lbl">Peso del video</span>${seg('weight', Object.entries(E.WEIGHTS).map(([k, v]) => [k, v.name]))}<p class="hint" data-el="weightHint"></p></div>
+          ${SA.ui.codecHtml()}
           <p class="summary" data-el="summary"></p>
           <button class="primary" type="button" data-act="create" data-el="create">Crear fotosecuencia</button>
           <div class="progress" data-el="progress" hidden>
@@ -139,7 +140,7 @@
         if (fn) fn.call(this, b, e);
       });
       const segS = (name, key, after) => SA.ui.seg(this.q(name), this.st[key], v => { this.st[key] = v; this.changed(); if (after) after(v); });
-      segS('shadow', 'shadow'); segS('capStyle', 'capStyle'); segS('style', 'style', () => this.renderFilm()); segS('move', 'move'); segS('weight', 'weight');
+      segS('shadow', 'shadow'); segS('capStyle', 'capStyle'); segS('style', 'style', () => this.renderFilm()); segS('move', 'move'); segS('weight', 'weight'); SA.ui.codec(R, () => { this.syncStyle(); this.summary(); });
       SA.ui.seg(this.q('theme'), this.st.theme, v => { this.st.theme = v; this.changed(); });
       SA.ui.seg(this.q('wmSize'), S.size || 'm', v => { S.size = v; SA.brandChanged(); });
       $$('.fsd', this.q('designs')).forEach(b => {
@@ -170,7 +171,7 @@
       $$('[data-f]', this.q('fields')).forEach(inp => { inp.placeholder = d.ph[inp.dataset.f] || ''; inp.closest('.field').hidden = d.id === 'ninguno' && inp.dataset.f !== 'title'; });
       SA.ui.setSeg(this.q('theme'), st.theme); SA.ui.setSeg(this.q('shadow'), st.shadow || 'auto'); SA.ui.setSeg(this.q('capStyle'), st.capStyle);
       SA.ui.setSeg(this.q('style'), st.style); SA.ui.setSeg(this.q('move'), st.move); SA.ui.setSeg(this.q('weight'), st.weight);
-      this.q('styleHint').textContent = { suave: 'Fundidos lentos y desenfoques: para bodas, XV y momentos emotivos.', elegante: 'Fundidos, deslizamientos suaves, círculo y destellos.',
+      this.q('styleHint').textContent = { suave: 'Fundidos lentos, desenfoque y luz cálida: para bodas, XV y momentos emotivos.', elegante: 'Fundidos lentos, deslizamientos suaves, apertura y luz cálida.',
         dinamica: 'Empujes, acercamientos, barridos y reloj, más rápidas: para fiestas y redes.', cortes: 'Cambio directo de una foto a otra, sin transición.' }[st.style] || '';
       this.q('durOut').textContent = `${st.dur} s`;
       $$('.fmt', this.q('formats')).forEach(b => b.setAttribute('aria-pressed', String(st.formats.includes(b.dataset.v))));
@@ -180,7 +181,7 @@
       this.q('beatOn').setAttribute('aria-checked', String(st.beatOn)); this.q('fit').setAttribute('aria-checked', String(st.fit));
       const w = E.WEIGHTS[st.weight] || E.WEIGHTS.normal;
       this.q('weightHint').textContent = { ligero: 'Para mandar por WhatsApp o subir rápido: 720p, pesa poco y se crea más rápido.',
-        normal: 'Full HD 1080p: se ve bien en la tele y en redes.', alta: 'La mejor calidad en 1080p para entregar al cliente; el archivo pesa más.' }[st.weight] + ` Aproximadamente ${w.mbMin} MB por minuto.`;
+        normal: 'Full HD 1080p: se ve bien en la tele y en redes.', alta: 'La mejor calidad en 1080p para entregar al cliente; el archivo pesa más.' }[st.weight] + ` Aproximadamente ${Math.round(w.mbMin * (S.codec === 'h265' ? .55 : 1))} MB por minuto.`;
     }
     drawDesignCard(cv, id, t) {
       const ctx = cv.getContext('2d'), W = cv.width, H = cv.height, d = DESIGNS.find(x => x.id === id);
@@ -363,8 +364,8 @@
       const s = this.st.song;
       if (s === 'none') { this.song = null; this.renderSong(); return; }
       if (s && s.builtin && SA.music.get(s.builtin)) { this.useBuiltin(s.builtin); return; }
-      if (s && s.path) { this.setSong(s.path, true).then(ok => { if (!ok) this.useBuiltin('para-siempre'); }); return; }
-      if (SA.music.available()) this.useBuiltin('para-siempre'); else this.renderSong();
+      if (s && s.path) { this.setSong(s.path, true).then(ok => { if (!ok) this.useBuiltin('nuestro-momento'); }); return; }
+      if (SA.music.available()) this.useBuiltin('nuestro-momento'); else this.renderSong();
     }
     useBuiltin(id) {
       const s = SA.music.song(id); if (!s) { this.renderSong(); return; }
@@ -392,7 +393,7 @@
     }
     async act_song() {
       this.stopAudio();
-      const r = await SA.music.pick({ title: 'Música de la fotosecuencia', forName: 'Fotosecuencia', suggest: ['para-siempre', 'nuestra-historia', 'brillar', 'cafe-de-la-tarde', 'vals-de-quince'], current: this.song, allowNone: true, noneLabel: 'Sin música' });
+      const r = await SA.music.pick({ title: 'Música de la fotosecuencia', forName: 'Fotosecuencia', suggest: ['nuestro-momento', 'primer-baile', 'vals-de-la-luna', 'promesa', 'eternamente', 'para-siempre'], current: this.song, allowNone: true, noneLabel: 'Sin música' });
       if (!r) return;
       if (r.kind === 'builtin') this.useBuiltin(r.id); else if (r.kind === 'file') this.setSong(r.path);
       else { this.stopAudio(); this.song = null; this.beat = null; this.st.song = 'none'; this.save(); this.renderSong(); this.planCache = null; this.summary(); }
@@ -445,7 +446,7 @@
       const el = this.q('summary'), plan = this.plan();
       if (!plan) { el.textContent = 'Agrega fotos para ver cuánto va a durar.'; this.syncTime(); return; }
       const docs = B.paths.documents || '', dir = this.outDir(), shown = dir.startsWith(docs) ? 'Documentos' + dir.slice(docs.length).split(/[\\/]/).join(' › ') : dir;
-      const w = E.WEIGHTS[this.st.weight] || E.WEIGHTS.normal, n = this.st.formats.length, mb = Math.max(1, Math.round(plan.total / 60 * w.mbMin));
+      const w = E.WEIGHTS[this.st.weight] || E.WEIGHTS.normal, n = this.st.formats.length, mb = Math.max(1, Math.round(plan.total / 60 * w.mbMin * (S.codec === 'h265' ? .55 : 1)));
       const how = { suave: 'transiciones suaves', elegante: 'transiciones elegantes', dinamica: 'transiciones dinámicas', cortes: 'solo cortes' }[this.st.style] || '';
       el.innerHTML = `Duración: <strong>${fmt(plan.total)}</strong> · ${plan.segments.length} fotos · ${how}` +
         (this.song ? ` · ♪ ${esc(this.song.name)}` : ' · <strong>sin música</strong>') + `<br>${n === 1 ? 'Se crea 1 video' : `Se crean ${n} videos`} de unos ${mb} MB en ${esc(shown)}`;
@@ -639,7 +640,7 @@
       this.setProgress(0, 'Revisando la computadora');
       const outs = [];
       try {
-        this.encoder = await B.detectEncoder();
+        this.encoder = await B.detectEncoder(S.codec);
         const dir = this.outDir(); await B.mkdir(dir);
         const fmts = this.st.formats;
         for (let i = 0; i < fmts.length && !this.cancelled; i++) {
@@ -717,9 +718,9 @@
           onT(0);
           let r = await B.run('ffmpeg', step.args, onT);
           if (this.cancelled) return null;
-          if (r.code !== 0 && step.final && this.encoder !== 'libx264') {
-            this.encoder = 'libx264';
-            r = await B.run('ffmpeg', E.tplFinalArgs(Object.assign({}, step.finalOpts, { encoderArgs: E.encoderFor('libx264', this.st.weight) })), onT);
+          if (r.code !== 0 && step.final && this.encoder !== E.cpuEncoder(this.encoder)) {
+            this.encoder = E.cpuEncoder(this.encoder);
+            r = await B.run('ffmpeg', E.tplFinalArgs(Object.assign({}, step.finalOpts, { encoderArgs: E.encoderFor(this.encoder, this.st.weight) })), onT);
           }
           if (this.cancelled) return null;
           if (r.code !== 0) {

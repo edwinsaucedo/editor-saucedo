@@ -188,9 +188,10 @@ def mel(text, meter=4, octave_shift=0):
 
 # ----------------------------------------------------------------- canción
 class Track:
-    def __init__(self, name, program=0, bank=0, drum=False, pan=64, chorus=0, human=(6, 6), legato=1.0, vel_add=0):
+    def __init__(self, name, program=0, bank=0, drum=False, pan=64, chorus=0, human=(6, 6), legato=1.0, vel_add=0, roll=0.0):
         self.name, self.program, self.bank, self.drum = name, program, bank, drum
         self.vel_add = vel_add
+        self.roll = roll   # ms entre notas de un mismo acorde (como una mano que no toca todo exacto)
         self.pan, self.chorus, self.human, self.legato = pan, chorus, human, legato
         self.notes = []   # (beat, dur, pitch, vel)
         self.ccs = []     # (beat, cc, value)
@@ -210,14 +211,44 @@ class Song:
         self.mix = {}         # nombre de pista → ajustes de mezcla
         self.master = {}
         self.meta = {}
+        self.tempo = [(0.0, float(bpm))]   # cambios de tempo (rubato): [(tiempo, bpm)]
 
     # tiempo
     @property
     def spb(self):
         return 60.0 / self.bpm
 
+    def tempo_map(self):
+        m = {}
+        for b, v in self.tempo:
+            m[round(b, 6)] = v
+        return sorted(m.items())
+
     def sec(self, beat):
-        return beat * self.spb
+        """Segundos hasta el tiempo `beat`, con los cambios de tempo."""
+        tm = self.tempo_map()
+        if len(tm) == 1:
+            return beat * 60.0 / tm[0][1]
+        t, prev_b, prev_v = 0.0, 0.0, tm[0][1]
+        for b, v in tm[1:]:
+            if b >= beat:
+                break
+            t += (b - prev_b) * 60.0 / prev_v
+            prev_b, prev_v = b, v
+        return t + (beat - prev_b) * 60.0 / prev_v
+
+    def rit(self, beat, beats, to=0.9, back=True, step=0.25):
+        """Ritardando: el tempo baja poco a poco hasta `to` × el tempo base (y vuelve al terminar)."""
+        n = max(1, int(round(beats / step)))
+        for i in range(n):
+            f = (i + 1) / n
+            self.tempo.append((beat + i * step, self.bpm * (1 + (to - 1) * f * f)))
+        if back:
+            self.tempo.append((beat + beats, float(self.bpm)))
+
+    def beat_times(self, end_beat=None):
+        end = end_beat if end_beat is not None else (self.end_beat or 0)
+        return [round(self.sec(b), 3) for b in range(int(end) + 1)]
 
     def section(self, name, bars):
         b = self.cursor
@@ -263,9 +294,13 @@ class Song:
         tpb = 960
         mf = mido.MidiFile(ticks_per_beat=tpb)
         meta = mido.MidiTrack()
-        meta.append(mido.MetaMessage('set_tempo', tempo=mido.bpm2tempo(self.bpm), time=0))
         num = self.meter
         meta.append(mido.MetaMessage('time_signature', numerator=num, denominator=4, time=0))
+        now_t = 0
+        for b, v in self.tempo_map():
+            tick = int(round(b * tpb))
+            meta.append(mido.MetaMessage('set_tempo', tempo=mido.bpm2tempo(v), time=tick - now_t))
+            now_t = tick
         mf.tracks.append(meta)
         ch_free = [c for c in range(16) if c != 9]
         last = 0.0
@@ -279,8 +314,18 @@ class Song:
             for num_, val in ((7, 100), (10, t.pan), (91, 0), (93, t.chorus), (11, 127)):
                 ev.append((0, 2, mido.Message('control_change', channel=ch, control=num_, value=val)))
             jt, jv = t.human
-            for b, d, p, v in t.notes:
-                bs = self._swing(b)
+            # acordes: las notas que empiezan juntas se tocan apenas escalonadas (de grave a agudo)
+            offs = {}
+            if t.roll:
+                groups = {}
+                for i, (b, d, p, v) in enumerate(t.notes):
+                    groups.setdefault(round(b, 3), []).append((p, i))
+                for g in groups.values():
+                    if len(g) > 1:
+                        for k, (p, i) in enumerate(sorted(g)):
+                            offs[i] = (k * t.roll * (0.8 + 0.4 * self.rng.random())) / 1000.0 / self.spb
+            for i, (b, d, p, v) in enumerate(t.notes):
+                bs = self._swing(b) + offs.get(i, 0.0)
                 if jt and b > 0:
                     bs += self.rng.gauss(0, jt / 1000.0) / self.spb
                 bs = max(0.0, bs)
@@ -625,7 +670,7 @@ def produce(song, out_wav, workdir, sf2=None, verbose=True):
         mixv += crackle(n, density=mc.get('crackle', 5.0), level=0.02)
     mixv = filt(mixv, sos_hp(28, 2))
     if mc.get('tone'):
-        mixv, cur, corr = tone_match(mixv, mc['tone'])
+        mixv, cur, corr = tone_match(mixv, mc['tone'], max_db=mc.get('tone_max', 6.0))
         report.append('tono ' + ' '.join(f'{c:+.0f}' for c in corr))
     mixv = compress(mixv, *mc.get('glue', (-16, 1.8, 0.03, 0.3, 6)))
     # sonoridad final: -14 LUFS y picos reales a -1 dB

@@ -5,13 +5,15 @@ Programa para Windows de **Eduardo Saucedo · Video & Fotografía**. Está hecho
 | Pestaña | Qué hace |
 |---|---|
 | **Fotos** | Botón "Mejorar colores", 6 estilos (Natural, Boda cálida, Rosa XV, Blanco y negro, Colores vivos, Película), ajustes finos (brillo, contraste, saturación, calidez) y el logo oficial como marca de agua. Todo se aplica a **todas las fotos o solo a una** (con giro y lugar del logo propio). Guarda por lote en JPG al tamaño original. |
-| **Plantillas de video** | 30 plantillas tipo CapCut, simples y elaboradas, con textos animados, efectos y cortes al ritmo. Cada una ya trae su canción sugerida (se puede cambiar). Sombra de las letras a elegir. Vertical, horizontal y cuadrado. |
+| **Plantillas de video** | 36 plantillas tipo CapCut, simples y elaboradas (6 nuevas **elegantes y modernas**, con su propia categoría), con textos animados, efectos y cortes al ritmo. Cada una ya trae su canción sugerida (se puede cambiar). Sombra de las letras a elegir. Vertical, horizontal y cuadrado. |
 | **Fotosecuencia** | Fotos con movimiento y transiciones profesionales (automáticas o una por una), letras como en las plantillas, letreros por foto, música al ritmo y tres pesos de archivo. Se ve completa en la pantalla antes de crearla. |
-| **Película del evento** | La película completa de la fiesta, guiada por momentos, más un **resumen** de 3 a 5 min y un **reel** vertical armados solos con las mejores partes. Con edición avanzada: tijeras, acortar la película a la duración que se pida, transición, velocidad, giro y color por toma. |
+| **Película del evento** | La película completa de la fiesta, guiada por momentos, con **transiciones según el momento** (lentas y cálidas en la ceremonia y el vals, ágiles en la fiesta), más un **resumen** de 3 a 5 min y un **reel** vertical armados solos con las mejores partes. Con edición avanzada: tijeras, acortar la película a la duración que se pida, transición, velocidad, giro y color por toma. |
 
 **Logo:** viene de fábrica el logo oficial en negro y en blanco. En automático se pone negro sobre fondos claros y blanco sobre oscuros, foto por foto y toma por toma. Tamaño chico, mediano o grande desde Fotos, Plantillas o Película (es el mismo ajuste en las tres). Se puede subir otro logo.
 
-**Música incluida:** 14 canciones originales hechas para el programa (romántica, vals, de película, inspiradora, alegre, acústica, lo-fi, tierna, cumbia, electrónica, trap, retro 80s, navideña y ragtime). Se pueden subir a Facebook, Instagram, TikTok y YouTube sin reclamos de derechos. En la ventana de música se escucha la mejor parte con ▶ y se elige con "Usar"; también se puede usar una canción de la computadora.
+**Música incluida:** 20 canciones originales hechas para el programa: 3 valses (lento, de salón y de XV), baladas con piano de cola y orquesta de cuerdas grabados de instrumentos reales, piano solo, guitarra de nylon, de película, y también alegre, lo-fi, tierna, cumbia, electrónica, trap, retro 80s, navideña y ragtime. Se pueden subir a Facebook, Instagram, TikTok y YouTube sin reclamos de derechos. En la ventana de música se escucha la mejor parte con ▶ y se elige con "Usar"; también se puede usar una canción de la computadora.
+
+**Compresión:** al crear un video se elige **Compatible (H.264)**, que se abre en cualquier lado, o **Más ligero (H.265)**, que con la misma calidad pesa cerca de la mitad en video de cámara y fotos. La elección se recuerda y es la misma en Plantillas, Fotosecuencia y Película.
 
 Todo se guarda en `Documentos\Saucedo\<fecha> <plantilla o evento> <nombres>\`.
 
@@ -19,6 +21,12 @@ Todo se guarda en `Documentos\Saucedo\<fecha> <plantilla o evento> <nombres>\`.
 
 | Plantilla | Tipo | Lo que la distingue |
 |---|---|---|
+| Luz dorada ✦ | Elaborada | Luces doradas que flotan, nombres con brillo cálido, transiciones de luz |
+| Editorial ✦ | Simple | Como portada de revista de novias: título en letra fina que sube despacio |
+| Vals XV elegante ✦ | Elaborada | Marco fino que se dibuja solo, pétalos que caen, cortes al compás del vals |
+| Tráiler elegante ✦ | Elaborada | Barras de cine, color suave de película, el nombre se acerca despacio |
+| Recuerdo suave ✦ | Simple | Bruma clara, colores suaves, frases que se enfocan palabra por palabra |
+| Moderno limpio ✦ | Simple | Marco blanco delgado, letras finas modernas, deslizamientos suaves |
 | Save the Date clásico | Simple | Zoom lento, letra manuscrita, cierre con la fecha |
 | Save the Date de cine | Elaborada | Barras de cine, grano, color cálido, nombres que se acomodan letra por letra |
 | Save the Date moderno | Elaborada | "SAVE THE DATE" que rebota, cortes al ritmo, fecha en números grandes |
@@ -50,6 +58,8 @@ Todo se guarda en `Documentos\Saucedo\<fecha> <plantilla o evento> <nombres>\`.
 | Película antigua | Simple | Blanco y negro, parpadeo de proyector, letreros de cine mudo |
 | Aniversario | Simple | "10 años" en grande, corazones que suben, nombres manuscritos |
 
+✦ = nuevas en la versión 0.7 (categoría **Elegantes**, junto con Save the Date clásico, Videoclip XV, Boda elegante, Agradecimiento y Aniversario).
+
 Las plantillas están en `src/js/templates.js`: cada una es una receta (tiempos, transiciones, color, efectos, canciones sugeridas) más sus diseños de texto, que se dibujan cuadro por cuadro y FFmpeg pone encima del video. En videos cortos con música incluida, la canción empieza sola en su mejor parte (el coro) y los cortes caen exactos en el ritmo, porque el tempo de cada canción se conoce de fábrica.
 
 ## Película del evento
@@ -65,9 +75,10 @@ Las plantillas están en `src/js/templates.js`: cada una es una receta (tiempos,
 
 - **✂ Cortar aquí** (tecla **S**): parte una toma en dos donde está el video. Cada pedazo se acomoda, recorta o quita por separado; en la barra se ven los otros pedazos del mismo archivo.
 - **✂ Acortar la película…**: se elige cuánto debe durar (por ejemplo, de 4 h a 2 h) y el programa revisa cada toma segundo a segundo y quita primero lo oscuro, sin movimiento, sin sonido o fuera de foco. Cada toma conserva por lo menos 3 segundos y la ceremonia, el vals y el brindis no se tocan (se puede cambiar). Lo quitado queda en gris en la barra de cada toma: un clic lo regresa.
-- **Opciones avanzadas de cada toma:** transición al empezar (18 tipos con muestra animada y duración rápida, normal o lenta), velocidad (0.5× cámara lenta a 2×), acercar (115 a 150 %), girar videos grabados de lado, color propio (brillo, contraste, saturación y calidez, o el mismo en todo el momento), estabilizar y un letrero en pantalla ("Los padrinos").
+- **Opciones avanzadas de cada toma:** transición al empezar (23 tipos con muestra animada y duración rápida, normal, lenta o muy lenta), velocidad (0.5× cámara lenta a 2×), acercar (115 a 150 %), girar videos grabados de lado, color propio (brillo, contraste, saturación y calidez, o el mismo en todo el momento), estabilizar y un letrero en pantalla ("Los padrinos").
 - **Doble toma:** otra toma (por ejemplo, la del dron) en un cuadro chico, mediano o grande en cualquier esquina, desde el segundo que se elija, con marco blanco y, si se quiere, con su sonido. Se ve en la vista previa al reproducir.
 - **Transiciones a la vista:** en el tablero, entre toma y toma, se ve qué transición lleva; al tocarla se reproduce en grande con las imágenes reales de las dos tomas. Las muestras de cada transición también usan las tomas reales.
+- **Transiciones de la película:** Según el momento (recomendada), Elegantes, Suaves, Dinámicas o Solo cortes. Las suaves nuevas: fundido lento, luz cálida (un destello dorado en medio del fundido), recuerdo en gris, apertura e iris de cine.
 - **Opciones avanzadas del momento:** una transición para todas sus tomas y si se puede recortar o no.
 - **Sombra de las letras** (como viene, suave, marcada o sin sombra) para los letreros, el resumen y el reel.
 - **↶ Deshacer** (Ctrl+Z) para cualquier cambio, y atajos: I / O marcan inicio y fin, Espacio reproduce, Supr quita la toma.
@@ -78,19 +89,27 @@ Las plantillas están en `src/js/templates.js`: cada una es una receta (tiempos,
 
 1. **Fotos:** se agregan o se arrastran; se ordenan como se agregaron o por nombre (como salen de la cámara), y se mueven con ‹ Antes / Después ›.
 2. **Letras:** 12 diseños de las plantillas (Elegante, De cine, Nostalgia, Delicado, Máquina de escribir, Minimal, Neón, Fiesta, Mexicana, Impacto, Navidad, Glitch) o sin letras; título al inicio y despedida al final, color y sombra. Cada foto puede llevar su letrero (elegante o en globo tipo CapCut).
-3. **Transiciones y movimiento:** estilos automáticos (Suave, Elegante, Dinámica o Solo cortes) y, foto por foto, cualquiera de las 18 transiciones con su duración, movimiento (acercar, alejar, recorrer hacia un lado o quieta) y cuánto dura. Entre foto y foto se ve la transición; al tocarla se reproduce ese momento.
+3. **Transiciones y movimiento:** estilos automáticos (Suave, Elegante, Dinámica o Solo cortes) y, foto por foto, cualquiera de las 23 transiciones con su duración, movimiento (acercar, alejar, recorrer hacia un lado o quieta) y cuánto dura. Entre foto y foto se ve la transición; al tocarla se reproduce ese momento.
 4. **Música:** canciones incluidas (empieza sola en la mejor parte), cambio de foto al ritmo y opción de que dure toda la canción.
-5. **Crear:** horizontal, vertical o cuadrado; peso Ligero (720p, para WhatsApp), Normal (1080p) o Alta calidad. Las fotos se preparan una sola vez al tamaño del video para que FFmpeg trabaje ligero.
+5. **Crear:** horizontal, vertical o cuadrado; peso Ligero (720p, para WhatsApp), Normal (1080p) o Alta calidad, y compresión H.264 o H.265. Las fotos se preparan una sola vez al tamaño del video para que FFmpeg trabaje ligero.
 
 ## Música incluida (`tools/musica/`)
 
-Las 14 canciones se componen en código (acordes, melodías, baterías y bajos en `tools/musica/canciones/`), se tocan con el banco de sonidos **GeneralUser GS** de S. Christian Collins (su licencia permite usarlo para hacer música, incluso comercial) y se mezclan y masterizan en Python: ecualización, reverberación de sala, compresión lateral en la electrónica, balance tonal por género y −14 LUFS con picos de −1 dB. Para volver a generarlas:
+Las 20 canciones se componen en código (acordes, melodías, baterías y bajos en `tools/musica/canciones/`) y se mezclan y masterizan en Python: ecualización, reverberación de sala, compresión lateral en la electrónica, balance tonal por género y volumen de −14 LUFS (−16 en el piano solo) con picos de −1 dB.
+
+- **Valses y baladas** (Vals de la luna, Primer baile, Para siempre, Eternamente, Promesa, Vals de las rosas, Vals de quince, Nuestro momento y Nuestra historia) se tocan con **MuseScore General**, que trae un piano de cola grabado nota por nota (Splendid Grand Piano) y secciones de cuerdas grabadas (VSCO 2). Para que no suenen a máquina, `tools/musica/expr.py` las interpreta como un músico: cada frase crece y baja, el tempo se detiene un poco al final de cada frase y mucho al final (rubato), el piano arpegia los acordes unos milisegundos y cambia el pedal después del tiempo, las cuerdas crecen dentro de cada nota larga, y en los valses el segundo tiempo llega un poco antes, como en el vals vienés. Las que tienen rubato guardan el tiempo exacto de cada pulso, así los cortes del video siguen cayendo en el ritmo.
+- **Las demás** se tocan con **GeneralUser GS** de S. Christian Collins (su licencia permite usarlo para hacer música, incluso comercial).
+
+Para volver a generarlas:
 
 ```bash
 pip install mido pyloudnorm numpy scipy
+sudo apt install fluidsynth musescore-general-soundfont-lossless
 SAUCEDO_SF2=/ruta/GeneralUser-GS.sf2 python3 tools/musica/producir.py      # todas
-SAUCEDO_SF2=/ruta/GeneralUser-GS.sf2 python3 tools/musica/producir.py brillar
+SAUCEDO_SF2=/ruta/GeneralUser-GS.sf2 python3 tools/musica/producir.py vals_de_la_luna
 ```
+
+`SAUCEDO_MS_SF2` cambia la ruta de MuseScore General si no está en `/usr/share/sounds/sf2/`.
 
 Se guardan en `src-tauri/musica/*.mp3` (se instalan junto al programa) y sus datos (nombre, ánimo, tempo, compás, coro y secciones) en `src/js/musica-data.js`. "Cascabeles" es un arreglo nuevo de *Jingle Bells* (James Lord Pierpont, 1857), que es de dominio público.
 
@@ -108,7 +127,7 @@ Cada vez que se sube un cambio a `main`, GitHub genera un instalador nuevo en Re
 - **Tauri 2** para la ventana y el instalador (`src-tauri/`). La parte en Rust solo corre FFmpeg, lee y escribe archivos y abre las ventanas de Windows.
 - **Interfaz** en HTML, CSS y JavaScript sin compilador (`src/`).
 - **FFmpeg** va dentro del programa. GitHub lo descarga de [BtbN/FFmpeg-Builds](https://github.com/BtbN/FFmpeg-Builds) al compilar; no se guarda en el repositorio.
-- **Exportación:** usa la tarjeta de video si encuentra una (NVIDIA, Intel o AMD) y si no, el procesador.
+- **Exportación:** usa la tarjeta de video si encuentra una (NVIDIA, Intel o AMD) y si no, el procesador, en H.264 o H.265 (HEVC). Medido contra el original sin compresión, en 1080p: fotos con acercamiento lento, H.264 (veryfast, CRF 20) 2.33 MB con SSIM 0.9675 y H.265 (faster, CRF 22) 1.13 MB con SSIM 0.9696; cámara en mano con ruido de sensor, 10.6 MB (SSIM 0.871) contra 3.8 MB (SSIM 0.875). En los dos casos H.265 pesa la mitad o menos y queda un poco más fiel. Con gráficos artificiales (barras de colores de prueba) no ahorra, pero eso no se ve en un evento. En H.265 el archivo lleva la etiqueta `hvc1` para que también lo abran iPhone, Mac y QuickTime.
 
 ### Motor de video (`src/js/engine.js`)
 
@@ -116,9 +135,9 @@ Se trabaja por etapas para que un evento con muchos clips en 4K no se acabe la m
 
 1. **Tomas:** cada clip o foto se recorta al formato y se guarda como archivo temporal (una toma con partes quitadas se guarda en pedazos, unidos después con un fundido muy corto). Las fotos se preparan en la interfaz con el mismo color que la pestaña Fotos, y FFmpeg les da un acercamiento lento. Un clip horizontal en un video vertical lleva el fondo difuminado del mismo clip. Los videos entrelazados (por ejemplo `.MTS` de videocámara) se desentrelazan.
 2. **Grupos:** con más de 12 tomas, se unen de 10 en 10 con sus transiciones (en 4K de 3 en 3, porque cada toma ocupa 4 veces más memoria al unirla).
-3. **Final:** se unen los grupos y se agregan títulos, logo, música con entrada y salida suaves, y se exporta el MP4 (H.264 + AAC).
+3. **Final:** se unen los grupos y se agregan títulos, logo, música con entrada y salida suaves, y se exporta el MP4 (H.264 o H.265 + AAC). La luz cálida es un fundido con un destello hecho con `eq` solo durante la unión, así casi no tarda más.
 
-Los títulos se dibujan en la interfaz (Great Vibes, Cormorant Garamond y Archivo) como PNG transparentes, y FFmpeg los pone encima con desvanecido.
+Los títulos se dibujan en la interfaz (Great Vibes, Cormorant Garamond, Jost y Archivo) como PNG transparentes, y FFmpeg los pone encima con desvanecido.
 
 ## Desarrollo
 
@@ -145,6 +164,6 @@ node tools/test-templates.mjs ./.prueba-plantillas <material>   # ritmo, capas a
 
 ## Licencias de terceros
 
-- Letras: Great Vibes, Cormorant Garamond, Archivo, Atkinson Hyperlegible y VT323, todas con licencia SIL Open Font License 1.1.
+- Letras: Great Vibes, Cormorant Garamond, Jost, Archivo, Atkinson Hyperlegible y VT323, todas con licencia SIL Open Font License 1.1.
 - FFmpeg (compilación GPL de BtbN) se incluye como programa aparte dentro del instalador, bajo su propia licencia GPL.
-- Música: composiciones originales de este proyecto, tocadas con GeneralUser GS (S. Christian Collins), cuya licencia permite usarlo sin restricción para crear música privada o comercial.
+- Música: composiciones originales de este proyecto, tocadas con GeneralUser GS (S. Christian Collins), cuya licencia permite usarlo sin restricción para crear música privada o comercial, y con MuseScore General (licencia MIT), que incluye Splendid Grand Piano (dominio público) y VSCO 2 Community Edition (CC0).

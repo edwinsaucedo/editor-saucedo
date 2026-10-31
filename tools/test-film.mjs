@@ -6,6 +6,8 @@ import path from 'path';
 const require = createRequire(import.meta.url);
 const E = require('../src/js/engine.js');
 const dir = path.resolve(process.argv[2]), M = path.resolve(process.argv[3]);
+// --h265: el archivo final en H.265 (más ligero), como cuando se elige "Más ligero" en el programa.
+const ENC = process.argv.includes('--h265') ? E.ENCODERS.libx265 : E.ENCODERS.libx264, HEVC = E.isHevcArgs(ENC);
 fs.mkdirSync(dir, { recursive: true });
 const ff = (args, label, tool = 'ffmpeg') => {
   const r = spawnSync(tool, args, { encoding: 'utf8', maxBuffer: 1 << 28 });
@@ -37,21 +39,22 @@ for (const mood of ['suave', 'corte']) {
     { name: 'Créditos', segments: [card(5)], music: song }
   ];
   const job = E.filmBuild({ W: 1920, H: 1080, mood, enhance: true, style: 'calido', denoise: true, hwaccel: false, cache, sep: path.sep,
-    title: 'XV Ana Sofía', watermark: P('marca.png'), encArgs: E.ENCODERS.libx264, units });
+    title: 'XV Ana Sofía', watermark: P('marca.png'), encArgs: ENC, units });
   const t0 = Date.now(); let skipped = 0;
   for (const s of job.steps) { if (fs.existsSync(s.out + '.ok')) { skipped++; continue; } ff(s.args, `${s.stage} ${s.unitName} ${s.n}`); fs.writeFileSync(s.out + '.ok', ''); }
   fs.writeFileSync(job.listPath, job.list); fs.writeFileSync(job.metaPath, job.meta);
   const m = E.parseLoudnorm(spawnSync('ffmpeg', E.filmMeasureArgs(job.listPath), { encoding: 'utf8' }).stderr);
   const out = P(`pelicula_${mood}.mp4`);
-  ff(E.filmFinalArgs(job.listPath, job.metaPath, m, out), 'final');
+  ff(E.filmFinalArgs(job.listPath, job.metaPath, m, out, HEVC), 'final');
   const pr = JSON.parse(ff(['-v', 'error', '-print_format', 'json', '-show_format', '-show_streams', '-show_chapters', out], 'probe final', 'ffprobe').stdout);
-  const dur = +pr.format.duration;
+  const dur = +pr.format.duration, vs = pr.streams.find(x => x.codec_type === 'video');
+  console.log('  video:', vs.codec_name, vs.codec_tag_string, `${vs.width}x${vs.height}`, `${(fs.statSync(out).size / 1048576).toFixed(2)} MB`);
   const after = E.parseLoudnorm(spawnSync('ffmpeg', ['-hide_banner', '-nostats', '-i', out, '-vn', '-af', 'loudnorm=print_format=json', '-f', 'null', '-'], { encoding: 'utf8' }).stderr);
   console.log(mood, `pasos ${job.steps.length} (grupos: ${job.steps.filter(s => s.stage === 'grupo').length})`, `plan ${job.total.toFixed(2)} s → archivo ${dur.toFixed(2)} s`,
     `capítulos ${pr.chapters.length}: ${pr.chapters.map(c => c.tags.title).join(', ')}`, `volumen medido ${m && m.input_i} → final ${after && after.input_i} LUFS`, `${((Date.now() - t0) / 1000).toFixed(0)} s`);
   if (Math.abs(dur - job.total) > .3) { console.error('DURACIÓN NO COINCIDE'); process.exit(1); }
   // Segunda vez: todo debe saltarse (reanudar)
-  const again = E.filmBuild({ W: 1920, H: 1080, mood, enhance: true, style: 'calido', denoise: true, hwaccel: false, cache, sep: path.sep, title: 'XV Ana Sofía', watermark: P('marca.png'), encArgs: E.ENCODERS.libx264, units });
+  const again = E.filmBuild({ W: 1920, H: 1080, mood, enhance: true, style: 'calido', denoise: true, hwaccel: false, cache, sep: path.sep, title: 'XV Ana Sofía', watermark: P('marca.png'), encArgs: ENC, units });
   console.log('  reanudar: pasos ya hechos', again.steps.filter(s => fs.existsSync(s.out + '.ok')).length, 'de', again.steps.length);
 }
 console.log('OK');

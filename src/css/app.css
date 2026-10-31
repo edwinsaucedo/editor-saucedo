@@ -7,6 +7,9 @@
 @font-face{font-family:"SA Serif";font-weight:600;src:url(../fonts/cormorant-600.woff2) format("woff2")}
 @font-face{font-family:"SA Script";font-weight:400;src:url(../fonts/great-vibes.woff2) format("woff2")}
 @font-face{font-family:"SA VHS";font-weight:400;src:url(../fonts/vt323.woff2) format("woff2")}
+@font-face{font-family:"SA Fina";font-weight:300;src:url(../fonts/jost-300.woff2) format("woff2")}
+@font-face{font-family:"SA Garamond";font-weight:300;src:url(../fonts/garamond-300.woff2) format("woff2")}
+@font-face{font-family:"SA Garamond";font-weight:400;font-style:italic;src:url(../fonts/garamond-400-italic.woff2) format("woff2")}
 
 /* Mesa de trabajo: pasos a la izquierda, la foto o el video al centro sobre gris 18 %, la tira de película abajo. */
 :root{
@@ -118,6 +121,8 @@ fieldset:disabled{opacity:.45}
 .seg{display:flex;gap:2px;padding:3px;border-radius:999px;border:1px solid var(--line);background:var(--bg)}
 .seg button{flex:1;min-height:40px;padding:0 6px;border:0;border-radius:999px;background:transparent;font-weight:700;font-size:14px;cursor:pointer}
 .seg button[aria-checked="true"]{background:var(--ink);color:var(--panel)}
+.seg.wrap{flex-wrap:wrap;border-radius:18px}
+.seg.wrap button{flex:1 1 30%;min-height:38px;font-size:13.5px}
 .dest{margin:0;font-size:15px;color:var(--muted);overflow-wrap:anywhere}
 .dest strong{color:var(--ink)}
 .primary{min-height:64px;padding:0 18px;border:0;border-radius:var(--r);background:var(--accent);color:var(--accent-ink);font-weight:700;font-size:20px;cursor:pointer}
@@ -297,6 +302,7 @@ button.col-h:hover{background:rgba(255,255,255,.08)}
 .tc-top strong{font-size:16px;line-height:1.2}
 .tc-lvl{flex:0 0 auto;font:700 11px/1 var(--f-caps);letter-spacing:.12em;text-transform:uppercase;padding:5px 7px;border-radius:999px;background:var(--bg);color:var(--muted)}
 .tc-lvl.pro{background:var(--accent);color:var(--accent-ink)}
+.tc-lvl.new{background:transparent;border:1px solid var(--accent);color:var(--ink);margin-left:auto}
 .tc-desc{font-size:14px;color:var(--muted);line-height:1.35}
 .tpl-editor.work{grid-template-columns:400px minmax(0,1fr)}
 .tpl-name{display:grid;gap:4px;padding-block:14px 4px}

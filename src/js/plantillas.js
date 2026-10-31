@@ -63,6 +63,7 @@
             <button class="big" type="button" data-act="enhance"><span class="t">Mejorar colores</span><span class="pill" data-el="enhState">Activado</span></button>
             <div class="sw-row"><button class="switch" type="button" role="switch" data-act="wm" data-el="wm" aria-labelledby="tWm"></button><span class="sw-state" id="tWm" data-el="wmTxt"></span></div>
             <div class="field" data-el="wmSizeBox"><span class="lbl">Tamaño del logo</span><div class="seg" data-el="wmSize" role="radiogroup" aria-label="Tamaño del logo"><button type="button" data-v="s">Chico</button><button type="button" data-v="m">Mediano</button><button type="button" data-v="l">Grande</button></div></div>
+            ${SA.ui.codecHtml()}
           </section>
           <section class="step">
             <h2><span class="num">5</span>Crear video</h2>
@@ -108,6 +109,7 @@
       SA.ui.seg(this.q('shadow'), 'auto', v => { this.st.shadow = v; this.changed(); });
       SA.ui.seg(this.q('which'), this.which, v => { this.which = v; this.pt = 0; SA.ui.setSeg(this.q('which'), v); });
       SA.ui.seg(this.q('wmSize'), S.size || 'm', v => { S.size = v; SA.brandChanged(); });
+      SA.ui.codec(R);
       $$('.fmt', this.q('formats')).forEach(b => b.addEventListener('click', () => {
         const set = new Set(this.st.formats); set.has(b.dataset.v) ? set.delete(b.dataset.v) : set.add(b.dataset.v);
         if (!set.size) { toast('Elige por lo menos un formato.'); return; }
@@ -122,7 +124,7 @@
       const grid = this.q('grid');
       grid.innerHTML = list.map(t => `<button class="tcard" type="button" data-act="pick" data-id="${t.id}">
         <canvas width="216" height="384" aria-hidden="true"></canvas>
-        <span class="tc-body"><span class="tc-top"><strong>${esc(t.name)}</strong><span class="tc-lvl ${t.level === 'Pro' ? 'pro' : ''}">${LEVEL[t.level]}</span></span>
+        <span class="tc-body"><span class="tc-top"><strong>${esc(t.name)}</strong>${t.nuevo ? '<span class="tc-lvl new">Nueva</span>' : ''}<span class="tc-lvl ${t.level === 'Pro' ? 'pro' : ''}">${LEVEL[t.level]}</span></span>
         <span class="tc-desc">${esc(t.desc)}</span>${this.musicName(t) ? `<span class="tc-music">♪ ${esc(this.musicName(t))}</span>` : ''}</span></button>`).join('');
       $$('.tcard', grid).forEach((card, i) => {
         const t = SA.TEMPLATES.find(x => x.id === card.dataset.id), cv = card.querySelector('canvas');
@@ -621,7 +623,7 @@
       this.setProgress(0, 'Revisando la computadora');
       const outs = [];
       try {
-        this.encoder = await B.detectEncoder();
+        this.encoder = await B.detectEncoder(S.codec);
         const dir = this.outDir(); await B.mkdir(dir);
         const fmts = this.st.formats;
         for (let i = 0; i < fmts.length && !this.cancelled; i++) {
@@ -746,9 +748,9 @@
           let r = await B.run('ffmpeg', step.args, onT);
           if (this.cancelled) return null;
           if (r.code !== 0 && step.args.includes('-hwaccel')) r = await B.run('ffmpeg', step.args.filter((x, i, arr) => x !== '-hwaccel' && arr[i - 1] !== '-hwaccel'), onT);
-          if (r.code !== 0 && step.final && this.encoder !== 'libx264') {
-            this.encoder = 'libx264';
-            r = await B.run('ffmpeg', E.tplFinalArgs(Object.assign({}, step.finalOpts, { encoderArgs: E.ENCODERS.libx264 })), onT);
+          if (r.code !== 0 && step.final && this.encoder !== E.cpuEncoder(this.encoder)) {
+            this.encoder = E.cpuEncoder(this.encoder);
+            r = await B.run('ffmpeg', E.tplFinalArgs(Object.assign({}, step.finalOpts, { encoderArgs: E.ENCODERS[this.encoder] })), onT);
           }
           if (this.cancelled) return null;
           if (r.code !== 0) {

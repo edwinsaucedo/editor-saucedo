@@ -75,13 +75,17 @@
     return window.Engine.parseProbe(r.stdout);
   };
   // Prueba una sola vez qué codificador sirve en esta computadora (tarjeta de video primero).
-  let encP = null;
-  B.detectEncoder = () => encP || (encP = (async () => {
-    for (const name of window.Engine.ENCODER_ORDER) {
-      try { const r = await B.run('ffmpeg', window.Engine.encoderTestArgs(name)); if (r.code === 0) return name; } catch (e) {}
-    }
-    return 'libx264';
-  })());
+  // codec: 'h264' (compatible) o 'h265' (más ligero); si no se da, se usa el que está elegido en los ajustes.
+  const encP = {};
+  B.detectEncoder = codec => {
+    const E = window.Engine, k = E.CODECS[codec] ? codec : (E.CODECS[(window.SA.settings || {}).codec] ? window.SA.settings.codec : 'h264');
+    return encP[k] || (encP[k] = (async () => {
+      for (const name of E.CODECS[k].order) {
+        try { const r = await B.run('ffmpeg', E.encoderTestArgs(name)); if (r.code === 0) return name; } catch (e) {}
+      }
+      return E.CODECS[k].cpu;
+    })());
+  };
 
   /* Arrastrar archivos a la ventana: el programa entrega las rutas completas */
   B.onDrop = handlers2 => {
