@@ -1,0 +1,33 @@
+name: Música de dominio público
+
+# Busca y descarga grabaciones libres (dominio público / CC0) en Wikimedia Commons.
+# Corre solo en la rama musica-pd y guarda lo que encuentra en esa misma rama.
+on:
+  push:
+    branches: [musica-pd]
+    paths: ['tools/musica/pd/**', '.github/workflows/musica-pd.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  musica:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Buscar grabaciones libres
+        run: python3 tools/musica/pd/buscar.py
+      - name: Descargar las elegidas
+        run: |
+          if [ -f tools/musica/pd/elegidas.json ]; then
+            sudo apt-get -qq update && sudo apt-get -qq install -y ffmpeg > /dev/null
+            python3 tools/musica/pd/descargar.py
+          fi
+      - name: Guardar en la rama
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898599+github-actions[bot]@users.noreply.github.com"
+          git add tools/musica/pd/out
+          git diff --cached --quiet || git commit -m "Música de dominio público: resultados [skip ci]"
+          git push origin HEAD:musica-pd
