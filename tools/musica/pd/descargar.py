@@ -3,11 +3,12 @@
 Antes de descargar vuelve a revisar en Commons que la licencia siga siendo de dominio público o CC0.
 Guarda out/creditos.json con compositor/intérprete, licencia y página de cada una.
 """
-import json, os, re, subprocess, sys, time, urllib.parse, urllib.request
+import json, os, re, subprocess, sys, time, urllib.error, urllib.parse, urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, 'out')
-UA = {'User-Agent': 'EditorSaucedo/0.8 (musica de dominio publico para un editor de video; github.com/edwinsaucedo)'}
+# Wikimedia pide un User-Agent con una dirección de contacto (si no, responde 429).
+UA = {'User-Agent': 'EditorSaucedo/0.8 (https://github.com/edwinsaucedo/editor-saucedo; musica de dominio publico) Python-urllib/3'}
 LIBRES = re.compile(r'public domain|^pd\b|pd-|cc0|cc-zero', re.I)
 
 
@@ -30,23 +31,29 @@ def main():
             print('NO ES LIBRE, se salta:', e['archivo'], lic, file=sys.stderr); continue
         if not os.path.exists(dest):
             src = os.path.join('/tmp', 'orig_' + e['id'])
-            for k in range(4):
+            ok = False
+            for k in range(7):
                 try:
                     with urllib.request.urlopen(urllib.request.Request(e['url'], headers=UA), timeout=300) as r, open(src, 'wb') as f:
                         while True:
                             b = r.read(1 << 20)
                             if not b: break
                             f.write(b)
-                    break
+                    ok = True; break
+                except urllib.error.HTTPError as ex:
+                    wait = int(ex.headers.get('Retry-After') or 0) or 20 * 2 ** k
+                    print('reintento', k, e['id'], ex.code, 'espera', wait, file=sys.stderr); time.sleep(min(wait, 300))
                 except Exception as ex:
-                    print('reintento', k, e['id'], ex, file=sys.stderr); time.sleep(5 * (k + 1))
+                    print('reintento', k, e['id'], ex, file=sys.stderr); time.sleep(20 * (k + 1))
+            if not ok:
+                print('NO SE PUDO DESCARGAR', e['id'], file=sys.stderr); continue
             r = subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', src, '-vn', '-ac', '2', '-ar', '44100', '-c:a', 'libmp3lame', '-q:a', '0', dest])
             os.remove(src)
             if r.returncode != 0:
                 print('no se pudo convertir', e['id'], file=sys.stderr); continue
         creditos.append(dict(e, licencia_revisada=lic))
         print('ok', e['id'], lic, file=sys.stderr)
-        time.sleep(1)
+        time.sleep(15)
     json.dump(creditos, open(os.path.join(OUT, 'creditos.json'), 'w', encoding='utf8'), ensure_ascii=False, indent=1)
 
 
