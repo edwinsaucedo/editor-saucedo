@@ -823,19 +823,19 @@
   D.editorialIn = { draw: (ctx, W, H, t, dur, d, th) => {
     const u = U(W, H), v = vert(W, H), x0 = W * (v ? .09 : .075), by = H * (v ? .8 : .76), s = Math.min(124 * u, W * .14);
     veil(ctx, W, H, prog(t, 0, 1.2), v ? .45 : .3);
-    A.text(ctx, (d.subtitle || 'Save the date').toUpperCase(), x0, by - s * 1.5, { w: 300, s: 22 * u, f: F.fina, ls: .5, color: th.soft, align: 'left', alpha: prog(t, .3, 1.2) });
+    A.text(ctx, (d.subtitle || 'Save the date').toUpperCase(), x0, by - s * 1.5, { w: 500, s: 22 * u, f: F.fina, ls: .5, color: th.soft, align: 'left', alpha: prog(t, .3, 1.2) });
     ctx.save(); ctx.fillStyle = th.accent; ctx.fillRect(x0, by - s * 1.3, 84 * u * A.eio(prog(t, .6, 1.7)), Math.max(1, 1.6 * u)); ctx.restore();
-    rise(ctx, W, by, s, prog(t, .7, 2.1), () => A.text(ctx, d.title, x0, by, { w: 300, s, f: F.garamond, ls: .005, color: th.text, align: 'left', shadow: 16 * u, maxW: W * .84 }));
-    A.text(ctx, dl(d.date).toUpperCase(), x0, by + 58 * u, { w: 300, s: 23 * u, f: F.fina, ls: .38, color: th.accent, align: 'left', alpha: prog(t, 1.7, 2.5) });
-    A.text(ctx, (d.place || '').toUpperCase(), x0, by + 94 * u, { w: 300, s: 18 * u, f: F.fina, ls: .34, color: th.soft, align: 'left', alpha: prog(t, 2, 2.7), maxW: W * .8 });
+    rise(ctx, W, by, s, prog(t, .7, 2.1), () => A.text(ctx, d.title, x0, by, { w: 500, s, f: F.garamond, ls: .005, color: th.text, align: 'left', shadow: 16 * u, maxW: W * .84 }));
+    A.text(ctx, dl(d.date).toUpperCase(), x0, by + 58 * u, { w: 500, s: 23 * u, f: F.fina, ls: .38, color: th.accent, align: 'left', alpha: prog(t, 1.7, 2.5) });
+    A.text(ctx, (d.place || '').toUpperCase(), x0, by + 94 * u, { w: 500, s: 18 * u, f: F.fina, ls: .34, color: th.soft, align: 'left', alpha: prog(t, 2, 2.7), maxW: W * .8 });
   } };
   D.editorialOut = { draw: (ctx, W, H, t, dur, d, th) => {
     const u = U(W, H), cy = H * .5, s = Math.min(104 * u, W * .12);
     ctx.save(); ctx.fillStyle = `rgba(12,10,8,${(.8 * A.eio(prog(t, 0, 1.2))).toFixed(3)})`; ctx.fillRect(0, 0, W, H); ctx.restore();
-    rise(ctx, W, cy, s, prog(t, .5, 1.9), () => A.text(ctx, d.phrase || 'Te esperamos', W / 2, cy, { s, w: 'italic 400', f: F.garamond, color: th.text, maxW: W * .86 }));
+    rise(ctx, W, cy, s, prog(t, .5, 1.9), () => A.text(ctx, d.phrase || 'Te esperamos', W / 2, cy, { s, w: 'italic 500', f: F.garamond, color: th.text, maxW: W * .86 }));
     ctx.save(); ctx.fillStyle = th.accent; const lw = 70 * u * A.eio(prog(t, 1.4, 2.2)); ctx.fillRect(W / 2 - lw, cy + 44 * u, lw * 2, Math.max(1, 1.4 * u)); ctx.restore();
-    A.text(ctx, dl(d.date, 'long').toUpperCase(), W / 2, cy + 100 * u, { w: 300, s: 23 * u, f: F.fina, ls: .38, color: th.accent, alpha: prog(t, 1.7, 2.4), maxW: W * .86 });
-    A.text(ctx, (d.title || '').toUpperCase(), W / 2, cy + 140 * u, { w: 300, s: 19 * u, f: F.fina, ls: .36, color: th.soft, alpha: prog(t, 2, 2.7), maxW: W * .86 });
+    A.text(ctx, dl(d.date, 'long').toUpperCase(), W / 2, cy + 100 * u, { w: 500, s: 23 * u, f: F.fina, ls: .38, color: th.accent, alpha: prog(t, 1.7, 2.4), maxW: W * .86 });
+    A.text(ctx, (d.title || '').toUpperCase(), W / 2, cy + 140 * u, { w: 500, s: 19 * u, f: F.fina, ls: .36, color: th.soft, alpha: prog(t, 2, 2.7), maxW: W * .86 });
   } };
 
   // Luz dorada: luces desenfocadas que flotan, nombres en manuscrita con un brillo cálido y un destello.
@@ -843,14 +843,14 @@
     const u = U(W, H), cy = cyIn(W, H), p = prog(t, .5, 2.3);
     A.scrim(ctx, W, H, vert(W, H) ? 'bottom' : 'center', .9 * prog(t, 0, 1.2));
     bokeh(ctx, W, H, t, 7, u, 24, GOLD);
-    A.text(ctx, (d.subtitle || 'Nuestra boda').toUpperCase(), W / 2, cy - 122 * u, { w: 300, s: 23 * u, f: F.fina, ls: .55, color: th.soft, alpha: prog(t, .3, 1.3) });
+    A.text(ctx, (d.subtitle || 'Nuestra boda').toUpperCase(), W / 2, cy - 122 * u, { w: 500, s: 23 * u, f: F.fina, ls: .55, color: th.soft, alpha: prog(t, .3, 1.3) });
     ctx.save(); const sc = 1.05 - .05 * eo(p); ctx.translate(W / 2, cy); ctx.scale(sc, sc);
     A.text(ctx, d.title, 0, 0, { s: 150 * u, f: F.script, color: th.text, alpha: eo(p), glow: ['rgba(255,205,120,.5)', 40 * u, 1], maxW: W * .86 });
     ctx.restore();
     const sp = prog(t, 1.7, 2.9);
     if (sp > 0 && sp < 1) A.star4(ctx, W * (.22 + .56 * sp), cy - 46 * u, 28 * u * Math.sin(Math.PI * sp), '#FFF4D6', Math.sin(Math.PI * sp));
     A.rule(ctx, W / 2, cy + 56 * u, 150 * u * eo(prog(t, 1.6, 2.6)), u, th.accent, 1, true);
-    A.text(ctx, dl(d.date).toUpperCase(), W / 2, cy + 110 * u, { w: 300, s: 25 * u, f: F.fina, ls: .4, color: th.accent, alpha: prog(t, 2.1, 2.9) });
+    A.text(ctx, dl(d.date).toUpperCase(), W / 2, cy + 110 * u, { w: 500, s: 25 * u, f: F.fina, ls: .4, color: th.accent, alpha: prog(t, 2.1, 2.9) });
   } };
   D.luzOut = { draw: (ctx, W, H, t, dur, d, th) => {
     const u = U(W, H), cy = H * .5;
@@ -858,27 +858,27 @@
     bokeh(ctx, W, H, t + 3, 9, u, 22, GOLD);
     A.text(ctx, d.phrase || 'Gracias', W / 2, cy - 20 * u + up(u, prog(t, .4, 1.6), 26), { s: 140 * u, f: F.script, color: th.text, alpha: prog(t, .4, 1.6), glow: ['rgba(255,205,120,.45)', 34 * u, 1], maxW: W * .86 });
     A.rule(ctx, W / 2, cy + 44 * u, 130 * u * eo(prog(t, 1.2, 2)), u, th.accent, 1, true);
-    A.text(ctx, (d.title || '').toUpperCase(), W / 2, cy + 104 * u, { w: 300, s: 26 * u, f: F.fina, ls: .4, color: th.accent, alpha: prog(t, 1.5, 2.2), maxW: W * .86 });
-    A.text(ctx, dl(d.date).toUpperCase(), W / 2, cy + 144 * u, { w: 300, s: 20 * u, f: F.fina, ls: .42, color: th.soft, alpha: prog(t, 1.8, 2.5) });
+    A.text(ctx, (d.title || '').toUpperCase(), W / 2, cy + 104 * u, { w: 500, s: 26 * u, f: F.fina, ls: .4, color: th.accent, alpha: prog(t, 1.5, 2.2), maxW: W * .86 });
+    A.text(ctx, dl(d.date).toUpperCase(), W / 2, cy + 144 * u, { w: 500, s: 20 * u, f: F.fina, ls: .42, color: th.soft, alpha: prog(t, 1.8, 2.5) });
   } };
 
   // Tráiler elegante: barras de cine, el nombre en mayúsculas finas que se acerca despacio.
   D.trailerIn = { draw: (ctx, W, H, t, dur, d, th) => {
     const u = U(W, H), cy = H * .5, p1 = prog(t, .3, 1.4), p2 = prog(t, .9, 3), p3 = prog(t, 2, 2.9);
     ctx.save(); ctx.fillStyle = `rgba(0,0,0,${(.5 * prog(t, 0, 1.2)).toFixed(3)})`; ctx.fillRect(0, 0, W, H); ctx.restore();
-    A.text(ctx, (d.subtitle || 'La boda de').toUpperCase(), W / 2, cy - 74 * u, { w: 300, s: 22 * u, f: F.fina, ls: .7 - .25 * eo(p1), color: th.soft, alpha: p1 });
+    A.text(ctx, (d.subtitle || 'La boda de').toUpperCase(), W / 2, cy - 74 * u, { w: 500, s: 22 * u, f: F.fina, ls: .7 - .25 * eo(p1), color: th.soft, alpha: p1 });
     const sc = 1.1 - .1 * eo(p2);
     ctx.save(); ctx.translate(W / 2, cy + 26 * u); ctx.scale(sc, sc);
-    A.text(ctx, (d.title || '').toUpperCase(), 0, 0, { w: 300, s: 82 * u, f: F.garamond, ls: .22, color: th.text, alpha: A.eio(prog(t, .9, 2.4)), shadow: 26 * u, maxW: W * .86 });
+    A.text(ctx, (d.title || '').toUpperCase(), 0, 0, { w: 500, s: 82 * u, f: F.garamond, ls: .22, color: th.text, alpha: A.eio(prog(t, .9, 2.4)), shadow: 26 * u, maxW: W * .86 });
     ctx.restore();
-    A.text(ctx, dl(d.date, 'num'), W / 2, cy + 92 * u, { w: 300, s: 22 * u, f: F.fina, ls: .5, color: th.accent, alpha: p3 });
+    A.text(ctx, dl(d.date, 'num'), W / 2, cy + 92 * u, { w: 500, s: 22 * u, f: F.fina, ls: .5, color: th.accent, alpha: p3 });
   } };
   D.trailerOut = { draw: (ctx, W, H, t, dur, d, th) => {
     const u = U(W, H), cy = H * .5;
     ctx.save(); ctx.fillStyle = `rgba(0,0,0,${(.85 * A.eio(prog(t, 0, 1.4))).toFixed(3)})`; ctx.fillRect(0, 0, W, H); ctx.restore();
-    focusWords(ctx, d.phrase || 'Un día para siempre', W / 2, cy - 10 * u, t, .5, .35, { w: 'italic 400', s: 84 * u, f: F.garamond, color: th.text, maxW: W * .86 });
-    A.text(ctx, (d.title || '').toUpperCase(), W / 2, cy + 70 * u, { w: 300, s: 24 * u, f: F.fina, ls: .5, color: th.accent, alpha: prog(t, 1.8, 2.6), maxW: W * .86 });
-    A.text(ctx, dl(d.date, 'num'), W / 2, cy + 110 * u, { w: 300, s: 20 * u, f: F.fina, ls: .5, color: th.soft, alpha: prog(t, 2.1, 2.8) });
+    focusWords(ctx, d.phrase || 'Un día para siempre', W / 2, cy - 10 * u, t, .5, .35, { w: 'italic 500', s: 84 * u, f: F.garamond, color: th.text, maxW: W * .86 });
+    A.text(ctx, (d.title || '').toUpperCase(), W / 2, cy + 70 * u, { w: 500, s: 24 * u, f: F.fina, ls: .5, color: th.accent, alpha: prog(t, 1.8, 2.6), maxW: W * .86 });
+    A.text(ctx, dl(d.date, 'num'), W / 2, cy + 110 * u, { w: 500, s: 20 * u, f: F.fina, ls: .5, color: th.soft, alpha: prog(t, 2.1, 2.8) });
   } };
 
   // Vals XV: marco fino que se dibuja solo, pétalos que caen y "Mis XV años" en manuscrita.
@@ -890,8 +890,8 @@
     ornFrame(ctx, W, H, u, prog(t, .2, 2.6), th.accent);
     A.text(ctx, d.subtitle || 'Mis XV años', W / 2, cy - 26 * u + up(u, prog(t, .6, 1.9), 24), { s: 132 * u, f: F.script, color: th.text, alpha: prog(t, .6, 1.9), shadow: 16 * u, maxW: W * .76 });
     A.rule(ctx, W / 2, cy + 24 * u, 120 * u * eo(prog(t, 1.4, 2.4)), u, th.accent, 1, true);
-    A.text(ctx, (d.title || '').toUpperCase(), W / 2, cy + 88 * u, { w: 300, s: 48 * u, f: F.garamond, ls: .3 - .12 * eo(prog(t, 1.6, 3.2)), color: th.text, alpha: prog(t, 1.6, 2.5), maxW: W * .74 });
-    A.text(ctx, dl(d.date).toUpperCase(), W / 2, cy + 134 * u, { w: 300, s: 21 * u, f: F.fina, ls: .45, color: th.accent, alpha: prog(t, 2.2, 2.9) });
+    A.text(ctx, (d.title || '').toUpperCase(), W / 2, cy + 88 * u, { w: 500, s: 48 * u, f: F.garamond, ls: .3 - .12 * eo(prog(t, 1.6, 3.2)), color: th.text, alpha: prog(t, 1.6, 2.5), maxW: W * .74 });
+    A.text(ctx, dl(d.date).toUpperCase(), W / 2, cy + 134 * u, { w: 500, s: 21 * u, f: F.fina, ls: .45, color: th.accent, alpha: prog(t, 2.2, 2.9) });
   } };
   D.xvValsOut = { draw: (ctx, W, H, t, dur, d, th) => {
     const u = U(W, H), cy = H * .5;
@@ -900,8 +900,8 @@
     ornFrame(ctx, W, H, u, prog(t, .1, 2), th.accent);
     focusWords(ctx, d.phrase || 'Gracias por acompañarme', W / 2, cy - 10 * u, t, .4, .3, { s: 100 * u, f: F.script, color: th.text, maxW: W * .76 });
     A.rule(ctx, W / 2, cy + 40 * u, 110 * u * eo(prog(t, 1.4, 2.2)), u, th.accent, 1, true);
-    A.text(ctx, (d.title || '').toUpperCase(), W / 2, cy + 100 * u, { w: 300, s: 36 * u, f: F.garamond, ls: .28, color: th.text, alpha: prog(t, 1.6, 2.4), maxW: W * .74 });
-    A.text(ctx, dl(d.date).toUpperCase(), W / 2, cy + 142 * u, { w: 300, s: 19 * u, f: F.fina, ls: .45, color: th.accent, alpha: prog(t, 1.9, 2.6) });
+    A.text(ctx, (d.title || '').toUpperCase(), W / 2, cy + 100 * u, { w: 500, s: 36 * u, f: F.garamond, ls: .28, color: th.text, alpha: prog(t, 1.6, 2.4), maxW: W * .74 });
+    A.text(ctx, dl(d.date).toUpperCase(), W / 2, cy + 142 * u, { w: 500, s: 19 * u, f: F.fina, ls: .45, color: th.accent, alpha: prog(t, 1.9, 2.6) });
   } };
 
   // Recuerdo suave: bruma clara en las orillas y frases que se enfocan palabra por palabra.
@@ -914,14 +914,14 @@
     const u = U(W, H), cy = cyIn(W, H);
     A.scrim(ctx, W, H, vert(W, H) ? 'bottom' : 'center', .85 * prog(t, 0, 1.2));
     focusWords(ctx, d.title || 'Nuestros recuerdos', W / 2, cy, t, .4, .32, { s: 128 * u, f: F.script, color: th.text, shadow: 16 * u, maxW: W * .86 });
-    focusWords(ctx, d.subtitle, W / 2, cy + 74 * u, t, 1.5, .14, { w: 'italic 400', s: 40 * u, f: F.garamond, color: th.soft, maxW: W * .84 });
-    A.text(ctx, dl(d.date).toUpperCase(), W / 2, cy + 126 * u, { w: 300, s: 20 * u, f: F.fina, ls: .45, color: th.accent, alpha: prog(t, 2.4, 3.1) });
+    focusWords(ctx, d.subtitle, W / 2, cy + 74 * u, t, 1.5, .14, { w: 'italic 500', s: 40 * u, f: F.garamond, color: th.soft, maxW: W * .84 });
+    A.text(ctx, dl(d.date).toUpperCase(), W / 2, cy + 126 * u, { w: 500, s: 20 * u, f: F.fina, ls: .45, color: th.accent, alpha: prog(t, 2.4, 3.1) });
   } };
   D.recuerdoOut = { draw: (ctx, W, H, t, dur, d, th) => {
     const u = U(W, H), cy = H * .5;
     ctx.save(); ctx.fillStyle = `rgba(250,246,240,${(.86 * A.eio(prog(t, 0, 1.4))).toFixed(3)})`; ctx.fillRect(0, 0, W, H); ctx.restore();
-    focusWords(ctx, d.phrase || 'Siempre en nuestro corazón', W / 2, cy, t, .6, .3, { w: 'italic 400', s: 76 * u, f: F.garamond, color: '#3A3129', maxW: W * .84 });
-    A.text(ctx, dl(d.date).toUpperCase(), W / 2, cy + 64 * u, { w: 300, s: 20 * u, f: F.fina, ls: .45, color: '#8A7A66', alpha: prog(t, 2, 2.7) });
+    focusWords(ctx, d.phrase || 'Siempre en nuestro corazón', W / 2, cy, t, .6, .3, { w: 'italic 500', s: 76 * u, f: F.garamond, color: '#3A3129', maxW: W * .84 });
+    A.text(ctx, dl(d.date).toUpperCase(), W / 2, cy + 64 * u, { w: 500, s: 20 * u, f: F.fina, ls: .45, color: '#8A7A66', alpha: prog(t, 2, 2.7) });
   } };
 
   // Moderno limpio: marco blanco delgado en todo el video y letras finas, abajo a la izquierda.
@@ -932,15 +932,238 @@
   D.limpioIn = { draw: (ctx, W, H, t, dur, d, th) => {
     const u = U(W, H), v = vert(W, H), x0 = W * (v ? .1 : .08), by = H * (v ? .84 : .8), s = Math.min(76 * u, W * .1);
     veil(ctx, W, H, .9 * prog(t, 0, 1.2), .5);
-    rise(ctx, W, by, s, prog(t, .4, 1.6), () => A.text(ctx, (d.title || '').toUpperCase(), x0, by, { w: 300, s, f: F.fina, ls: .16, color: '#FFFFFF', align: 'left', maxW: W * .8 }));
+    rise(ctx, W, by, s, prog(t, .4, 1.6), () => A.text(ctx, (d.title || '').toUpperCase(), x0, by, { w: 500, s, f: F.fina, ls: .16, color: '#FFFFFF', align: 'left', maxW: W * .8 }));
     ctx.save(); ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.fillRect(x0, by + 26 * u, 120 * u * A.eio(prog(t, 1.1, 2)), Math.max(1, 1.5 * u)); ctx.restore();
-    A.text(ctx, [dl(d.date), d.place].filter(Boolean).join('   ·   ').toUpperCase(), x0, by + 66 * u, { w: 300, s: 20 * u, f: F.fina, ls: .32, color: 'rgba(255,255,255,.85)', align: 'left', alpha: prog(t, 1.4, 2.1), maxW: W * .8 });
+    A.text(ctx, [dl(d.date), d.place].filter(Boolean).join('   ·   ').toUpperCase(), x0, by + 66 * u, { w: 500, s: 20 * u, f: F.fina, ls: .32, color: 'rgba(255,255,255,.85)', align: 'left', alpha: prog(t, 1.4, 2.1), maxW: W * .8 });
   } };
   D.limpioOut = { draw: (ctx, W, H, t, dur, d, th) => {
     const u = U(W, H), cy = H * .5;
     ctx.save(); ctx.fillStyle = `rgba(16,16,16,${(.82 * A.eio(prog(t, 0, 1.1))).toFixed(3)})`; ctx.fillRect(0, 0, W, H); ctx.restore();
-    rise(ctx, W, cy, 70 * u, prog(t, .4, 1.6), () => A.text(ctx, (d.phrase || 'Gracias').toUpperCase(), W / 2, cy, { w: 300, s: 70 * u, f: F.fina, ls: .3, color: '#FFFFFF', maxW: W * .84 }));
-    A.text(ctx, (d.title || '').toUpperCase(), W / 2, cy + 64 * u, { w: 300, s: 20 * u, f: F.fina, ls: .4, color: 'rgba(255,255,255,.8)', alpha: prog(t, 1.2, 1.9), maxW: W * .84 });
+    rise(ctx, W, cy, 70 * u, prog(t, .4, 1.6), () => A.text(ctx, (d.phrase || 'Gracias').toUpperCase(), W / 2, cy, { w: 500, s: 70 * u, f: F.fina, ls: .3, color: '#FFFFFF', maxW: W * .84 }));
+    A.text(ctx, (d.title || '').toUpperCase(), W / 2, cy + 64 * u, { w: 500, s: 20 * u, f: F.fina, ls: .4, color: 'rgba(255,255,255,.8)', alpha: prog(t, 1.2, 1.9), maxW: W * .84 });
+  } };
+
+  /* ======================= LEGIBLES Y XV DE HOMBRE (v0.8) =======================
+   * Letras gruesas y grandes (Playfair, Montserrat, Bebas, Cinzel y una manuscrita clara) sobre un fondo que
+   * asegura el contraste: se leen bien en el celular y en la tele. */
+  const plate = (ctx, x, y, w, h, r, color) => {
+    ctx.save(); ctx.fillStyle = color; ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h);
+    ctx.fill(); ctx.restore();
+  };
+  // Banda horizontal semitransparente detrás del texto (de lado a lado), que entra abriéndose desde el centro.
+  const band = (ctx, W, H, cy, h, p, color) => {
+    const w = W * A.eio(clamp(p)); if (w <= 0) return;
+    ctx.save(); ctx.fillStyle = color; ctx.fillRect((W - w) / 2, cy - h / 2, w, h); ctx.restore();
+  };
+  // Brillo que cruza un texto (como luz sobre metal).
+  const shine = (ctx, x0, y0, w, h, p) => {
+    if (p <= 0 || p >= 1) return;
+    const x = x0 - w * .3 + w * 1.6 * p, g = ctx.createLinearGradient(x - w * .12, 0, x + w * .12, 0);
+    g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(.5, 'rgba(255,255,255,.55)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.save(); ctx.globalCompositeOperation = 'source-atop'; ctx.fillStyle = g; ctx.fillRect(x0, y0, w, h); ctx.restore();
+  };
+  // Texto con un brillo encima: se dibuja en una capa aparte para que el brillo solo toque las letras.
+  const shinyText = (ctx, W, H, text, x, y, o, p) => {
+    const c = document.createElement('canvas'); c.width = W; c.height = H; const x2 = c.getContext('2d');
+    const r = A.text(x2, text, x, y, o); if (r) shine(x2, x - r.w / 2, y - r.size, r.w, r.size * 1.2, p);
+    ctx.drawImage(c, 0, 0); c.width = c.height = 0;
+  };
+  const NAVY = 'rgba(9,20,44,', GOLD2 = '#E7C66B';
+
+  // XV Gala: azul marino y dorado, "XV" grande en mayúsculas clásicas con un brillo, nombre en Playfair.
+  D.galaIn = { draw: (ctx, W, H, t, dur, d, th) => {
+    const u = U(W, H), cy = cyIn(W, H), v = vert(W, H);
+    A.scrim(ctx, W, H, v ? 'bottom' : 'center', .7 * prog(t, 0, .8));
+    band(ctx, W, H, cy - 10 * u, 330 * u, prog(t, .1, .9), NAVY + '.72)');
+    ctx.save(); ctx.fillStyle = GOLD2; const lw = W * .8 * A.eio(prog(t, .5, 1.3));
+    ctx.fillRect((W - lw) / 2, cy - 175 * u, lw, 2.5 * u); ctx.fillRect((W - lw) / 2, cy + 155 * u, lw, 2.5 * u); ctx.restore();
+    A.text(ctx, (d.subtitle || 'Mis XV años').toUpperCase(), W / 2, cy - 112 * u, { w: 700, s: 30 * u, f: F.mont, ls: .32, color: GOLD2, alpha: prog(t, .5, 1.1), maxW: W * .86 });
+    const p = prog(t, .7, 1.6), s = Math.min(120 * u, W * .13);
+    ctx.save(); ctx.globalAlpha = eo(p); ctx.translate(0, up(u, p, 30));
+    A.text(ctx, d.title || 'Santiago', W / 2, cy + 26 * u, { w: 700, s, f: F.playfair, color: '#FFFFFF', shadow: 18 * u, maxW: W * .86 });
+    ctx.restore();
+    A.text(ctx, dl(d.date).toUpperCase(), W / 2, cy + 108 * u, { w: 700, s: 32 * u, f: F.mont, ls: .18, color: GOLD2, alpha: prog(t, 1.4, 2), maxW: W * .86 });
+    if (d.place) A.text(ctx, d.place.toUpperCase(), W / 2, cy + 210 * u, { w: 500, s: 26 * u, f: F.mont, ls: .12, color: '#FFFFFF', alpha: prog(t, 1.7, 2.3), shadow: 12 * u, maxW: W * .86 });
+  } };
+  D.galaOut = { draw: (ctx, W, H, t, dur, d, th) => {
+    const u = U(W, H), cy = H * .5;
+    ctx.save(); ctx.fillStyle = NAVY + (.86 * A.eio(prog(t, 0, 1))).toFixed(3) + ')'; ctx.fillRect(0, 0, W, H); ctx.restore();
+    shinyText(ctx, W, H, (d.phrase || 'Gracias').toUpperCase(), W / 2, cy - 10 * u, { w: 700, s: 104 * u, f: F.cinzel, ls: .08, color: GOLD2, alpha: prog(t, .3, 1.1), maxW: W * .86 }, prog(t, 1.1, 2.3));
+    A.rule(ctx, W / 2, cy + 40 * u, 140 * u * eo(prog(t, .9, 1.6)), u, GOLD2, 1, true);
+    A.text(ctx, d.title || '', W / 2, cy + 110 * u, { w: 700, s: 58 * u, f: F.playfair, color: '#FFFFFF', alpha: prog(t, 1.2, 1.9), maxW: W * .86 });
+    A.text(ctx, dl(d.date).toUpperCase(), W / 2, cy + 162 * u, { w: 700, s: 28 * u, f: F.mont, ls: .18, color: GOLD2, alpha: prog(t, 1.5, 2.2) });
+  } };
+
+  // XV Urbano: negro y naranja, letras altas (Bebas) que entran de golpe, franjas diagonales.
+  const ORANGE = '#FF7A1A';
+  D.urbanoIn = { draw: (ctx, W, H, t, dur, d, th) => {
+    const u = U(W, H), v = vert(W, H), cy = v ? H * .66 : H * .55;
+    A.scrim(ctx, W, H, 'full', .75 * prog(t, 0, .4));
+    // franjas diagonales que cruzan
+    ctx.save(); ctx.globalAlpha = .9; ctx.fillStyle = ORANGE;
+    const k = A.eio(prog(t, 0, .7)), sw = 70 * u;
+    ctx.translate(W / 2, cy); ctx.rotate(-.18);
+    ctx.fillRect(-W * 1.2 + W * 1.2 * k - W * .6, -250 * u, W * 1.2, sw * .35);
+    ctx.fillRect(W * .6 - W * 1.2 * k, 230 * u, W * 1.2, sw * .35);
+    ctx.restore();
+    const words = [(d.subtitle || 'Mis XV').toUpperCase(), (d.title || 'Santiago').toUpperCase()];
+    const p1 = prog(t, .2, .55), p2 = prog(t, .45, .85), S1 = Math.min(150 * u, W * .2), S2 = Math.min(230 * u, W * .26);
+    const sc = p => 1 + (1 - back(p)) * .6;
+    ctx.save(); ctx.translate(W / 2, cy - 150 * u); ctx.scale(sc(p1), sc(p1));
+    A.text(ctx, words[0], 0, 0, { s: S1, f: F.bebas, ls: .04, color: ORANGE, alpha: p1 > 0 ? 1 : 0, shadow: 20 * u, maxW: W * .9 }); ctx.restore();
+    ctx.save(); ctx.translate(W / 2, cy + 90 * u); ctx.scale(sc(p2), sc(p2));
+    A.text(ctx, words[1], 0, 0, { s: S2, f: F.bebas, ls: .02, color: '#FFFFFF', alpha: p2 > 0 ? 1 : 0, shadow: 24 * u, maxW: W * .92 }); ctx.restore();
+    const p3 = prog(t, .9, 1.3);
+    if (p3 > 0) {
+      const txt = [dl(d.date, 'num'), d.place].filter(Boolean).join('  ·  ').toUpperCase();
+      ctx.save(); const fs = A.fit(ctx, txt, 700, 30 * u, F.mont, .08, W * .8); const tw = Math.min(W * .9, ctx.measureText(txt).width + 50 * u); ctx.restore();
+      plate(ctx, (W - tw) / 2, cy + 140 * u, tw * eo(p3), 58 * u, 6 * u, '#FFFFFF');
+      A.text(ctx, txt, W / 2, cy + 180 * u, { w: 700, s: fs, f: F.mont, ls: .08, color: '#111111', alpha: prog(t, 1.1, 1.4) });
+    }
+  } };
+  D.urbanoOut = { draw: (ctx, W, H, t, dur, d, th) => {
+    const u = U(W, H), cy = H * .52;
+    A.scrim(ctx, W, H, 'full', 1.3 * prog(t, 0, .3));
+    const p = prog(t, .15, .5), s = Math.min(200 * u, W * .24);
+    ctx.save(); ctx.translate(W / 2, cy); ctx.scale(1 + (1 - back(p)) * .5, 1 + (1 - back(p)) * .5);
+    A.text(ctx, (d.phrase || 'Gracias').toUpperCase(), 0, 0, { s, f: F.bebas, ls: .03, color: '#FFFFFF', alpha: p > 0 ? 1 : 0, shadow: 24 * u, maxW: W * .9 }); ctx.restore();
+    ctx.save(); ctx.fillStyle = ORANGE; ctx.fillRect(W / 2 - 90 * u * eo(prog(t, .5, .9)), cy + 30 * u, 180 * u * eo(prog(t, .5, .9)), 10 * u); ctx.restore();
+    A.text(ctx, (d.title || '').toUpperCase(), W / 2, cy + 110 * u, { s: 70 * u, f: F.bebas, ls: .06, color: ORANGE, alpha: prog(t, .7, 1.1), maxW: W * .9 });
+  } };
+
+  // XV Campeón: estilo deportivo, un "15" enorme de fondo, el nombre en un letrero tipo marcador y luces de estadio.
+  D.campeonIn = { draw: (ctx, W, H, t, dur, d, th) => {
+    const u = U(W, H), v = vert(W, H), cy = v ? H * .62 : H * .55;
+    A.scrim(ctx, W, H, 'full', .55 * prog(t, 0, .6));
+    // luces de estadio que barren
+    ctx.save(); ctx.globalCompositeOperation = 'screen';
+    for (const [x0, ph] of [[.12, 0], [.88, 1.3]]) {
+      const a = .35 * prog(t, .1, .8), ang = Math.sin(t * .9 + ph) * .25;
+      const gx = W * x0, g = ctx.createRadialGradient(gx, -H * .05, 0, gx, -H * .05, H * 1.1);
+      g.addColorStop(0, `rgba(255,255,240,${a})`); g.addColorStop(1, 'rgba(255,255,240,0)');
+      ctx.save(); ctx.translate(gx, -H * .05); ctx.rotate(ang + (x0 < .5 ? -.35 : .35)); ctx.translate(-gx, H * .05);
+      ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(gx, -H * .05); ctx.lineTo(gx - W * .22, H * 1.1); ctx.lineTo(gx + W * .22, H * 1.1); ctx.closePath(); ctx.fill(); ctx.restore();
+    }
+    ctx.restore();
+    // "15" de contorno, grande, detrás
+    const p0 = prog(t, .1, .9), S15 = Math.min(H * .5, W * .5);
+    ctx.save(); ctx.globalAlpha = .85 * eo(p0); ctx.font = `400 ${S15}px ${F.bebas}`; ctx.textAlign = 'center';
+    ctx.lineWidth = 5 * u; ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.strokeText('15', W / 2, cy - 70 * u + (1 - eo(p0)) * 60 * u); ctx.restore();
+    // letrero del nombre (encima de la parte de abajo del 15)
+    const p1 = prog(t, .6, 1.1), name = (d.title || 'Santiago').toUpperCase();
+    ctx.save(); const ns = A.fit(ctx, name, 400, 150 * u, F.bebas, .05, W * .8); const nw = Math.min(W * .9, ctx.measureText(name).width + 100 * u); ctx.restore();
+    plate(ctx, (W - nw * eo(p1)) / 2, cy - 90 * u, nw * eo(p1), 175 * u, 12 * u, 'rgba(12,16,24,.9)');
+    ctx.save(); ctx.fillStyle = th.accent; ctx.fillRect((W - nw * eo(p1)) / 2, cy + 79 * u, nw * eo(p1), 8 * u); ctx.restore();
+    A.text(ctx, name, W / 2, cy + 45 * u, { s: ns, f: F.bebas, ls: .05, color: '#FFFFFF', alpha: prog(t, .9, 1.2) });
+    A.text(ctx, (d.subtitle || 'Mis XV años').toUpperCase(), W / 2, cy + 150 * u, { w: 800, s: 40 * u, f: F.mont, ls: .2, color: '#FFFFFF', alpha: prog(t, 1.1, 1.5), shadow: 14 * u, maxW: W * .86 });
+    A.text(ctx, dl(d.date, 'num'), W / 2, cy + 205 * u, { w: 800, s: 36 * u, f: F.mont, ls: .12, color: th.accent, alpha: prog(t, 1.3, 1.7), shadow: 12 * u });
+  } };
+  D.campeonOut = { draw: (ctx, W, H, t, dur, d, th) => {
+    const u = U(W, H), cy = H * .52;
+    A.scrim(ctx, W, H, 'full', 1.25 * prog(t, 0, .4));
+    const p = prog(t, .2, .7);
+    ctx.save(); ctx.translate(W / 2, cy); const sc = 1 + (1 - back(p)) * .4; ctx.scale(sc, sc);
+    A.text(ctx, (d.phrase || '¡Gracias por venir!').toUpperCase(), 0, 0, { s: Math.min(150 * u, W * .17), f: F.bebas, ls: .03, color: '#FFFFFF', alpha: p > 0 ? 1 : 0, shadow: 22 * u, maxW: W * .9 }); ctx.restore();
+    A.text(ctx, (d.title || '').toUpperCase() + (d.title ? ' · XV' : ''), W / 2, cy + 90 * u, { w: 800, s: 40 * u, f: F.mont, ls: .16, color: th.accent, alpha: prog(t, .7, 1.1), maxW: W * .9 });
+  } };
+
+  // XV Caballero: negro y plata, monograma con la inicial dentro de un anillo que se dibuja solo.
+  const SILVER = '#D9DEE5';
+  D.caballeroIn = { draw: (ctx, W, H, t, dur, d, th) => {
+    const u = U(W, H), cy = cyIn(W, H), name = d.title || 'Santiago', ini = (name.trim()[0] || 'S').toUpperCase();
+    A.scrim(ctx, W, H, vert(W, H) ? 'bottom' : 'center', .9 * prog(t, 0, .9));
+    const R = 92 * u, my = cy - 150 * u, p = prog(t, .2, 1.4);
+    ctx.save(); ctx.strokeStyle = SILVER; ctx.lineWidth = 3 * u; ctx.beginPath(); ctx.arc(W / 2, my, R, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * A.eio(p)); ctx.stroke();
+    ctx.globalAlpha = .55; ctx.lineWidth = 1.5 * u; ctx.beginPath(); ctx.arc(W / 2, my, R - 12 * u, Math.PI / 2, Math.PI / 2 + Math.PI * 2 * A.eio(p)); ctx.stroke(); ctx.restore();
+    A.text(ctx, ini, W / 2, my + 40 * u, { w: 700, s: 112 * u, f: F.cinzel, color: '#FFFFFF', alpha: prog(t, .8, 1.5) });
+    A.text(ctx, name, W / 2, cy + 40 * u + up(u, prog(t, 1, 1.8), 26), { w: 700, s: Math.min(110 * u, W * .12), f: F.playfair, color: '#FFFFFF', alpha: prog(t, 1, 1.8), shadow: 16 * u, maxW: W * .86 });
+    A.text(ctx, (d.subtitle || 'Mis XV años').toUpperCase(), W / 2, cy + 110 * u, { w: 700, s: 30 * u, f: F.mont, ls: .3, color: SILVER, alpha: prog(t, 1.5, 2.1), maxW: W * .86 });
+    A.text(ctx, dl(d.date).toUpperCase(), W / 2, cy + 158 * u, { w: 500, s: 27 * u, f: F.mont, ls: .16, color: '#FFFFFF', alpha: prog(t, 1.8, 2.4), shadow: 10 * u, maxW: W * .86 });
+  } };
+  D.caballeroOut = { draw: (ctx, W, H, t, dur, d, th) => {
+    const u = U(W, H), cy = H * .5;
+    ctx.save(); ctx.fillStyle = `rgba(8,8,10,${(.88 * A.eio(prog(t, 0, 1))).toFixed(3)})`; ctx.fillRect(0, 0, W, H); ctx.restore();
+    A.text(ctx, d.phrase || 'Gracias por acompañarme', W / 2, cy - 10 * u + up(u, prog(t, .4, 1.3), 24), { w: 700, s: Math.min(84 * u, W * .09), f: F.playfair, color: '#FFFFFF', alpha: prog(t, .4, 1.3), maxW: W * .86 });
+    A.rule(ctx, W / 2, cy + 40 * u, 120 * u * eo(prog(t, 1, 1.7)), u, SILVER, 1, true);
+    A.text(ctx, (d.title || '').toUpperCase(), W / 2, cy + 100 * u, { w: 700, s: 34 * u, f: F.mont, ls: .3, color: SILVER, alpha: prog(t, 1.3, 2), maxW: W * .86 });
+  } };
+
+  // Destello corto en los cortes (blanco que se desvanece).
+  D.flash = { draw: (ctx, W, H, t, dur) => {
+    const a = .55 * Math.pow(1 - clamp(t / (dur || .3)), 2);
+    if (a > .01) { ctx.save(); ctx.fillStyle = `rgba(255,255,255,${a.toFixed(3)})`; ctx.fillRect(0, 0, W, H); ctx.restore(); }
+  } };
+
+  // Boda clara: "NOS CASAMOS", nombres en Playfair grueso y fecha grande, con un marco blanco que entra.
+  D.claraIn = { draw: (ctx, W, H, t, dur, d, th) => {
+    const u = U(W, H), cy = cyIn(W, H), v = vert(W, H);
+    A.scrim(ctx, W, H, v ? 'bottom' : 'center', 1.05 * prog(t, 0, 1));
+    const m = 40 * u, fp = A.eio(prog(t, .1, 1.2));
+    ctx.save(); ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 3 * u; ctx.globalAlpha = fp; ctx.strokeRect(m + (1 - fp) * 30 * u, m + (1 - fp) * 30 * u, W - 2 * m - (1 - fp) * 60 * u, H - 2 * m - (1 - fp) * 60 * u); ctx.restore();
+    A.text(ctx, (d.subtitle || 'Nos casamos').toUpperCase(), W / 2, cy - 120 * u, { w: 700, s: 34 * u, f: F.mont, ls: .3, color: '#FFFFFF', alpha: prog(t, .4, 1), shadow: 12 * u, maxW: W * .84 });
+    rise(ctx, W, cy + 10 * u, 120 * u, prog(t, .6, 1.7), () => A.text(ctx, d.title || 'Ana & Luis', W / 2, cy + 10 * u, { w: 700, s: Math.min(124 * u, W * .13), f: F.playfair, color: '#FFFFFF', shadow: 18 * u, maxW: W * .86 }));
+    A.rule(ctx, W / 2, cy + 56 * u, 160 * u * eo(prog(t, 1.3, 2)), u, th.accent, 1, true);
+    A.text(ctx, dl(d.date, 'num'), W / 2, cy + 132 * u, { w: 800, s: 54 * u, f: F.mont, ls: .08, color: th.accent, alpha: prog(t, 1.5, 2.1), shadow: 12 * u });
+    if (d.place) A.text(ctx, d.place, W / 2, cy + 184 * u, { w: 500, s: 30 * u, f: F.mont, color: '#FFFFFF', alpha: prog(t, 1.8, 2.4), shadow: 10 * u, maxW: W * .84 });
+  } };
+  D.claraOut = { draw: (ctx, W, H, t, dur, d, th) => {
+    const u = U(W, H), cy = H * .5;
+    A.scrim(ctx, W, H, 'full', 1.3 * prog(t, 0, 1));
+    A.text(ctx, d.phrase || 'Te esperamos', W / 2, cy - 10 * u + up(u, prog(t, .3, 1.2), 26), { w: 700, s: Math.min(110 * u, W * .12), f: F.playfair, color: '#FFFFFF', alpha: prog(t, .3, 1.2), shadow: 16 * u, maxW: W * .86 });
+    A.text(ctx, dl(d.date, 'long'), W / 2, cy + 74 * u, { w: 700, s: 40 * u, f: F.mont, color: th.accent, alpha: prog(t, 1, 1.6), maxW: W * .86 });
+  } };
+
+  // Save the Date grande: tarjeta clara abajo con letras oscuras (se lee aunque la foto sea muy clara u oscura).
+  D.grandeIn = { draw: (ctx, W, H, t, dur, d, th) => {
+    const u = U(W, H), v = vert(W, H), ch = (v ? 520 : 400) * u, cw = Math.min(W - 80 * u, 1000 * u), x0 = (W - cw) / 2, y0 = H - ch - (v ? 160 : 60) * u;
+    const p = A.eio(prog(t, .1, .9));
+    plate(ctx, x0, y0 + (1 - p) * 80 * u, cw, ch, 22 * u, `rgba(255,250,242,${(.94 * p).toFixed(3)})`);
+    const top = y0 + (1 - p) * 80 * u, cx = W / 2;
+    A.text(ctx, (d.subtitle || 'Save the date').toUpperCase(), cx, top + 74 * u, { w: 800, s: 40 * u, f: F.mont, ls: .22, color: '#2A2420', alpha: prog(t, .5, 1), maxW: cw - 60 * u });
+    A.text(ctx, d.title || 'Ana & Luis', cx, top + (v ? 210 : 190) * u, { w: 700, s: (v ? 120 : 110) * u, f: F.manus, color: th.dark || '#A35A00', alpha: prog(t, .8, 1.4), maxW: cw - 60 * u });
+    A.text(ctx, dl(d.date, 'num'), cx, top + (v ? 320 : 280) * u, { s: (v ? 92 : 80) * u, f: F.bebas, ls: .06, color: '#2A2420', alpha: prog(t, 1.2, 1.7) });
+    if (d.place) A.text(ctx, d.place, cx, top + (v ? 400 : 345) * u, { w: 500, s: 32 * u, f: F.mont, color: '#5A5048', alpha: prog(t, 1.5, 2), maxW: cw - 60 * u });
+  } };
+  D.grandeOut = { draw: (ctx, W, H, t, dur, d, th) => {
+    const u = U(W, H), cy = H * .5, p = A.eio(prog(t, 0, .8)), cw = Math.min(W - 80 * u, 900 * u), ch = 300 * u;
+    plate(ctx, (W - cw) / 2, cy - ch / 2 + (1 - p) * 60 * u, cw, ch, 22 * u, `rgba(255,250,242,${(.95 * p).toFixed(3)})`);
+    A.text(ctx, d.phrase || '¡Te esperamos!', W / 2, cy + 10 * u, { w: 700, s: 100 * u, f: F.manus, color: th.dark || '#A35A00', alpha: prog(t, .5, 1.1), maxW: cw - 60 * u });
+    A.text(ctx, dl(d.date, 'long'), W / 2, cy + 90 * u, { w: 700, s: 34 * u, f: F.mont, color: '#2A2420', alpha: prog(t, .9, 1.4), maxW: cw - 60 * u });
+  } };
+
+  // XV Dulce: manuscrita clara y gruesa, nombre en Playfair y pétalos.
+  D.dulceIn = { draw: (ctx, W, H, t, dur, d, th) => {
+    const u = U(W, H), cy = cyIn(W, H);
+    A.scrim(ctx, W, H, vert(W, H) ? 'bottom' : 'center', 1 * prog(t, 0, 1));
+    petals(ctx, W, H, t, 31, u, 12, ROSE);
+    A.text(ctx, d.subtitle || 'Mis XV años', W / 2, cy - 70 * u + up(u, prog(t, .3, 1.2), 24), { w: 700, s: Math.min(120 * u, W * .13), f: F.manus, color: th.accent, alpha: prog(t, .3, 1.2), shadow: 14 * u, maxW: W * .86 });
+    A.text(ctx, d.title || 'Ana Sofía', W / 2, cy + 50 * u + up(u, prog(t, .8, 1.7), 24), { w: 700, s: Math.min(112 * u, W * .12), f: F.playfair, color: '#FFFFFF', alpha: prog(t, .8, 1.7), shadow: 18 * u, maxW: W * .86 });
+    A.text(ctx, dl(d.date).toUpperCase(), W / 2, cy + 128 * u, { w: 700, s: 30 * u, f: F.mont, ls: .16, color: '#FFFFFF', alpha: prog(t, 1.5, 2.1), shadow: 10 * u, maxW: W * .86 });
+  } };
+  D.dulceOut = { draw: (ctx, W, H, t, dur, d, th) => {
+    const u = U(W, H), cy = H * .5;
+    A.scrim(ctx, W, H, 'full', 1.3 * prog(t, 0, 1));
+    petals(ctx, W, H, t + 4, 33, u, 12, ROSE);
+    A.text(ctx, d.phrase || 'Gracias por acompañarme', W / 2, cy + up(u, prog(t, .3, 1.2), 24), { w: 700, s: Math.min(96 * u, W * .1), f: F.manus, color: '#FFFFFF', alpha: prog(t, .3, 1.2), shadow: 14 * u, maxW: W * .86 });
+    A.text(ctx, d.title || '', W / 2, cy + 90 * u, { w: 700, s: 52 * u, f: F.playfair, color: th.accent, alpha: prog(t, 1, 1.6), maxW: W * .86 });
+  } };
+
+  // Bautizo claro: blanco y celeste, manuscrita clara y nombre grande.
+  D.bautizoClaroIn = { draw: (ctx, W, H, t, dur, d, th) => {
+    const u = U(W, H), cy = cyIn(W, H);
+    A.scrim(ctx, W, H, vert(W, H) ? 'bottom' : 'center', .95 * prog(t, 0, 1));
+    bokeh(ctx, W, H, t, 41, u, 18, ['220,236,255', '255,255,255', '200,224,255']);
+    A.text(ctx, d.subtitle || 'Mi bautizo', W / 2, cy - 60 * u + up(u, prog(t, .3, 1.2), 22), { w: 700, s: Math.min(104 * u, W * .11), f: F.manus, color: th.accent, alpha: prog(t, .3, 1.2), shadow: 12 * u, maxW: W * .86 });
+    A.text(ctx, d.title || 'Santiago', W / 2, cy + 60 * u, { w: 700, s: Math.min(120 * u, W * .13), f: F.playfair, color: '#FFFFFF', alpha: prog(t, .8, 1.6), shadow: 18 * u, maxW: W * .86 });
+    A.text(ctx, dl(d.date).toUpperCase(), W / 2, cy + 132 * u, { w: 700, s: 30 * u, f: F.mont, ls: .16, color: '#FFFFFF', alpha: prog(t, 1.4, 2), shadow: 10 * u, maxW: W * .86 });
+  } };
+  D.bautizoClaroOut = { draw: (ctx, W, H, t, dur, d, th) => {
+    const u = U(W, H), cy = H * .5;
+    A.scrim(ctx, W, H, 'full', 1.3 * prog(t, 0, 1));
+    bokeh(ctx, W, H, t + 2, 43, u, 16, ['220,236,255', '255,255,255', '200,224,255']);
+    A.text(ctx, d.phrase || 'Gracias por acompañarnos', W / 2, cy, { w: 700, s: Math.min(92 * u, W * .1), f: F.manus, color: '#FFFFFF', alpha: prog(t, .3, 1.2), shadow: 14 * u, maxW: W * .86 });
+    A.text(ctx, d.title || '', W / 2, cy + 86 * u, { w: 700, s: 50 * u, f: F.playfair, color: th.accent, alpha: prog(t, 1, 1.6), maxW: W * .86 });
   } };
 
   /* ======================= PAPEL Y FOTOS ESPECIALES ======================= */
@@ -996,42 +1219,82 @@
   const VHS_POST = 'rgbashift=rh=-4:bh=4,noise=alls=16:allf=t+u,eq=saturation=1.25:contrast=1.05,gblur=sigma=0.5';
 
   SA.TEMPLATES = [
-    // Elegantes y modernas (nuevas): movimientos lentos, letras finas y transiciones suaves.
-    { id: 'luz-dorada', nuevo: true, music: ['vals-de-la-luna', 'primer-baile', 'para-siempre'], name: 'Luz dorada', cats: ['elegantes', 'bodas', 'xv', 'eventos'], level: 'Pro', theme: 'dorado', photoStyle: 'calido',
+    // Nuevas en la 0.8: letras gruesas y grandes que se leen bien en el celular, y cuatro para XV de hombre.
+    { id: 'xv-gala', nuevo: true, music: ['danubio-azul', 'vals-de-las-flores', 'valses-de-strauss', 'vals-de-la-luna'], name: 'XV Gala', cats: ['xvhombre', 'xv', 'elegantes'], level: 'Pro', theme: 'dorado',
+      desc: 'Azul marino y dorado: "MIS XV AÑOS", el nombre grande y un brillo dorado en el final. Para XV de hombre formales.', fields: [f('title', 'Nombre', 'Santiago'), f('subtitle', 'Frase de arriba', '', 'Mis XV años'), f('phrase', 'Frase final', '', 'Gracias'), FECHA, LUGAR],
+      mode: 'song', durations: ['full', 180, 120, 60], intro: 5, shot: 3.6, outro: 5.4, beats: 6, shotMax: 5, T: 1, trans: ['fade', 'fadeslow', 'luz', 'fade'],
+      look: 'eq=contrast=1.04:saturation=1.02', post: 'vignette=angle=PI/5', preview: 'contrast(1.04)', vignette: true,
+      layers: [{ at: 'intro', d: D.galaIn }, { at: 'outro', d: D.galaOut }] },
+    { id: 'xv-caballero', nuevo: true, music: ['vals-de-las-flores', 'danubio-azul', 'gran-vals-brillante', 'vals-de-las-rosas'], name: 'XV Caballero', cats: ['xvhombre', 'xv', 'elegantes'], level: 'Simple', theme: 'plata',
+      desc: 'Negro y plata, con la inicial del nombre en un anillo que se dibuja solo. Sobrio y elegante.', fields: [f('title', 'Nombre', 'Santiago'), f('subtitle', 'Frase', '', 'Mis XV años'), f('phrase', 'Frase final', '', 'Gracias por acompañarme'), FECHA],
+      mode: 'song', durations: ['full', 120, 60], intro: 5, shot: 3.6, outro: 5.2, beats: 6, shotMax: 5, T: 1, trans: ['fade', 'fadeslow', 'fadeblack', 'fade'],
+      look: 'eq=contrast=1.06:saturation=0.9', post: 'vignette=angle=PI/5', preview: 'contrast(1.06) saturate(.9)', vignette: true,
+      layers: [{ at: 'intro', d: D.caballeroIn }, { at: 'outro', d: D.caballeroOut }] },
+    { id: 'xv-urbano', nuevo: true, music: ['impacto', 'noche-de-neon', 'dia-de-fiesta'], name: 'XV Urbano', cats: ['xvhombre', 'xv', 'llamativas'], level: 'Pro', theme: 'blanco',
+      desc: 'Negro y naranja, letras altas que entran de golpe y cortes rápidos al ritmo. Para XV de hombre modernos.', fields: [f('title', 'Nombre', 'Santiago'), f('subtitle', 'Frase de arriba', '', 'Mis XV'), f('phrase', 'Frase final', '', 'Gracias'), FECHA, LUGAR],
+      mode: 'song', durations: [30, 60, 15, 'full'], intro: 3.2, shot: 1.8, outro: 3.4, beats: 2, T: .3, trans: ['fadefast', 'smoothleft', 'fadefast', 'zoomin', 'fadefast', 'smoothright'],
+      look: 'eq=contrast=1.12:saturation=1.08', preview: 'contrast(1.12) saturate(1.08)',
+      layers: [{ at: 'intro', d: D.urbanoIn }, { at: 'cuts', d: D.flash, dur: .3, every: 4 }, { at: 'outro', d: D.urbanoOut }] },
+    { id: 'xv-campeon', nuevo: true, music: ['impacto', 'dia-de-fiesta', 'brillar'], name: 'XV Campeón', cats: ['xvhombre', 'xv', 'llamativas'], level: 'Pro', theme: 'azul',
+      desc: 'Estilo deportivo: un 15 enorme, luces de estadio y el nombre en un letrero como de marcador.', fields: [f('title', 'Nombre', 'Santiago'), f('subtitle', 'Frase de arriba', '', 'Mis XV años'), f('phrase', 'Frase final', '', '¡Gracias por venir!'), FECHA],
+      mode: 'song', durations: [30, 60, 'full'], intro: 3.8, shot: 2.2, outro: 3.6, beats: 4, T: .4, trans: ['fadefast', 'smoothleft', 'fadewhite', 'smoothright', 'fadefast'],
+      look: 'eq=contrast=1.1:saturation=1.1', preview: 'contrast(1.1) saturate(1.1)',
+      layers: [{ at: 'intro', d: D.campeonIn }, { at: 'outro', d: D.campeonOut }] },
+    { id: 'boda-clara', nuevo: true, music: ['canon-en-re', 'aire-de-bach', 'nocturno', 'primer-baile'], name: 'Boda clara', cats: ['bodas', 'elegantes', 'simples'], level: 'Simple', theme: 'blanco',
+      desc: '"NOS CASAMOS", los nombres en letra gruesa y la fecha grande. Muy fácil de leer.', fields: [NOMBRES, f('subtitle', 'Frase de arriba', '', 'Nos casamos'), f('phrase', 'Frase final', '', 'Te esperamos'), FECHA, LUGAR],
+      mode: 'song', durations: [60, 120, 'full', 30], intro: 5, shot: 3.6, outro: 5, beats: 8, shotMax: 5, T: 1.1, trans: ['fadeslow', 'fade', 'luz', 'fade'],
+      look: 'eq=contrast=1.02:saturation=0.98', preview: 'contrast(1.02)',
+      layers: [{ at: 'intro', d: D.claraIn }, { at: 'outro', d: D.claraOut }] },
+    { id: 'std-grande', nuevo: true, music: ['nocturno', 'gymnopedie', 'canon-en-re', 'primer-baile'], name: 'Save the Date grande', cats: ['bodas', 'xv', 'eventos', 'simples'], level: 'Simple', theme: 'blanco',
+      desc: 'Una tarjeta clara con letras oscuras y grandes encima de las fotos: se lee perfecto en WhatsApp.', fields: [NOMBRES, f('subtitle', 'Encabezado', '', 'Save the date'), f('phrase', 'Frase final', '', '¡Te esperamos!'), FECHA, LUGAR],
+      mode: 'song', durations: [30, 60, 15], intro: 5, shot: 3.2, outro: 4.6, beats: 8, T: .9, trans: ['fade', 'fadeslow', 'smoothleft', 'fade'],
+      layers: [{ at: 'intro', d: D.grandeIn }, { at: 'outro', d: D.grandeOut }] },
+    { id: 'xv-dulce', nuevo: true, music: ['vals-de-las-flores', 'vals-del-adios', 'danubio-azul', 'vals-de-la-luna'], name: 'XV Dulce', cats: ['xv', 'elegantes'], level: 'Simple', theme: 'rosa', photoStyle: 'rosa',
+      desc: '"Mis XV años" en manuscrita clara y gruesa, el nombre grande y pétalos que caen.', fields: [NOMBRE_XV, f('subtitle', 'Título', '', 'Mis XV años'), f('phrase', 'Frase final', '', 'Gracias por acompañarme'), FECHA],
+      mode: 'song', durations: ['full', 180, 120, 60], intro: 5, shot: 3.6, outro: 5.4, beats: 6, shotMax: 5, T: 1.1, trans: ['fadeslow', 'luz', 'fade', 'fadeslow'],
+      look: 'eq=contrast=0.99:saturation=0.98', preview: 'saturate(.98)',
+      layers: [{ at: 'intro', d: D.dulceIn }, { at: 'outro', d: D.dulceOut }] },
+    { id: 'bautizo-claro', nuevo: true, music: ['jesus-alegria', 'nocturno', 'gymnopedie', 'pequenos-pasos'], name: 'Bautizo claro', cats: ['familia', 'eventos', 'simples'], level: 'Simple', theme: 'celeste',
+      desc: 'Blanco y celeste, luces suaves y letras claras y grandes. Para bautizos y primeras comuniones.', fields: [f('title', 'Nombre', 'Santiago'), f('subtitle', 'Frase de arriba', '', 'Mi bautizo'), f('phrase', 'Frase final', '', 'Gracias por acompañarnos'), FECHA],
+      mode: 'song', durations: [60, 120, 'full'], intro: 5, shot: 3.6, outro: 5, beats: 8, shotMax: 5, T: 1.1, trans: ['fadeslow', 'fade', 'hblur', 'fade'],
+      look: 'eq=contrast=0.98:brightness=0.015:saturation=0.95', preview: 'saturate(.95) brightness(1.02)',
+      layers: [{ at: 'intro', d: D.bautizoClaroIn }, { at: 'outro', d: D.bautizoClaroOut }] },
+    // Elegantes y modernas (0.7): movimientos lentos, letras finas y transiciones suaves.
+    { id: 'luz-dorada', music: ['vals-de-las-flores', 'vals-del-adios', 'vals-de-la-luna', 'primer-baile'], name: 'Luz dorada', cats: ['elegantes', 'bodas', 'xv', 'eventos'], level: 'Pro', theme: 'dorado', photoStyle: 'calido',
       desc: 'Luces doradas que flotan, nombres con brillo cálido y transiciones de luz. Muy romántica.', fields: [NOMBRES, f('subtitle', 'Frase de arriba', '', 'Nuestra boda'), f('phrase', 'Frase final', '', 'Gracias'), FECHA, LUGAR],
       mode: 'song', durations: ['full', 120, 60], intro: 5.2, shot: 3.6, outro: 5.6, beats: 8, shotMax: 5, T: 1.2, trans: ['fadeslow', 'luz', 'fade', 'fadeslow', 'luz', 'hblur'],
       look: 'colorbalance=rm=0.03:bm=-0.04:rh=0.03:bh=-0.03,eq=contrast=0.98:saturation=1.02', post: 'vignette=angle=PI/5', preview: 'sepia(.12) saturate(1.02)', vignette: true,
       layers: [{ at: 'intro', d: D.luzIn }, { at: 'outro', d: D.luzOut }] },
-    { id: 'editorial', nuevo: true, music: ['primer-baile', 'eternamente', 'promesa'], name: 'Editorial', cats: ['elegantes', 'bodas', 'xv', 'eventos'], level: 'Simple', theme: 'blanco',
+    { id: 'editorial', music: ['nocturno', 'canon-en-re', 'primer-baile', 'eternamente'], name: 'Editorial', cats: ['elegantes', 'bodas', 'xv', 'eventos'], level: 'Simple', theme: 'blanco',
       desc: 'Como portada de revista de novias: título grande en letra fina que sube despacio y fundidos lentos.', fields: [NOMBRES, f('subtitle', 'Encabezado', '', 'Save the date'), f('phrase', 'Frase final', '', 'Te esperamos'), FECHA, LUGAR],
       mode: 'song', durations: [60, 120, 'full', 30], intro: 5, shot: 3.6, outro: 5.6, beats: 8, shotMax: 5, T: 1.2, trans: ['fadeslow', 'fade', 'hblur', 'fadeslow'],
       look: 'eq=contrast=0.97:saturation=0.9,colorbalance=rh=0.02:bh=-0.015', preview: 'contrast(.97) saturate(.9)',
       layers: [{ at: 'intro', d: D.editorialIn }, { at: 'outro', d: D.editorialOut }] },
-    { id: 'xv-vals', nuevo: true, music: ['vals-de-la-luna', 'vals-de-las-rosas', 'vals-de-quince'], name: 'Vals XV elegante', cats: ['elegantes', 'xv'], level: 'Pro', theme: 'rosa', photoStyle: 'rosa',
+    { id: 'xv-vals', music: ['vals-de-las-flores', 'danubio-azul', 'vals-del-adios', 'vals-de-la-luna'], name: 'Vals XV elegante', cats: ['elegantes', 'xv'], level: 'Pro', theme: 'rosa', photoStyle: 'rosa',
       desc: 'Marco fino que se dibuja solo, pétalos que caen y "Mis XV años" en letra manuscrita, al ritmo del vals.', fields: [NOMBRE_XV, f('subtitle', 'Título', '', 'Mis XV años'), f('phrase', 'Frase final', '', 'Gracias por acompañarme'), FECHA],
       mode: 'song', durations: ['full', 180, 120, 60], intro: 5.4, shot: 3.6, outro: 6, beats: 6, shotMax: 5, T: 1.2, trans: ['fadeslow', 'luz', 'fade', 'fadeslow', 'hblur'],
       look: 'eq=contrast=0.98:saturation=0.97', post: 'vignette=angle=PI/5', preview: 'saturate(.97)', vignette: true,
       layers: [{ at: 'intro', d: D.xvValsIn }, { at: 'outro', d: D.xvValsOut }] },
-    { id: 'trailer', nuevo: true, music: ['eternamente', 'primer-baile', 'vals-de-la-luna'], name: 'Tráiler elegante', cats: ['elegantes', 'bodas', 'xv', 'eventos'], level: 'Pro', theme: 'blanco',
+    { id: 'trailer', music: ['amanecer', 'canon-en-re', 'eternamente', 'primer-baile'], name: 'Tráiler elegante', cats: ['elegantes', 'bodas', 'xv', 'eventos'], level: 'Pro', theme: 'blanco',
       desc: 'Formato de cine con barras, color suave de película y el nombre que se acerca despacio.', fields: [NOMBRES, f('subtitle', 'Frase de arriba', '', 'La boda de'), f('phrase', 'Frase final', '', 'Un día para siempre'), FECHA],
       mode: 'song', durations: [60, 120, 'full', 30], intro: 5.4, shot: 3.4, outro: 5.6, beats: 8, shotMax: 5, T: 1.1, trans: ['fadeslow', 'fade', 'fadeblack', 'fadeslow', 'hblur'],
       look: 'colorbalance=rs=-0.02:bs=0.03:rh=0.04:bh=-0.03,eq=contrast=1.03:saturation=0.94', post: 'vignette=angle=PI/5', preview: 'contrast(1.03) saturate(.94) sepia(.06)', vignette: true,
       layers: [{ at: 'all', d: D.letterbox }, { at: 'intro', d: D.trailerIn }, { at: 'outro', d: D.trailerOut }] },
-    { id: 'recuerdo', nuevo: true, music: ['promesa', 'nuestro-momento', 'para-siempre'], name: 'Recuerdo suave', cats: ['elegantes', 'familia', 'eventos', 'bodas'], level: 'Simple', theme: 'blanco',
+    { id: 'recuerdo', music: ['vals-melancolico', 'gymnopedie', 'vals-del-adios', 'promesa'], name: 'Recuerdo suave', cats: ['elegantes', 'familia', 'eventos', 'bodas'], level: 'Simple', theme: 'blanco',
       desc: 'Bruma clara en las orillas, colores suaves y frases que se enfocan palabra por palabra. Para recuerdos y homenajes.',
       fields: [f('title', 'Título', 'Nuestros recuerdos', 'Nuestros recuerdos'), f('subtitle', 'Frase', '', 'Momentos que guardamos para siempre'), f('phrase', 'Frase final', '', 'Siempre en nuestro corazón'), FECHA],
       mode: 'song', durations: ['full', 120, 60], intro: 5.6, shot: 3.8, outro: 5.6, beats: 8, shotMax: 5, T: 1.4, trans: ['fadeslow', 'fade', 'fadegrays', 'fadeslow', 'hblur', 'fade'],
       look: 'eq=contrast=0.9:brightness=0.025:saturation=0.86', preview: 'saturate(.86) contrast(.92) brightness(1.03)',
       layers: [{ at: 'all', d: D.haze }, { at: 'intro', d: D.recuerdoIn }, { at: 'outro', d: D.recuerdoOut }] },
-    { id: 'moderno-limpio', nuevo: true, music: ['nuestro-momento', 'primer-baile', 'promesa'], name: 'Moderno limpio', cats: ['elegantes', 'simples', 'eventos', 'bodas', 'vlog'], level: 'Simple', theme: 'blanco',
+    { id: 'moderno-limpio', music: ['gymnopedie', 'nocturno', 'nuestro-momento', 'primer-baile'], name: 'Moderno limpio', cats: ['elegantes', 'simples', 'eventos', 'bodas', 'vlog'], level: 'Simple', theme: 'blanco',
       desc: 'Marco blanco delgado, letras finas modernas y deslizamientos suaves. Limpio y actual.', fields: [f('title', 'Título', 'Ana & Luis'), FECHA, LUGAR, f('phrase', 'Frase final', '', 'Gracias')],
       mode: 'song', durations: [60, 30, 'full'], intro: 4.6, shot: 3.2, outro: 4.6, beats: 4, T: .9, trans: ['smoothleft', 'fade', 'smoothright', 'fadeslow'],
       look: 'eq=contrast=1.02:saturation=0.95', preview: 'contrast(1.02) saturate(.95)',
       layers: [{ at: 'all', d: D.frameThin }, { at: 'intro', d: D.limpioIn }, { at: 'outro', d: D.limpioOut }] },
-    { id: 'std-clasico', music: ['primer-baile', 'para-siempre', 'vals-de-la-luna'], name: 'Save the Date clásico', cats: ['eventos', 'bodas', 'simples', 'elegantes'], level: 'Simple', theme: 'dorado',
+    { id: 'std-clasico', music: ['canon-en-re', 'nocturno', 'primer-baile', 'para-siempre'], name: 'Save the Date clásico', cats: ['eventos', 'bodas', 'simples', 'elegantes'], level: 'Simple', theme: 'dorado',
       desc: 'Zoom lento en las fotos, título en letra manuscrita y cierre con la fecha.', fields: [NOMBRES, FECHA, LUGAR],
       mode: 'shots', intro: 4.2, shot: 3, outro: 5.2, beats: 4, T: .8, trans: ['fade'], layers: [{ at: 'intro', d: D.clasicoIn }, { at: 'outro', d: D.clasicoOut }] },
-    { id: 'std-cine', music: ['eternamente', 'nuestra-historia', 'para-siempre'], name: 'Save the Date de cine', cats: ['eventos', 'bodas', 'llamativas'], level: 'Pro', theme: 'blanco', photoStyle: 'calido',
+    { id: 'std-cine', music: ['amanecer', 'nocturno', 'eternamente', 'nuestra-historia'], name: 'Save the Date de cine', cats: ['eventos', 'bodas', 'llamativas'], level: 'Pro', theme: 'blanco', photoStyle: 'calido',
       desc: 'Barras de cine, grano de película, color cálido y nombres que se acomodan letra por letra.', fields: [NOMBRES, f('subtitle', 'Frase de arriba', 'Una historia de', 'Una historia de'), FECHA, LUGAR],
       mode: 'shots', intro: 4.6, shot: 3.2, outro: 5.6, beats: 4, T: .9, trans: ['fade', 'fadeblack'], look: CINE_LOOK, post: 'noise=alls=8:allf=t+u,vignette=angle=PI/5',
       preview: 'contrast(1.06) saturate(1.05) sepia(.08)', grain: true, vignette: true,
@@ -1040,7 +1303,7 @@
       desc: 'Letras grandes que rebotan, cortes al ritmo y la fecha en números enormes.', fields: [NOMBRES, FECHA, LUGAR],
       mode: 'shots', intro: 4, shot: 2.4, outro: 4.6, beats: 4, T: .25, trans: ['fadewhite', 'smoothleft', 'zoomin', 'smoothright'], look: 'eq=contrast=1.08:saturation=1.15',
       layers: [{ at: 'intro', d: D.modernoIn }, { at: 'outro', d: D.modernoOut }] },
-    { id: 'xv-clasico', music: ['vals-de-la-luna', 'vals-de-quince', 'vals-de-las-rosas'], name: 'Videoclip XV clásico', cats: ['xv', 'elegantes'], level: 'Simple', theme: 'rosa',
+    { id: 'xv-clasico', music: ['vals-de-las-flores', 'danubio-azul', 'gran-vals-brillante', 'vals-de-la-luna'], name: 'Videoclip XV clásico', cats: ['xv', 'elegantes'], level: 'Simple', theme: 'rosa',
       desc: 'Portada "Mis XV", tomas repartidas en toda la canción y cierre de agradecimiento.', fields: [NOMBRE_XV, f('subtitle', 'Frase final', '', 'Gracias por acompañarme'), FECHA, LUGAR],
       mode: 'song', durations: ['full', 180, 120, 60], intro: 5.2, shot: 3.4, outro: 6.5, beats: 8, T: .9, trans: ['fade', 'fadeslow'], layers: [{ at: 'intro', d: D.xvIn }, { at: 'outro', d: D.xvOut }] },
     { id: 'xv-neon', music: ['noche-de-neon', 'impacto', 'dia-de-fiesta'], name: 'XV neón', cats: ['xv', 'llamativas'], level: 'Pro', theme: 'rosa',
@@ -1048,7 +1311,7 @@
       mode: 'song', durations: ['full', 120, 60, 30], intro: 4.5, shot: 2.4, outro: 5, beats: 4, T: .25, trans: ['fadewhite', 'zoomin', 'fade', 'smoothleft'],
       look: 'eq=contrast=1.12:saturation=1.35', post: 'vignette=angle=PI/4', photoStyle: 'vivo', preview: 'contrast(1.12) saturate(1.35)', vignette: true,
       layers: [{ at: 'intro', d: D.neonIn }, { at: 'outro', d: D.neonOut }] },
-    { id: 'boda-elegante', music: ['primer-baile', 'vals-de-la-luna', 'para-siempre'], name: 'Boda elegante', cats: ['bodas', 'elegantes'], level: 'Simple', theme: 'dorado', photoStyle: 'calido',
+    { id: 'boda-elegante', music: ['canon-en-re', 'aire-de-bach', 'nocturno', 'primer-baile'], name: 'Boda elegante', cats: ['bodas', 'elegantes'], level: 'Simple', theme: 'dorado', photoStyle: 'calido',
       desc: 'Nombres que se escriben solos, disolvencias lentas y color cálido.', fields: [NOMBRES, f('subtitle', 'Frase de arriba', '', 'Nuestra boda'), f('phrase', 'Frase final', '', 'Los esperamos'), FECHA, LUGAR],
       mode: 'song', durations: ['full', 180, 120, 60], intro: 5, shot: 3.8, outro: 6, beats: 8, T: 1.1, trans: ['fadeslow', 'fade', 'luz', 'fade'],
       look: 'colorbalance=rm=0.03:bm=-0.03,eq=contrast=0.97:saturation=0.95', post: 'vignette=angle=PI/5', preview: 'sepia(.12) saturate(.95)', vignette: true,
@@ -1057,10 +1320,10 @@
       desc: '"Faltan 30 días": el número rebota, cortes rápidos y cierre con la fecha.', fields: [f('extra', 'Días que faltan', '30', '30'), f('title', 'Para qué', 'mis XV'), FECHA, LUGAR],
       mode: 'shots', intro: 4, shot: 2.2, outro: 4.5, beats: 4, T: .3, trans: ['fadewhite', 'smoothleft', 'smoothright'], look: 'eq=contrast=1.06:saturation=1.1',
       layers: [{ at: 'intro', d: D.cuentaIn }, { at: 'outro', d: D.cuentaOut }] },
-    { id: 'gracias', music: ['promesa', 'para-siempre', 'nuestro-momento'], name: 'Agradecimiento', cats: ['eventos', 'xv', 'bodas', 'simples', 'elegantes'], level: 'Simple', theme: 'dorado',
+    { id: 'gracias', music: ['vals-del-adios', 'gymnopedie', 'promesa', 'para-siempre'], name: 'Agradecimiento', cats: ['eventos', 'xv', 'bodas', 'simples', 'elegantes'], level: 'Simple', theme: 'dorado',
       desc: 'Mensaje que se escribe como en máquina de escribir y firma al final.', fields: [f('subtitle', 'Mensaje', '', 'Gracias por acompañarnos en este día'), f('title', 'Firma', 'Ana & Luis'), FECHA],
       mode: 'shots', intro: 5.5, shot: 3.4, outro: 5, beats: 8, T: 1, trans: ['fadeslow', 'fade'], layers: [{ at: 'intro', d: D.graciasIn }, { at: 'outro', d: D.graciasOut }] },
-    { id: 'bautizo', music: ['promesa', 'pequenos-pasos', 'nuestro-momento'], name: 'Bautizo o primera comunión', cats: ['eventos'], level: 'Simple', theme: 'celeste',
+    { id: 'bautizo', music: ['jesus-alegria', 'gymnopedie', 'promesa', 'pequenos-pasos'], name: 'Bautizo o primera comunión', cats: ['eventos'], level: 'Simple', theme: 'celeste',
       desc: 'Colores claros, letra delicada y entrada suave.', fields: [f('title', 'Nombre', 'Santiago'), f('subtitle', 'Título', '', 'Mi bautizo'), FECHA, LUGAR],
       mode: 'shots', intro: 4.6, shot: 3.4, outro: 5.2, beats: 8, T: 1, trans: ['fade'], look: 'eq=brightness=0.03:saturation=0.92', preview: 'brightness(1.05) saturate(.92)',
       layers: [{ at: 'intro', d: D.bautizoIn }, { at: 'outro', d: D.bautizoOut }] },
@@ -1068,7 +1331,7 @@
       desc: 'Confeti, letras que rebotan y cortes al ritmo.', fields: [f('title', 'Nombre', 'Sofi'), f('subtitle', 'Saludo', '', '¡Feliz cumpleaños!'), FECHA],
       mode: 'song', durations: [60, 30, 'full'], intro: 4.2, shot: 2.4, outro: 4.6, beats: 4, T: .3, trans: ['zoomin', 'fadewhite', 'smoothup'], look: 'eq=contrast=1.08:saturation=1.3', preview: 'saturate(1.3)',
       layers: [{ at: 'intro', d: D.cumpleIn }, { at: 'outro', d: D.cumpleOut }] },
-    { id: 'graduacion', music: ['brillar', 'dia-de-fiesta', 'nuestra-historia'], name: 'Graduación', cats: ['eventos'], level: 'Simple', theme: 'dorado',
+    { id: 'graduacion', music: ['amanecer', 'brillar', 'dia-de-fiesta', 'nuestra-historia'], name: 'Graduación', cats: ['eventos'], level: 'Simple', theme: 'dorado',
       desc: '"Generación 2027" en grande, línea dorada y transiciones laterales.', fields: [f('title', 'Nombre', 'Ana Sofía'), f('subtitle', 'Escuela o carrera', 'Ingeniería en TI'), f('extra', 'Año', '2027'), FECHA],
       mode: 'shots', intro: 4.6, shot: 3, outro: 4.8, beats: 4, T: .5, trans: ['slideleft', 'slideup', 'fade'], layers: [{ at: 'intro', d: D.gradIn }, { at: 'outro', d: D.gradOut }] },
     { id: 'vlog', music: ['domingo-feliz', 'cafe-de-la-tarde', 'dia-de-fiesta'], name: 'Vlog del día', cats: ['vlog', 'simples'], level: 'Simple', theme: 'blanco',
@@ -1080,12 +1343,12 @@
       mode: 'song', durations: [60, 30, 'full'], intro: 4, shot: 2.4, outro: 3.6, beats: 4, T: 0, trans: [], post: VHS_POST, photoStyle: 'vivo',
       preview: 'saturate(1.25) contrast(1.05) blur(.4px)', grain: true, vhs: true,
       layers: [{ at: 'all', d: D.vhsHud }, { at: 'intro', d: D.vhsIn }, { at: 'outro', d: D.vhsOut }] },
-    { id: 'nostalgia', music: ['nuestro-momento', 'cafe-de-la-tarde', 'promesa'], name: 'Nostalgia 35 mm', cats: ['vlog', 'eventos', 'bodas'], level: 'Pro', theme: 'dorado', photoStyle: 'pelicula',
+    { id: 'nostalgia', music: ['vals-melancolico', 'gymnopedie', 'nuestro-momento', 'cafe-de-la-tarde'], name: 'Nostalgia 35 mm', cats: ['vlog', 'eventos', 'bodas'], level: 'Pro', theme: 'dorado', photoStyle: 'pelicula',
       desc: 'Color de película antigua, grano, destellos de luz en los cortes y fecha a máquina.', fields: [f('title', 'Título', 'Ana & Luis'), f('subtitle', 'Frase', 'nuestra historia'), FECHA],
       mode: 'song', durations: ['full', 120, 60], intro: 4.8, shot: 3.4, outro: 5, beats: 8, T: .7, trans: ['fade'], look: 'curves=preset=vintage,eq=saturation=0.85',
       post: 'noise=alls=14:allf=t+u,vignette=angle=PI/4.5', preview: 'sepia(.35) saturate(.85) contrast(1.05)', grain: true, vignette: true,
       layers: [{ at: 'intro', d: D.filmIn }, { at: 'outro', d: D.filmOut }, { at: 'cuts', d: D.leak, dur: 1.2, every: 2 }] },
-    { id: 'impacto', music: ['impacto', 'noche-de-neon', 'rebobinar'], name: 'Impacto', cats: ['llamativas', 'vlog', 'xv'], level: 'Pro', theme: 'blanco',
+    { id: 'impacto', music: ['impacto', 'noche-de-neon', 'rebobinar'], name: 'Impacto', cats: ['llamativas', 'vlog', 'xv', 'xvhombre'], level: 'Pro', theme: 'blanco',
       desc: 'Palabras que golpean la pantalla con destello, cortes muy rápidos y alto contraste.', fields: [f('title', 'Frase de entrada', 'LA MEJOR NOCHE'), f('subtitle', 'Frase final', 'XV ANA SOFÍA'), FECHA],
       mode: 'song', durations: [30, 60, 15], intro: 3.6, shot: 1.4, outro: 3.6, beats: 2, shotMin: 0.9, shotMax: 2.2, T: .2, trans: ['fadewhite', 'zoomin', 'fadewhite', 'smoothleft'],
       look: 'eq=contrast=1.18:saturation=1.25', preview: 'contrast(1.18) saturate(1.25)', layers: [{ at: 'intro', d: D.impactoIn }, { at: 'outro', d: D.impactoOut }] },
@@ -1096,7 +1359,7 @@
       desc: 'Cada foto en una polaroid sobre papel, con pie de foto a mano.', fields: [f('title', 'Pie de foto', 'XV Ana Sofía'), f('phrase', 'Despedida', '', 'Gracias'), FECHA],
       mode: 'shots', intro: 3.4, shot: 3.2, outro: 4.6, beats: 8, T: .7, trans: ['fade', 'slideleft'], note: 'Ideal con fotos; los videos se ven completos sin marco.',
       layers: [{ at: 'outro', d: D.polaroidOut }] },
-    { id: 'minimal', music: ['promesa', 'cafe-de-la-tarde', 'nuestro-momento'], name: 'Minimal', cats: ['simples'], level: 'Simple', theme: 'blanco',
+    { id: 'minimal', music: ['gymnopedie', 'nocturno', 'promesa', 'cafe-de-la-tarde'], name: 'Minimal', cats: ['simples'], level: 'Simple', theme: 'blanco',
       desc: 'Solo un título pequeño, fundidos limpios y nada más.', fields: [f('title', 'Título', 'ana & luis'), FECHA],
       mode: 'shots', intro: 4, shot: 3.2, outro: 4, beats: 8, T: .8, trans: ['fade'], layers: [{ at: 'intro', d: D.minimalIn }, { at: 'outro', d: D.minimalOut }] },
     { id: 'navidad', music: ['cascabeles', 'pequenos-pasos', 'domingo-feliz'], name: 'Feliz Navidad', cats: ['familia', 'eventos', 'simples'], level: 'Simple', theme: 'dorado',
@@ -1136,7 +1399,7 @@
       mode: 'song', durations: [60, 30, 'full'], intro: 5.4, shot: 2.6, outro: 4.2, beats: 4, T: .4, trans: ['fade', 'fadeblack'],
       post: "hue=s=0,eq=contrast=1.18:brightness='0.02*sin(t*41)+0.012*sin(t*67)':eval=frame,noise=alls=18:allf=t+u,vignette=angle=PI/4",
       preview: 'grayscale(1) contrast(1.18)', grain: true, vignette: true, wmSkip: ['intro', 'outro'], layers: [{ at: 'intro', d: D.mudoIn }, { at: 'outro', d: D.mudoOut }] },
-    { id: 'aniversario', music: ['nuestro-momento', 'primer-baile', 'para-siempre'], name: 'Aniversario', cats: ['bodas', 'familia', 'elegantes'], level: 'Simple', theme: 'dorado', photoStyle: 'calido',
+    { id: 'aniversario', music: ['nocturno', 'vals-del-adios', 'nuestro-momento', 'primer-baile'], name: 'Aniversario', cats: ['bodas', 'familia', 'elegantes'], level: 'Simple', theme: 'dorado', photoStyle: 'calido',
       desc: '"10 años" en grande, corazones que suben y nombres en letra manuscrita.', fields: [f('extra', 'Años', '10', '10'), f('title', 'Nombres', 'Ana & Luis'), f('phrase', 'Frase final', '', 'y por muchos años más'), FECHA],
       mode: 'song', durations: ['full', 120, 60], intro: 5, shot: 3.4, outro: 5.4, beats: 8, T: 1, trans: ['fade', 'luz', 'fadeslow'], look: 'colorbalance=rm=0.03:bm=-0.03',
       post: 'vignette=angle=PI/5', preview: 'sepia(.1)', vignette: true, layers: [{ at: 'intro', d: D.anivIn }, { at: 'outro', d: D.anivOut }] },
@@ -1149,6 +1412,6 @@
       mode: 'shots', intro: 4.2, shot: 2.2, outro: 5, beats: 4, T: .6, trans: ['wiperight', 'fade'], maxShots: 24, note: 'Solo usa fotos.', wmSkip: ['outro'],
       layers: [{ at: 'intro', d: D.adIn }, { at: 'outro', d: D.adOut }] }
   ];
-  SA.TPL_CATS = [['todas', 'Todas'], ['elegantes', 'Elegantes'], ['eventos', 'Eventos'], ['xv', 'XV años'], ['bodas', 'Bodas'], ['familia', 'Familia'], ['llamativas', 'Llamativas'], ['vlog', 'Vlog'], ['simples', 'Simples'], ['negocio', 'Negocio']];
+  SA.TPL_CATS = [['todas', 'Todas'], ['elegantes', 'Elegantes'], ['xvhombre', 'XV de hombre'], ['eventos', 'Eventos'], ['xv', 'XV años'], ['bodas', 'Bodas'], ['familia', 'Familia'], ['llamativas', 'Llamativas'], ['vlog', 'Vlog'], ['simples', 'Simples'], ['negocio', 'Negocio']];
   SA.TPL_DESIGNS = D;
 })();

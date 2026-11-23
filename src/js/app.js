@@ -50,7 +50,9 @@
     }
     try { await B.init(); } catch (e) { console.error(e); }
     try {
-      await Promise.all(['400 20px "SA Script"', '600 20px "SA Serif"', '600 20px "SA Caps"', '700 20px "SA Caps"', '800 20px "SA Caps"', '400 20px "SA Body"', '400 20px "SA VHS"', '300 20px "SA Fina"', '300 20px "SA Garamond"', 'italic 400 20px "SA Garamond"']
+      await Promise.all(['400 20px "SA Script"', '600 20px "SA Serif"', '600 20px "SA Caps"', '700 20px "SA Caps"', '800 20px "SA Caps"', '400 20px "SA Body"', '400 20px "SA VHS"', '300 20px "SA Fina"', '300 20px "SA Garamond"', 'italic 400 20px "SA Garamond"',
+      '500 20px "SA Fina"', '500 20px "SA Garamond"', 'italic 500 20px "SA Garamond"', '700 20px "SA Playfair"', '500 20px "SA Montserrat"',
+      '700 20px "SA Montserrat"', '800 20px "SA Montserrat"', '700 20px "SA Manuscrita"', '700 20px "SA Cinzel"', '400 20px "SA Bebas"']
         .map(f => document.fonts.load(f)));
     } catch (e) {}
     await SA.loadStoredLogo();

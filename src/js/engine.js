@@ -178,7 +178,8 @@
   /* ---------- Unir con transiciones ---------- */
   // 'luz' no es de FFmpeg: es un fundido con un destello cálido y suave encima (se hace con eq solo durante la unión,
   // así casi no tarda más; la versión con expresión propia de xfade era 13 veces más lenta).
-  E.xfType = tr => tr === 'luz' ? 'fade' : (tr || 'fade');
+  // 'corte' no existe en xfade: si llega a una unión con duración, se hace un fundido rápido.
+  E.xfType = tr => tr === 'luz' ? 'fade' : tr === 'corte' ? 'fadefast' : (tr || 'fade');
   E.xfPost = (tr, off, d) => {
     if (tr !== 'luz' || !(d > 0)) return '';
     const u = `pow(sin(PI*clip((t-${r3(off)})/${r3(d)},0,1)),2)`;
@@ -851,18 +852,21 @@
     cortes: { name: 'Solo cortes', T: 0, list: [] }
   };
   E.FS_MOVES = ['in', 'left', 'out', 'right', 'in', 'up', 'out', 'down'];
+  // Fotos y videos: un video (video: true) dura lo que se le pida pero nunca más que lo que mide desde su inicio (max),
+  // no se mueve con zoom y se toma desde su segundo 'start'. Se usa sin su sonido: la música es la de la fotosecuencia.
   E.fsPlan = o => {
     const n = o.photos.length;
     if (!n) throw new Error('Agrega por lo menos una foto.');
-    let d = o.photos.map(ph => +ph.dur || +o.dur || 4);
+    const cap = arr => arr.map((x, i) => o.photos[i].max > 0 ? Math.min(x, Math.max(1, o.photos[i].max)) : x);
+    let d = cap(o.photos.map(ph => +ph.dur || +o.dur || 4));
     const iMin = o.introMin || 0, oMin = o.outroMin || 0;
     if (n === 1) d[0] = Math.max(d[0], iMin, oMin, 5);
     else { d[0] = Math.max(d[0], iMin); d[n - 1] = Math.max(d[n - 1], oMin); }
     // Ajustar a la canción: las fotos de en medio se estiran o se encogen (nunca menos de 1.5 s).
     if (o.fit && n > 2) {
       const ends = d[0] + d[n - 1], mid = d.slice(1, -1).reduce((s, x) => s + x, 0), want = Math.max(1.5 * (n - 2), o.fit - ends);
-      d = d.map((x, i) => i === 0 || i === n - 1 ? x : Math.max(1.5, x * want / mid));
-    } else if (o.fit && n <= 2) d = d.map(x => Math.max(x, o.fit / n));
+      d = cap(d.map((x, i) => i === 0 || i === n - 1 ? x : Math.max(1.5, x * want / mid)));
+    } else if (o.fit && n <= 2) d = cap(d.map(x => Math.max(x, o.fit / n)));
     // Al ritmo: cada cambio de foto cae en un golpe de la canción.
     if (o.beat && o.beat.period > .25) {
       const P = o.beat.period < .75 ? o.beat.period * 2 : o.beat.period, off = o.beat.offset || 0, minStep = 1.2;
@@ -890,7 +894,9 @@
     const lens = d.map((x, i) => q(x + (i > 0 ? Ts[i - 1] / 2 : 0) + (i < n - 1 ? Ts[i] / 2 : 0)));
     let moveI = 0;
     const segments = lens.map((len, i) => {
-      const m = o.photos[i].move && o.photos[i].move !== 'auto' ? o.photos[i].move : (o.move === 'none' ? 'none' : o.move === 'in' ? 'in' : E.FS_MOVES[moveI++ % E.FS_MOVES.length]);
+      const ph = o.photos[i];
+      if (ph.video) return { m: i, len, move: 'none', start: Math.max(0, +ph.start || 0), video: true };
+      const m = ph.move && ph.move !== 'auto' ? ph.move : (o.move === 'none' ? 'none' : o.move === 'in' ? 'in' : E.FS_MOVES[moveI++ % E.FS_MOVES.length]);
       return { m: i, len, move: m, start: 0 };
     });
     // Tiempos en el video: dónde empieza cada foto, cuándo se ve completa y dónde cae cada cambio.

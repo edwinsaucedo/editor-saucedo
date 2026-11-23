@@ -1,4 +1,4 @@
-/* Pestaña Fotosecuencia: fotos con movimiento, transiciones profesionales (automáticas o una por una),
+/* Pestaña Fotosecuencia: fotos (y videos cortos) con movimiento, transiciones profesionales (automáticas o una por una),
  * letras como en las plantillas, música y logo. Se ve completa en la pantalla antes de crear el video. */
 (function () {
   'use strict';
@@ -13,6 +13,12 @@
 
   // Diseños de letras (los mismos de las plantillas): título al inicio y despedida al final.
   const DESIGNS = [
+    { id: 'clara', name: 'Clara (fácil de leer)', in: 'claraIn', out: 'claraOut', intro: 5, outro: 5, ph: { title: 'Ana & Luis', subtitle: 'Nos casamos', phrase: 'Te esperamos' } },
+    { id: 'grande', name: 'Tarjeta grande', in: 'grandeIn', out: 'grandeOut', intro: 5, outro: 4.6, ph: { title: 'Ana & Luis', subtitle: 'Save the date', phrase: '¡Te esperamos!' } },
+    { id: 'gala', name: 'XV Gala', in: 'galaIn', out: 'galaOut', intro: 5, outro: 5.4, ph: { title: 'Santiago', subtitle: 'Mis XV años', phrase: 'Gracias' } },
+    { id: 'caballero', name: 'XV Caballero', in: 'caballeroIn', out: 'caballeroOut', intro: 5, outro: 5.2, ph: { title: 'Santiago', subtitle: 'Mis XV años', phrase: 'Gracias por acompañarme' } },
+    { id: 'urbano', name: 'XV Urbano', in: 'urbanoIn', out: 'urbanoOut', intro: 3.2, outro: 3.4, ph: { title: 'Santiago', subtitle: 'Mis XV', phrase: 'Gracias' } },
+    { id: 'dulce', name: 'XV Dulce', in: 'dulceIn', out: 'dulceOut', intro: 5, outro: 5.4, ph: { title: 'Ana Sofía', subtitle: 'Mis XV años', phrase: 'Gracias por acompañarme' } },
     { id: 'elegante', name: 'Elegante', in: 'eleganteIn', out: 'eleganteOut', intro: 5, outro: 6, ph: { title: 'Ana & Luis', subtitle: 'Nuestra boda', phrase: 'Los esperamos' } },
     { id: 'cine', name: 'De cine', in: 'cineIn', out: 'cineOut', all: 'letterbox', intro: 4.6, outro: 5.6, ph: { title: 'Ana & Luis', subtitle: 'Una historia de' } },
     { id: 'nostalgia', name: 'Nostalgia', in: 'filmIn', out: 'filmOut', intro: 4.8, outro: 5, ph: { title: 'Ana & Luis', subtitle: 'nuestra historia' } },
@@ -57,10 +63,11 @@
       this.root.innerHTML = `
       <aside class="steps" aria-label="Pasos de la fotosecuencia">
         <section class="step">
-          <h2><span class="num">1</span>Fotos</h2>
-          <button class="drop" type="button" data-act="add"><strong>Agregar fotos</strong><span>o arrástralas a esta ventana</span></button>
+          <h2><span class="num">1</span>Fotos y videos</h2>
+          <button class="drop" type="button" data-act="add"><strong>Agregar fotos y videos</strong><span>o arrástralos a esta ventana</span></button>
           <div class="links"><button class="link" type="button" data-act="folder">Elegir una carpeta completa</button><button class="link" type="button" data-act="sortName" data-el="sortName" hidden>Ordenar por nombre</button><button class="link danger" type="button" data-act="clear" hidden>Quitar todas</button></div>
           <p class="count" data-el="count" aria-live="polite">Todavía no hay fotos.</p>
+          <p class="hint">Los videos se mezclan con las fotos, con sus transiciones y letreros. Se usan sin su sonido: se oye la música de la fotosecuencia.</p>
         </section>
         <section class="step">
           <h2><span class="num">2</span>Letras</h2>
@@ -204,16 +211,15 @@
     }
 
     /* ---------- Fotos ---------- */
-    act_add() { B.pick('images', true).then(p => p.length && this.addPaths(p)); }
+    act_add() { B.pick('media', true).then(p => p.length && this.addPaths(p)); }
     act_folder() { B.pickFolder().then(p => p && this.addPaths([p])); }
     async addPaths(paths) {
       const list = await B.listMedia(paths);
-      const imgs = list.filter(f => f.kind === 'image'), aud = list.filter(f => f.kind === 'audio'), vids = list.filter(f => f.kind === 'video').length;
+      const vis = list.filter(f => f.kind === 'image' || f.kind === 'video'), aud = list.filter(f => f.kind === 'audio');
       if (aud.length) this.setSong(aud[0].path);
-      if (!imgs.length) { if (!aud.length) toast(vids ? 'La fotosecuencia es solo con fotos. Los videos se usan en Plantillas o en la Película.' : 'No encontré fotos en lo que agregaste.'); return; }
-      if (vids) toast(`Se dejaron fuera ${vids} ${vids === 1 ? 'video' : 'videos'}: la fotosecuencia es solo con fotos.`);
+      if (!vis.length) { if (!aud.length) toast('No encontré fotos ni videos en lo que agregaste.'); return; }
       const known = new Set(this.photos.map(p => p.path));
-      const news = imgs.filter(f => !known.has(f.path)).map(f => ({ id: ++this.uid, path: f.path, name: f.name, status: 'loading' }));
+      const news = vis.filter(f => !known.has(f.path)).map(f => ({ id: ++this.uid, path: f.path, name: f.name, kind: f.kind, status: 'loading' }));
       this.photos.push(...news); this.planCache = null;
       this.renderFilm(); this.counts(); this.q('done').hidden = true;
       this.queue.push(...news); this.pump();
@@ -223,25 +229,45 @@
       while (this.queue.length) {
         const p = this.queue.shift(); if (!this.photos.includes(p)) continue;
         try {
-          const bmp = await createImageBitmap(await B.readBlob(p.path));
-          p.w = bmp.width; p.h = bmp.height; p.thumb = C.downscale(bmp, 480); bmp.close && bmp.close();
+          const bmp = p.kind === 'video' ? await this.videoPoster(p) : await createImageBitmap(await B.readBlob(p.path));
+          if (p.kind !== 'video') { p.w = bmp.width; p.h = bmp.height; }
+          p.thumb = C.downscale(bmp, 480); bmp.close && bmp.close();
           p.stats = C.computeStats(p.thumb); p.status = 'ok';
-        } catch (e) { p.status = 'error'; p.err = /\.(heic|heif)$/i.test(p.name) ? 'HEIC del iPhone: no se abre' : 'No se pudo abrir'; }
+        } catch (e) { p.status = 'error'; p.err = /\.(heic|heif)$/i.test(p.name) ? 'HEIC del iPhone: no se abre' : p.kind === 'video' ? 'Este video no se pudo leer' : 'No se pudo abrir'; }
         this.paintThumb(p); this.planCache = null; this.counts();
         if (!this.sel && p.status === 'ok') this.select(p, true);
       }
       this.pumping = false; this.counts(); this.syncStyle(); this.renderFilm(); this.renderDetail();
     }
+    // Video: medidas, duración y un cuadro para la miniatura (al 30 % o en el segundo 1).
+    async videoPoster(p) {
+      const pr = await B.probe(p.path);
+      if (!pr.hasVideo || !(pr.duration > .5)) throw new Error('sin video');
+      p.w = pr.width; p.h = pr.height; p.duration = pr.duration;
+      if (!this.tmpDir) this.tmpDir = await B.newJobDir();
+      const out = B.join(this.tmpDir, `cuadro_${p.id}.jpg`);
+      let r = await B.run('ffmpeg', ['-y', '-hide_banner', '-v', 'error', '-ss', String(Math.min(1, pr.duration * .3)), '-i', p.path, '-frames:v', '1', '-vf', 'scale=480:-2', out]);
+      if (r.code !== 0 || !(await B.exists(out))) r = await B.run('ffmpeg', ['-y', '-hide_banner', '-v', 'error', '-i', p.path, '-frames:v', '1', '-vf', 'scale=480:-2', out]);
+      return createImageBitmap(await B.readBlob(out, 'image/jpeg'));
+    }
+    // Cuánto dura un video si no se le pone duración: lo que mide (desde donde empieza), hasta 6 s o la duración de las fotos.
+    vDur(p) { return Math.max(1, Math.min((p.duration || 0) - (p.start || 0), Math.max(this.st.dur, 6))); }
+    durOf(p) { return p.kind === 'video' ? (p.dur ? Math.min(p.dur, (p.duration || 0) - (p.start || 0)) : this.vDur(p)) : (p.dur || this.st.dur); }
     ok() { return this.photos.filter(p => p.status === 'ok'); }
     counts() {
       const ok = this.ok().length, ld = this.photos.filter(p => p.status === 'loading').length, er = this.photos.filter(p => p.status === 'error').length;
-      let t = !this.photos.length ? 'Todavía no hay fotos.' : ld ? `Cargando ${this.photos.length - ld} de ${this.photos.length}…` : `${ok} ${ok === 1 ? 'foto' : 'fotos'}`;
+      let t = !this.photos.length ? 'Todavía no hay fotos.' : ld ? `Cargando ${this.photos.length - ld} de ${this.photos.length}…` : this.whatCount(this.ok());
       if (er) t += ` · ${er} no se ${er === 1 ? 'pudo' : 'pudieron'} abrir`;
       this.q('count').textContent = t;
       this.root.querySelector('[data-act="clear"]').hidden = !this.photos.length;
       this.q('sortName').hidden = this.photos.length < 2;
       this.q('empty').hidden = !!this.photos.length; this.q('ctrl').hidden = !ok; this.q('filmWrap').hidden = !this.photos.length;
       this.summary();
+    }
+    // "8 fotos · 2 videos"
+    whatCount(list) {
+      const v = list.filter(p => p.kind === 'video').length, f = list.length - v;
+      return [f && `${f} ${f === 1 ? 'foto' : 'fotos'}`, v && `${v} ${v === 1 ? 'video' : 'videos'}`].filter(Boolean).join(' · ') || '0 fotos';
     }
     renderFilm() {
       const film = this.q('film'), plan = this.plan(), okList = this.ok();
@@ -268,7 +294,7 @@
       if (p.status !== 'ok') return;
       pick.textContent = '';
       const c = document.createElement('canvas'); c.width = p.thumb.width; c.height = p.thumb.height; c.getContext('2d').drawImage(p.thumb, 0, 0); pick.appendChild(c);
-      const marks = [p.caption && 'T', p.move && p.move !== 'auto' && '↔', p.dur && '⏱'].filter(Boolean);
+      const marks = [p.kind === 'video' && `▶ ${fmt(p.duration || 0)}`, p.caption && 'T', p.kind !== 'video' && p.move && p.move !== 'auto' && '↔', p.dur && '⏱'].filter(Boolean);
       if (marks.length) { const s = document.createElement('span'); s.className = 'dur'; s.textContent = marks.join(' '); pick.appendChild(s); }
     }
     select(p, quiet) {
@@ -296,6 +322,7 @@
     remove(p) {
       const i = this.photos.indexOf(p); if (i < 0) return;
       this.photos.splice(i, 1); this.planCache = null; this.comp.delete(p.id);
+      if (p._vid) { p._vid.pause(); p._vid.removeAttribute('src'); p._vid.load(); p._vid = null; }
       if (this.sel === p) this.sel = this.photos[i] || this.photos[i - 1] || null;
       this.renderFilm(); this.counts(); this.renderDetail();
     }
@@ -306,7 +333,8 @@
     act_clear(b) {
       if (!this.clearArm) { b.textContent = '¿Seguro? Toca otra vez'; this.clearArm = setTimeout(() => { this.clearArm = 0; b.textContent = 'Quitar todas'; }, 4000); return; }
       clearTimeout(this.clearArm); this.clearArm = 0; b.textContent = 'Quitar todas';
-      this.photos = []; this.queue.length = 0; this.sel = null; this.comp.clear(); this.planCache = null; this.t = 0; this.setPlaying(false);
+      this.setPlaying(false); this.photos.forEach(p => { if (p._vid) { p._vid.removeAttribute('src'); p._vid.load(); p._vid = null; } });
+      this.photos = []; this.queue.length = 0; this.sel = null; this.comp.clear(); this.planCache = null; this.t = 0;
       this.renderFilm(); this.counts(); this.renderDetail();
     }
 
@@ -318,21 +346,25 @@
           <p class="hint">Toca la imagen grande o la barra de espacio para ver la fotosecuencia completa con su música.</p>`;
         return;
       }
-      const k = this.ok().indexOf(p), n = this.ok().length, w = plan.shown[k];
-      const tr = p.trans || {};
+      const k = this.ok().indexOf(p), n = this.ok().length, w = plan.shown[k], vid = p.kind === 'video';
+      const tr = p.trans || {}, room = vid ? Math.max(1, (p.duration || 0) - (p.start || 0)) : 0;
       d.innerHTML = `
         <h3 class="d-t">${esc(p.name)}</h3>
-        <p class="d-sub">Foto ${k + 1} de ${n} · se ve ${secs(plan.dur[k])} (de ${fmt(w.a)} a ${fmt(w.b)})</p>
+        <p class="d-sub">${vid ? 'Video' : 'Foto'} ${k + 1} de ${n} · se ve ${secs(plan.dur[k])} (de ${fmt(w.a)} a ${fmt(w.b)})${vid ? ` · el video mide ${fmt(p.duration || 0)}` : ''}</p>
         <button class="btn" type="button" data-act="playHere">▶ Ver desde aquí</button>
-        ${k > 0 ? `<div class="field"><span class="lbl">Transición al entrar esta foto</span>${TR.gridHtml(TR.TYPES, tr.type, 'setTrans')}
+        ${k > 0 ? `<div class="field"><span class="lbl">Transición al entrar ${vid ? 'este video' : 'esta foto'}</span>${TR.gridHtml(TR.TYPES, tr.type, 'setTrans')}
           ${tr.type && tr.type !== 'auto' && tr.type !== 'corte' ? `<span class="lbl">Duración de la transición</span><div class="seg small" data-el="tdur">${TR.DURS.map(([v, t]) => `<button type="button" data-act="tdur" data-v="${v}" aria-checked="${String(v) === String(tr.dur || .8)}">${t}</button>`).join('')}</div>` : ''}
           <div class="links"><button class="link" type="button" data-act="transAll">Usar esta transición en todas</button></div></div>`
-        : '<p class="flag tip">Es la primera foto: aquí aparece el título.</p>'}
-        <div class="field"><span class="lbl">Movimiento</span><div class="chips mv">${MOVES.map(([v, t]) => `<button type="button" class="chip" data-act="setMove" data-v="${v}" aria-pressed="${(p.move || 'auto') === v}">${t}</button>`).join('')}</div></div>
+        : `<p class="flag tip">Es ${vid ? 'el primer video' : 'la primera foto'}: aquí aparece el título.</p>`}
+        ${vid ? `<div class="field"><span class="lbl">Desde qué segundo del video</span><div class="stepper"><button type="button" data-act="pStart" data-v="-1">−</button><output>${fmt(p.start || 0)}</output><button type="button" data-act="pStart" data-v="1">+</button></div>
+            <p class="hint">Se usa sin su sonido: se oye la música de la fotosecuencia.</p></div>
+          <div class="field"><span class="lbl">Cuánto se ve este video</span><div class="stepper"><button type="button" data-act="pDur" data-v="-1">−</button><output>${p.dur ? secs(this.durOf(p)) : `${secs(this.vDur(p))} (automático)`}</output><button type="button" data-act="pDur" data-v="1">+</button></div>
+            ${p.dur ? '<button class="link" type="button" data-act="pDurReset">Automático</button>' : ''}<p class="hint">Hasta ${secs(room)}, lo que queda del video desde donde empieza.</p></div>`
+        : `<div class="field"><span class="lbl">Movimiento</span><div class="chips mv">${MOVES.map(([v, t]) => `<button type="button" class="chip" data-act="setMove" data-v="${v}" aria-pressed="${(p.move || 'auto') === v}">${t}</button>`).join('')}</div></div>
         <div class="field"><span class="lbl">Cuánto dura esta foto</span><div class="stepper"><button type="button" data-act="pDur" data-v="-0.5">−</button><output>${p.dur ? p.dur + ' s' : `Como todas (${this.st.dur} s)`}</output><button type="button" data-act="pDur" data-v="0.5">+</button></div>
-          ${p.dur ? '<button class="link" type="button" data-act="pDurReset">Que dure como todas</button>' : ''}</div>
-        <label class="field"><span class="lbl">Letrero en esta foto (opcional)</span><input class="input" type="text" data-el="cap" maxlength="40" placeholder="Ej. Los novios" value="${esc(p.caption || '')}" autocomplete="off"></label>
-        <div class="d-actions"><button class="navbtn dark" type="button" data-act="left" ${k <= 0 ? 'disabled' : ''}>‹ Antes</button><button class="navbtn dark" type="button" data-act="right" ${k >= n - 1 ? 'disabled' : ''}>Después ›</button><button class="btn" type="button" data-act="removeSel">Quitar foto</button></div>`;
+          ${p.dur ? '<button class="link" type="button" data-act="pDurReset">Que dure como todas</button>' : ''}</div>`}
+        <label class="field"><span class="lbl">Letrero en ${vid ? 'este video' : 'esta foto'} (opcional)</span><input class="input" type="text" data-el="cap" maxlength="40" placeholder="Ej. Los novios" value="${esc(p.caption || '')}" autocomplete="off"></label>
+        <div class="d-actions"><button class="navbtn dark" type="button" data-act="left" ${k <= 0 ? 'disabled' : ''}>‹ Antes</button><button class="navbtn dark" type="button" data-act="right" ${k >= n - 1 ? 'disabled' : ''}>Después ›</button><button class="btn" type="button" data-act="removeSel">Quitar ${vid ? 'video' : 'foto'}</button></div>`;
       const cap = d.querySelector('[data-el="cap"]');
       cap.addEventListener('input', () => { p.caption = cap.value.trim() || undefined; this.paintThumb(p); });
       const prev = this.ok()[k - 1], grid = d.querySelector('.trans-grid');
@@ -345,7 +377,17 @@
       this.edited(true); toast(t ? `Todas las fotos entran con "${TR.name(t.type)}".` : 'Todas las fotos usan las transiciones automáticas.');
     }
     act_setMove(b) { this.sel.move = b.dataset.v === 'auto' ? undefined : b.dataset.v; this.edited(); this.act_playHere(); }
-    act_pDur(b) { const p = this.sel; p.dur = Math.max(1.5, Math.min(15, (p.dur || this.st.dur) + (+b.dataset.v))); this.edited(true); }
+    act_pDur(b) {
+      const p = this.sel;
+      if (p.kind === 'video') { const room = Math.max(1, (p.duration || 0) - (p.start || 0)); p.dur = Math.max(1, Math.min(room, 60, Math.round(this.durOf(p)) + (+b.dataset.v))); }
+      else p.dur = Math.max(1.5, Math.min(15, (p.dur || this.st.dur) + (+b.dataset.v)));
+      this.edited(true);
+    }
+    act_pStart(b) {
+      const p = this.sel; if (!p || p.kind !== 'video') return;
+      p.start = Math.max(0, Math.min(Math.max(0, (p.duration || 0) - 1), (p.start || 0) + (+b.dataset.v)));
+      this.edited(true); this.act_playHere();
+    }
     act_pDurReset() { this.sel.dur = undefined; this.edited(true); }
     edited(film) { this.planCache = null; if (film) this.renderFilm(); else this.paintThumb(this.sel); this.renderDetail(); this.summary(); }
     act_playHere() { const plan = this.plan(), k = this.ok().indexOf(this.sel); if (!plan || k < 0) return; this.t = Math.max(0, (k ? plan.starts[k] : 0) - .3); this.setPlaying(true); }
@@ -364,8 +406,8 @@
       const s = this.st.song;
       if (s === 'none') { this.song = null; this.renderSong(); return; }
       if (s && s.builtin && SA.music.get(s.builtin)) { this.useBuiltin(s.builtin); return; }
-      if (s && s.path) { this.setSong(s.path, true).then(ok => { if (!ok) this.useBuiltin('nuestro-momento'); }); return; }
-      if (SA.music.available()) this.useBuiltin('nuestro-momento'); else this.renderSong();
+      if (s && s.path) { this.setSong(s.path, true).then(ok => { if (!ok) this.useBuiltin(SA.music.get('gymnopedie') ? 'gymnopedie' : 'nuestro-momento'); }); return; }
+      if (SA.music.available()) this.useBuiltin(SA.music.get('gymnopedie') ? 'gymnopedie' : 'nuestro-momento'); else this.renderSong();
     }
     useBuiltin(id) {
       const s = SA.music.song(id); if (!s) { this.renderSong(); return; }
@@ -393,7 +435,7 @@
     }
     async act_song() {
       this.stopAudio();
-      const r = await SA.music.pick({ title: 'Música de la fotosecuencia', forName: 'Fotosecuencia', suggest: ['nuestro-momento', 'primer-baile', 'vals-de-la-luna', 'promesa', 'eternamente', 'para-siempre'], current: this.song, allowNone: true, noneLabel: 'Sin música' });
+      const r = await SA.music.pick({ title: 'Música de la fotosecuencia', forName: 'Fotosecuencia', suggest: ['gymnopedie', 'nocturno', 'vals-de-las-flores', 'canon-en-re', 'vals-del-adios', 'nuestro-momento'], current: this.song, allowNone: true, noneLabel: 'Sin música' });
       if (!r) return;
       if (r.kind === 'builtin') this.useBuiltin(r.id); else if (r.kind === 'file') this.setSong(r.path);
       else { this.stopAudio(); this.song = null; this.beat = null; this.st.song = 'none'; this.save(); this.renderSong(); this.planCache = null; this.summary(); }
@@ -423,16 +465,18 @@
       const d = this.design();
       // Canciones incluidas en una fotosecuencia corta: empieza en la mejor parte.
       if (this.song && this.song.builtin && this.st.startAuto) {
-        const approx = okList.reduce((s, p) => s + (p.dur || this.st.dur), 0);
+        const approx = okList.reduce((s, p) => s + this.durOf(p), 0);
         this.st.songStart = !this.st.fit && approx <= 75 ? SA.music.bestStart(this.song.builtin, approx) : 0;
         const ss = this.q('ss'); if (ss) ss.textContent = fmt(this.st.songStart);
       }
-      const key = JSON.stringify([okList.map(p => [p.id, p.dur, p.trans, p.move]), this.st.dur, this.st.style, this.st.move, this.st.design, this.st.fit, this.st.beatOn, this.st.songStart, this.song && this.song.path, !!this.beat]);
+      const key = JSON.stringify([okList.map(p => [p.id, p.dur, p.trans, p.move, p.kind, p.start]), this.st.dur, this.st.style, this.st.move, this.st.design, this.st.fit, this.st.beatOn, this.st.songStart, this.song && this.song.path, !!this.beat]);
       if (this.planCache && this.planKey === key) return this.planCache;
       let beat = null;
       if (this.beat && this.st.beatOn && this.song) { const s = this.st.songStart, nb = this.beat.beats.find(b => b >= s - .02); if (nb != null) beat = { period: this.beat.period, offset: Math.max(0, nb - s) }; }
       try {
-        this.planCache = E.fsPlan({ photos: okList.map(p => ({ dur: p.dur, trans: p.trans, move: p.move })), dur: this.st.dur, style: E.FS_STYLES[this.st.style] || E.FS_STYLES.elegante,
+        this.planCache = E.fsPlan({ photos: okList.map(p => p.kind === 'video'
+            ? { dur: this.durOf(p), trans: p.trans, video: true, start: p.start || 0, max: Math.max(1, (p.duration || 0) - (p.start || 0)) }
+            : { dur: p.dur, trans: p.trans, move: p.move }), dur: this.st.dur, style: E.FS_STYLES[this.st.style] || E.FS_STYLES.elegante,
           move: this.st.move, beat, fit: this.st.fit && this.song ? Math.max(10, this.song.duration - this.st.songStart) : null, introMin: d.intro, outroMin: d.outro });
       } catch (e) { this.planCache = null; }
       this.planKey = key;
@@ -444,11 +488,11 @@
     }
     summary() {
       const el = this.q('summary'), plan = this.plan();
-      if (!plan) { el.textContent = 'Agrega fotos para ver cuánto va a durar.'; this.syncTime(); return; }
+      if (!plan) { el.textContent = 'Agrega fotos o videos para ver cuánto va a durar.'; this.syncTime(); return; }
       const docs = B.paths.documents || '', dir = this.outDir(), shown = dir.startsWith(docs) ? 'Documentos' + dir.slice(docs.length).split(/[\\/]/).join(' › ') : dir;
       const w = E.WEIGHTS[this.st.weight] || E.WEIGHTS.normal, n = this.st.formats.length, mb = Math.max(1, Math.round(plan.total / 60 * w.mbMin * (S.codec === 'h265' ? .55 : 1)));
       const how = { suave: 'transiciones suaves', elegante: 'transiciones elegantes', dinamica: 'transiciones dinámicas', cortes: 'solo cortes' }[this.st.style] || '';
-      el.innerHTML = `Duración: <strong>${fmt(plan.total)}</strong> · ${plan.segments.length} fotos · ${how}` +
+      el.innerHTML = `Duración: <strong>${fmt(plan.total)}</strong> · ${this.whatCount(this.ok())} · ${how}` +
         (this.song ? ` · ♪ ${esc(this.song.name)}` : ' · <strong>sin música</strong>') + `<br>${n === 1 ? 'Se crea 1 video' : `Se crean ${n} videos`} de unos ${mb} MB en ${esc(shown)}`;
       this.syncTime();
     }
@@ -473,13 +517,34 @@
       const differ = Math.abs(Math.log((img.width / img.height) / (W / H))) > .35;
       if (!differ) C.drawFit(x, img, W, H, 'cover');
       else { x.filter = 'blur(14px) brightness(.8)'; C.drawFit(x, img, W, H, 'cover', 1.15); x.filter = 'none'; C.drawFit(x, img, W, H, 'contain'); }
-      if (this.st.enhance) C.colorCanvas(x, W, H, p.stats, { auto: true, style: 'natural' });
+      if (this.st.enhance && p.kind !== 'video') C.colorCanvas(x, W, H, p.stats, { auto: true, style: 'natural' });
       this.comp.set(k, c);
       while (this.comp.size > 14) this.comp.delete(this.comp.keys().next().value);
       return c;
     }
+    // Video en la vista previa: el <video> de verdad, en el segundo que toca (en pausa se queda en ese cuadro).
+    vidEl(p) {
+      if (p._vid) return p._vid.readyState >= 2 && p._vid.videoWidth ? p._vid : null;
+      const v = document.createElement('video'); v.muted = true; v.preload = 'auto'; v.playsInline = true; p._vid = v;
+      B.previewSrc(p.path).then(src => { v.src = src; }).catch(() => {});
+      return null;
+    }
+    pauseVideos(keep) { this.photos.forEach(p => { if (p._vid && !(keep && keep.has(p)) && !p._vid.paused) p._vid.pause(); }); }
+    videoFrame(k, t, plan, okList) {
+      return (ctx, W, H) => {
+        const p = okList[k], sg = plan.segments[k], v = this.vidEl(p);
+        const lt = Math.max(0, Math.min((p.duration || 0) - .05, (sg.start || 0) + t - plan.starts[k]));
+        if (this._used) this._used.add(p);
+        if (!v) { ctx.drawImage(this.compOf(p, W, H), 0, 0); return; }
+        if (this.playing) { if (v.paused) v.play().catch(() => {}); if (Math.abs(v.currentTime - lt) > .35) v.currentTime = lt; }
+        else { if (!v.paused) v.pause(); if (Math.abs(v.currentTime - lt) > .04 && !v.seeking) v.currentTime = lt; }
+        if (Math.abs(Math.log((v.videoWidth / v.videoHeight) / (W / H))) <= .35) C.drawFit(ctx, v, W, H, 'cover');
+        else { ctx.save(); ctx.filter = 'blur(14px) brightness(.8)'; C.drawFit(ctx, v, W, H, 'cover', 1.15); ctx.restore(); C.drawFit(ctx, v, W, H, 'contain'); }
+      };
+    }
     // Cuadro de la foto k en el tiempo t, con su movimiento (igual que zoompan en FFmpeg).
     photoFrame(k, t, plan, okList) {
+      if (okList[k].kind === 'video') return this.videoFrame(k, t, plan, okList);
       return (ctx, W, H) => {
         const p = okList[k], img = this.compOf(p, W, H), sg = plan.segments[k], L = sg.len, pr = Math.max(0, Math.min(1, (t - plan.starts[k]) / L)), Z = ZOOM;
         let z = 1 + Z, fx = .5, fy = .5;
@@ -494,6 +559,7 @@
       if (!W || !plan) { ctx.clearRect(0, 0, W, H); return; }
       const n = okList.length;
       let k = 0; while (k + 1 < n && t >= plan.starts[k + 1]) k++;
+      this._used = new Set();
       ctx.save(); ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
       // ¿Está en medio de una transición?
       if (k > 0 && t < plan.starts[k] + plan.eff[k - 1]) {
@@ -511,6 +577,7 @@
       });
       if (S.wm) SA.drawWatermark(ctx, W, H, S, SA.VIDEO_WM_SCALE);
       ctx.restore();
+      this.pauseVideos(this._used); this._used = null;
       // Entrada y salida en negro
       const fa = Math.max(t < .5 ? 1 - t / .5 : 0, t > plan.total - 1 ? (t - (plan.total - 1)) : 0);
       if (fa > 0) { ctx.fillStyle = `rgba(0,0,0,${Math.min(1, fa)})`; ctx.fillRect(0, 0, W, H); }
@@ -543,7 +610,7 @@
         const g = ctx.createLinearGradient(0, H * .6, 0, H); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,.45)');
         ctx.fillStyle = g; ctx.fillRect(0, H * .6, W * .7, H * .4);
         ctx.fillStyle = th.accent; ctx.fillRect(x, y - 58 * u, 70 * u, 3 * u);
-        A.text(ctx, text, x, y, { s: 76 * u, f: A.F.script, color: th.text, align: 'left', shadow: 14 * u, maxW: W * .6 });
+        A.text(ctx, text, x, y, { w: 700, s: 70 * u, f: A.F.manus, color: th.text, align: 'left', shadow: 14 * u, maxW: W * .6 });
       });
     }
     loop() {
@@ -571,7 +638,7 @@
       const plan = this.plan();
       if (on && (!plan)) return;
       if (on && plan && this.t >= plan.total - .05) this.t = 0;
-      this.playing = on; if (!on) this.stopAt = 0;
+      this.playing = on; if (!on) { this.stopAt = 0; this.pauseVideos(); }
       this.q('playBtn').textContent = on ? '❚❚ Pausa' : '▶ Ver';
       if (on) this.playAudio(); else this.stopAudio();
     }
@@ -629,8 +696,8 @@
     act_openDir() { this.lastOut && B.open(this.lastOut, true); }
     async act_create() {
       if (this.busy) return;
-      if (this.photos.some(p => p.status === 'loading')) { toast('Espera a que terminen de cargar las fotos.'); return; }
-      if (!this.ok().length) { toast('Agrega por lo menos una foto.'); return; }
+      if (this.photos.some(p => p.status === 'loading')) { toast('Espera a que terminen de cargar las fotos y los videos.'); return; }
+      if (!this.ok().length) { toast('Agrega por lo menos una foto o un video.'); return; }
       if (this.design().in && !(this.st.values.title || '').trim()) { toast('Escribe el título (paso 2).'); const f = this.root.querySelector('[data-f="title"]'); f.scrollIntoView({ block: 'center' }); f.focus(); return; }
       this.setPlaying(false); SA.music.stop();
       this.busy = true; this.cancelled = false; this.t0 = performance.now();
@@ -667,13 +734,18 @@
       const tmp = await B.newJobDir();
       try {
         const est = plan.lens.reduce((s, x) => s + x, 0) * (1 + .5 * (okList.length > 12)) + plan.total * 1.2;
-        const totalW = okList.length * 1.2 + 4 + est;
-        let done = 0;
-        // 1. Fotos (ya al tamaño del video: así FFmpeg trabaja ligero)
+        const nImg = okList.filter(p => p.kind !== 'video').length, totalW = nImg * 1.2 + 4 + est;
+        let done = 0, ni = 0;
+        // 1. Fotos (ya al tamaño del video: así FFmpeg trabaja ligero). Los videos se leen directo del archivo.
         const media = [], luma = [];
         for (let i = 0; i < okList.length; i++) {
           if (this.cancelled) return null;
-          this.setProgress(done / totalW, `${prefix}Preparando fotos: ${i + 1} de ${okList.length}`);
+          const v = okList[i];
+          if (v.kind === 'video') {
+            media.push({ kind: 'video', path: v.path, width: v.w, height: v.h, duration: v.duration || 0, name: v.name });
+            luma[i] = SA.wmZoneLuma(v.thumb, W, H, S, SA.VIDEO_WM_SCALE); continue;
+          }
+          this.setProgress(done / totalW, `${prefix}Preparando fotos: ${++ni} de ${nImg}`);
           const still = B.join(tmp, `foto_${String(i + 1).padStart(3, '0')}.jpg`);
           try { luma[i] = await this.makeStill(okList[i], W, H, still); }
           catch (e) { throw Object.assign(new Error(`No se pudo preparar la foto «${okList[i].name}». Quítala y vuelve a intentar.`), { detail: String(e) }); }
@@ -713,7 +785,7 @@
         const jobW = job.steps.reduce((s, x) => s + x.weight, 0), scale = est / jobW;
         for (const step of job.steps) {
           if (this.cancelled) return null;
-          const label = prefix + (step.stage === 'toma' ? `Moviendo las fotos: ${step.n} de ${step.of}` : step.stage === 'grupo' ? `Uniendo con transiciones: ${step.n} de ${step.of}` : 'Terminando el video');
+          const label = prefix + (step.stage === 'toma' ? `${okList.some(p => p.kind === 'video') ? 'Preparando fotos y videos' : 'Moviendo las fotos'}: ${step.n} de ${step.of}` : step.stage === 'grupo' ? `Uniendo con transiciones: ${step.n} de ${step.of}` : 'Terminando el video');
           const onT = tt => this.setProgress((done + Math.min(1, tt / step.seconds) * step.weight * scale) / totalW, label);
           onT(0);
           let r = await B.run('ffmpeg', step.args, onT);
@@ -724,8 +796,8 @@
           }
           if (this.cancelled) return null;
           if (r.code !== 0) {
-            const who = step.media != null ? okList[step.media].name : null;
-            throw Object.assign(new Error(who ? `No se pudo usar la foto «${who}». Quítala y vuelve a intentar.` : 'FFmpeg no pudo terminar el video. Revisa que haya espacio en el disco e intenta de nuevo.'), { detail: r.stderr });
+            const it = step.media != null ? okList[step.media] : null, who = it && it.name;
+            throw Object.assign(new Error(who ? `No se pudo usar ${it.kind === 'video' ? 'el video' : 'la foto'} «${who}». Quítal${it.kind === 'video' ? 'o' : 'a'} y vuelve a intentar.` : 'FFmpeg no pudo terminar el video. Revisa que haya espacio en el disco e intenta de nuevo.'), { detail: r.stderr });
           }
           done += step.weight * scale;
         }

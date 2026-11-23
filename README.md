@@ -5,13 +5,13 @@ Programa para Windows de **Eduardo Saucedo · Video & Fotografía**. Está hecho
 | Pestaña | Qué hace |
 |---|---|
 | **Fotos** | Botón "Mejorar colores", 6 estilos (Natural, Boda cálida, Rosa XV, Blanco y negro, Colores vivos, Película), ajustes finos (brillo, contraste, saturación, calidez) y el logo oficial como marca de agua. Todo se aplica a **todas las fotos o solo a una** (con giro y lugar del logo propio). Guarda por lote en JPG al tamaño original. |
-| **Plantillas de video** | 36 plantillas tipo CapCut, simples y elaboradas (6 nuevas **elegantes y modernas**, con su propia categoría), con textos animados, efectos y cortes al ritmo. Cada una ya trae su canción sugerida (se puede cambiar). Sombra de las letras a elegir. Vertical, horizontal y cuadrado. |
-| **Fotosecuencia** | Fotos con movimiento y transiciones profesionales (automáticas o una por una), letras como en las plantillas, letreros por foto, música al ritmo y tres pesos de archivo. Se ve completa en la pantalla antes de crearla. |
+| **Plantillas de video** | 44 plantillas tipo CapCut, simples y elaboradas, con textos animados, efectos y cortes al ritmo. Categorías **Elegantes** y **XV de hombre**; las nuevas usan letras gruesas y grandes que se leen bien en el celular. Cada una ya trae su canción sugerida (se puede cambiar). Sombra de las letras a elegir. Vertical, horizontal y cuadrado. |
+| **Fotosecuencia** | Fotos y videos cortos mezclados, con movimiento y transiciones profesionales (automáticas o una por una), letras como en las plantillas, letreros por foto, música al ritmo y tres pesos de archivo. Se ve completa en la pantalla antes de crearla. |
 | **Película del evento** | La película completa de la fiesta, guiada por momentos, con **transiciones según el momento** (lentas y cálidas en la ceremonia y el vals, ágiles en la fiesta), más un **resumen** de 3 a 5 min y un **reel** vertical armados solos con las mejores partes. Con edición avanzada: tijeras, acortar la película a la duración que se pida, transición, velocidad, giro y color por toma. |
 
 **Logo:** viene de fábrica el logo oficial en negro y en blanco. En automático se pone negro sobre fondos claros y blanco sobre oscuros, foto por foto y toma por toma. Tamaño chico, mediano o grande desde Fotos, Plantillas o Película (es el mismo ajuste en las tres). Se puede subir otro logo.
 
-**Música incluida:** 20 canciones originales hechas para el programa: 3 valses (lento, de salón y de XV), baladas con piano de cola y orquesta de cuerdas grabados de instrumentos reales, piano solo, guitarra de nylon, de película, y también alegre, lo-fi, tierna, cumbia, electrónica, trap, retro 80s, navideña y ragtime. Se pueden subir a Facebook, Instagram, TikTok y YouTube sin reclamos de derechos. En la ventana de música se escucha la mejor parte con ▶ y se elige con "Usar"; también se puede usar una canción de la computadora.
+**Música incluida:** 34 canciones. **14 son grabaciones reales de dominio público** (bandas de los Estados Unidos, Musopen y músicos que liberaron sus grabaciones): El Danubio Azul, Vals de las flores, valses de Chopin y de Strauss, Canon de Pachelbel, Aire en sol, Ave María, Marcha nupcial, Nocturno, Gymnopédie y más. Las otras 20 son originales del programa (valses, baladas, alegre, lo-fi, cumbia, electrónica, trap, retro 80s, navideña y ragtime). Todas se pueden subir a Facebook, Instagram, TikTok y YouTube; si YouTube marcara por error una pieza clásica, se disputa porque es de dominio público. En la ventana de música se escucha la mejor parte con ▶ y se elige con "Usar"; también se puede usar una canción de la computadora.
 
 **Compresión:** al crear un video se elige **Compatible (H.264)**, que se abre en cualquier lado, o **Más ligero (H.265)**, que con la misma calidad pesa cerca de la mitad en video de cámara y fotos. La elección se recuerda y es la misma en Plantillas, Fotosecuencia y Película.
 
@@ -21,6 +21,14 @@ Todo se guarda en `Documentos\Saucedo\<fecha> <plantilla o evento> <nombres>\`.
 
 | Plantilla | Tipo | Lo que la distingue |
 |---|---|---|
+| XV Gala ★ | Elaborada | XV de hombre: azul marino y dorado, "MIS XV AÑOS", el nombre grande y un brillo dorado |
+| XV Caballero ★ | Simple | XV de hombre: negro y plata, la inicial en un anillo que se dibuja solo |
+| XV Urbano ★ | Elaborada | XV de hombre: negro y naranja, letras altas que entran de golpe, cortes rápidos |
+| XV Campeón ★ | Elaborada | XV de hombre: estilo deportivo, un 15 enorme, luces de estadio y letrero de marcador |
+| Boda clara ★ | Simple | "NOS CASAMOS", nombres en letra gruesa y fecha grande |
+| Save the Date grande ★ | Simple | Tarjeta clara con letras oscuras y grandes: se lee perfecto en WhatsApp |
+| XV Dulce ★ | Simple | "Mis XV años" en manuscrita clara, nombre grande y pétalos |
+| Bautizo claro ★ | Simple | Blanco y celeste, luces suaves y letras grandes |
 | Luz dorada ✦ | Elaborada | Luces doradas que flotan, nombres con brillo cálido, transiciones de luz |
 | Editorial ✦ | Simple | Como portada de revista de novias: título en letra fina que sube despacio |
 | Vals XV elegante ✦ | Elaborada | Marco fino que se dibuja solo, pétalos que caen, cortes al compás del vals |
@@ -58,7 +66,7 @@ Todo se guarda en `Documentos\Saucedo\<fecha> <plantilla o evento> <nombres>\`.
 | Película antigua | Simple | Blanco y negro, parpadeo de proyector, letreros de cine mudo |
 | Aniversario | Simple | "10 años" en grande, corazones que suben, nombres manuscritos |
 
-✦ = nuevas en la versión 0.7 (categoría **Elegantes**, junto con Save the Date clásico, Videoclip XV, Boda elegante, Agradecimiento y Aniversario).
+★ = nuevas en la versión 0.8 (letras Playfair Display, Montserrat, Bebas Neue, Cinzel y Dancing Script). ✦ = nuevas en la 0.7 (categoría **Elegantes**, junto con Save the Date clásico, Videoclip XV, Boda elegante, Agradecimiento y Aniversario); en la 0.8 sus letras finas se hicieron más gruesas para que se lean mejor.
 
 Las plantillas están en `src/js/templates.js`: cada una es una receta (tiempos, transiciones, color, efectos, canciones sugeridas) más sus diseños de texto, que se dibujan cuadro por cuadro y FFmpeg pone encima del video. En videos cortos con música incluida, la canción empieza sola en su mejor parte (el coro) y los cortes caen exactos en el ritmo, porque el tempo de cada canción se conoce de fábrica.
 
@@ -87,15 +95,39 @@ Las plantillas están en `src/js/templates.js`: cada una es una receta (tiempos,
 
 ## Fotosecuencia
 
-1. **Fotos:** se agregan o se arrastran; se ordenan como se agregaron o por nombre (como salen de la cámara), y se mueven con ‹ Antes / Después ›.
-2. **Letras:** 12 diseños de las plantillas (Elegante, De cine, Nostalgia, Delicado, Máquina de escribir, Minimal, Neón, Fiesta, Mexicana, Impacto, Navidad, Glitch) o sin letras; título al inicio y despedida al final, color y sombra. Cada foto puede llevar su letrero (elegante o en globo tipo CapCut).
+1. **Fotos y videos:** se agregan o se arrastran; se ordenan como se agregaron o por nombre (como salen de la cámara), y se mueven con ‹ Antes / Después ›. Los videos se mezclan con las fotos (con sus transiciones y letreros), se elige desde qué segundo empiezan y cuánto se ven, y se usan sin su sonido porque se oye la música.
+2. **Letras:** 18 diseños de las plantillas (Clara, Tarjeta grande, XV Gala, XV Caballero, XV Urbano, XV Dulce, Elegante, De cine, Nostalgia, Delicado, Máquina de escribir, Minimal, Neón, Fiesta, Mexicana, Impacto, Navidad, Glitch) o sin letras; título al inicio y despedida al final, color y sombra. Cada foto puede llevar su letrero (elegante o en globo tipo CapCut).
 3. **Transiciones y movimiento:** estilos automáticos (Suave, Elegante, Dinámica o Solo cortes) y, foto por foto, cualquiera de las 23 transiciones con su duración, movimiento (acercar, alejar, recorrer hacia un lado o quieta) y cuánto dura. Entre foto y foto se ve la transición; al tocarla se reproduce ese momento.
 4. **Música:** canciones incluidas (empieza sola en la mejor parte), cambio de foto al ritmo y opción de que dure toda la canción.
 5. **Crear:** horizontal, vertical o cuadrado; peso Ligero (720p, para WhatsApp), Normal (1080p) o Alta calidad, y compresión H.264 o H.265. Las fotos se preparan una sola vez al tamaño del video para que FFmpeg trabaje ligero.
 
 ## Música incluida (`tools/musica/`)
 
-Las 20 canciones se componen en código (acordes, melodías, baterías y bajos en `tools/musica/canciones/`) y se mezclan y masterizan en Python: ecualización, reverberación de sala, compresión lateral en la electrónica, balance tonal por género y volumen de −14 LUFS (−16 en el piano solo) con picos de −1 dB.
+**Grabaciones reales (`tools/musica/pd/`).** Se buscan en Wikimedia Commons solo grabaciones de dominio público o CC0 (`buscar.py`), se descargan revisando otra vez la licencia (`descargar.py`, corre en GitHub Actions en la rama `musica-pd` porque necesita internet) y se preparan con `preparar.py`: sin silencios al inicio y al final, volumen parejo a −16 LUFS sin aplastar la dinámica, pulsos medidos con librosa y la "mejor parte" para videos cortos. Cada una guarda su crédito y su licencia y se ve en la ventana de música:
+
+| Canción | Compositor · intérprete | Licencia |
+|---|---|---|
+| El Danubio Azul | Johann Strauss II · Banda de Marina de los EE. UU. | Dominio público (gobierno de EE. UU.) |
+| Vals de las flores | Chaikovski · Banda de Concierto de la Fuerza Aérea de los EE. UU. | Dominio público (gobierno de EE. UU.) |
+| Valses de Strauss | Johann Strauss II · Cuerdas de la Fuerza Aérea de los EE. UU. | Dominio público (gobierno de EE. UU.) |
+| Gran vals brillante, Vals del adiós, Vals melancólico | Chopin · Olga Gurevich (Musopen) | Dominio público |
+| Nocturno | Chopin · Frank Lévy (Musopen) | Dominio público |
+| Canon de Pachelbel | Pachelbel · Strolling Strings de la Fuerza Aérea de los EE. UU. | Dominio público (gobierno de EE. UU.) |
+| Aire en sol | Bach · Cuerdas de la Fuerza Aérea de los EE. UU. | Dominio público (gobierno de EE. UU.) |
+| Jesús, alegría de los hombres | Bach · Orchestra Gli Armonici (Musopen) | CC0 |
+| Ave María | Bach y Gounod · John Michel, chelo | Dominio público |
+| Marcha nupcial | Wagner · Musopen | CC0 |
+| Gymnopédie n.º 1 | Satie · Michael Laucke, guitarra | Dominio público |
+| La mañana | Grieg · Musopen Symphony | Dominio público |
+
+```bash
+# después de que el flujo "Música de dominio público" deja los MP3 en la rama musica-pd:
+git archive origin/musica-pd tools/musica/pd/out/audio | tar -x -C /tmp/pd
+pip install librosa numpy
+SAUCEDO_PD_AUDIO=/tmp/pd/tools/musica/pd/out/audio python3 tools/musica/pd/preparar.py
+```
+
+**Compuestas para el programa.** Las 20 canciones originales se componen en código (acordes, melodías, baterías y bajos en `tools/musica/canciones/`) y se mezclan y masterizan en Python: ecualización, reverberación de sala, compresión lateral en la electrónica, balance tonal por género y volumen de −14 LUFS (−16 en el piano solo) con picos de −1 dB.
 
 - **Valses y baladas** (Vals de la luna, Primer baile, Para siempre, Eternamente, Promesa, Vals de las rosas, Vals de quince, Nuestro momento y Nuestra historia) se tocan con **MuseScore General**, que trae un piano de cola grabado nota por nota (Splendid Grand Piano) y secciones de cuerdas grabadas (VSCO 2). Para que no suenen a máquina, `tools/musica/expr.py` las interpreta como un músico: cada frase crece y baja, el tempo se detiene un poco al final de cada frase y mucho al final (rubato), el piano arpegia los acordes unos milisegundos y cambia el pedal después del tiempo, las cuerdas crecen dentro de cada nota larga, y en los valses el segundo tiempo llega un poco antes, como en el vals vienés. Las que tienen rubato guardan el tiempo exacto de cada pulso, así los cortes del video siguen cayendo en el ritmo.
 - **Las demás** se tocan con **GeneralUser GS** de S. Christian Collins (su licencia permite usarlo para hacer música, incluso comercial).
@@ -164,6 +196,6 @@ node tools/test-templates.mjs ./.prueba-plantillas <material>   # ritmo, capas a
 
 ## Licencias de terceros
 
-- Letras: Great Vibes, Cormorant Garamond, Jost, Archivo, Atkinson Hyperlegible y VT323, todas con licencia SIL Open Font License 1.1.
+- Letras: Great Vibes, Cormorant Garamond, Jost, Playfair Display, Montserrat, Bebas Neue, Cinzel, Dancing Script, Archivo, Atkinson Hyperlegible y VT323, todas con licencia SIL Open Font License 1.1.
 - FFmpeg (compilación GPL de BtbN) se incluye como programa aparte dentro del instalador, bajo su propia licencia GPL.
-- Música: composiciones originales de este proyecto, tocadas con GeneralUser GS (S. Christian Collins), cuya licencia permite usarlo sin restricción para crear música privada o comercial, y con MuseScore General (licencia MIT), que incluye Splendid Grand Piano (dominio público) y VSCO 2 Community Edition (CC0).
+- Música: grabaciones de dominio público o CC0 tomadas de Wikimedia Commons (ver la tabla de grabaciones reales; el crédito de cada una está en `tools/musica/meta/`), y composiciones originales de este proyecto, tocadas con GeneralUser GS (S. Christian Collins), cuya licencia permite usarlo sin restricción para crear música privada o comercial, y con MuseScore General (licencia MIT), que incluye Splendid Grand Piano (dominio público) y VSCO 2 Community Edition (CC0).

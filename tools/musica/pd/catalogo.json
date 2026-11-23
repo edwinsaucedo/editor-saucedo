@@ -1,0 +1,242 @@
+[
+ {
+  "id": "danubio-azul",
+  "src": "danubio-azul",
+  "name": "El Danubio Azul",
+  "mood": "Vals vienés",
+  "meter": 3,
+  "tags": [
+   "vals",
+   "xv",
+   "boda",
+   "elegante",
+   "real"
+  ],
+  "desc": "El vals más famoso, con banda completa. Para el vals de XV y de bodas.",
+  "credit": "Johann Strauss II · Banda de Marina de los Estados Unidos",
+  "license": "Dominio público (grabación del gobierno de EE. UU.)",
+  "source": "https://commons.wikimedia.org/wiki/File:%22An_der_sch%C3%B6nen,_blauen_Donau%22_performed_by_the_U.S._Marine_Band.flac"
+ },
+ {
+  "id": "vals-de-las-flores",
+  "src": "vals-de-las-flores-b",
+  "name": "Vals de las flores",
+  "mood": "Vals de ballet",
+  "meter": 3,
+  "tags": [
+   "vals",
+   "xv",
+   "boda",
+   "elegante",
+   "real"
+  ],
+  "desc": "De El Cascanueces: alegre, elegante y muy de quinceañera.",
+  "credit": "Piotr Ilich Chaikovski · Banda de Concierto de la Fuerza Aérea de los Estados Unidos",
+  "license": "Dominio público (grabación del gobierno de EE. UU.)",
+  "source": "https://commons.wikimedia.org/wiki/File:Waltz_of_the_Flowers_-_Concert_Band_-_United_States_Air_Force_Band.mp3"
+ },
+ {
+  "id": "gran-vals-brillante",
+  "src": "gran-vals-brillante",
+  "name": "Gran vals brillante",
+  "mood": "Vals de piano",
+  "meter": 3,
+  "tags": [
+   "vals",
+   "xv",
+   "piano",
+   "alegre",
+   "real"
+  ],
+  "desc": "Piano alegre y luminoso. Para la entrada, el vals o un resumen.",
+  "credit": "Frédéric Chopin · Olga Gurevich, piano (Musopen)",
+  "license": "Dominio público",
+  "source": "https://commons.wikimedia.org/wiki/File:Chopin_-_Waltz_No._1_in_E-flat_major,_Op._18_%27Grande_Valse_Brillante%27_(Olga_Gurevich).flac"
+ },
+ {
+  "id": "vals-del-adios",
+  "src": "vals-del-adios",
+  "name": "Vals del adiós",
+  "mood": "Vals de piano",
+  "meter": 3,
+  "tags": [
+   "vals",
+   "xv",
+   "piano",
+   "romantica",
+   "real"
+  ],
+  "desc": "Piano tierno y nostálgico. Para el vals con papá o un recuerdo.",
+  "credit": "Frédéric Chopin · Olga Gurevich, piano (Musopen)",
+  "license": "Dominio público",
+  "source": "https://commons.wikimedia.org/wiki/File:Chopin_-_Waltz_No._9_in_A-flat_major,_Op._69_No._1_%27Farewell%27_(Olga_Gurevich).flac"
+ },
+ {
+  "id": "vals-melancolico",
+  "src": "vals-nostalgia",
+  "name": "Vals melancólico",
+  "mood": "Vals de piano",
+  "meter": 3,
+  "tags": [
+   "vals",
+   "piano",
+   "recuerdos",
+   "real"
+  ],
+  "desc": "Piano suave y emotivo. Para recuerdos, homenajes y fotos antiguas.",
+  "credit": "Frédéric Chopin · Olga Gurevich, piano (Musopen)",
+  "license": "Dominio público",
+  "source": "https://commons.wikimedia.org/wiki/File:Chopin_-_Waltz_No._7_in_C-sharp_minor,_Op._64_No._2_(Olga_Gurevich).flac"
+ },
+ {
+  "id": "valses-de-strauss",
+  "src": "valses-de-strauss",
+  "name": "Valses de Strauss",
+  "mood": "Vals de cuerdas",
+  "meter": 3,
+  "tags": [
+   "vals",
+   "xv",
+   "boda",
+   "real"
+  ],
+  "desc": "Varios valses vieneses seguidos, con orquesta de cuerdas.",
+  "credit": "Johann Strauss II · Cuerdas de la Banda de la Fuerza Aérea de EE. UU.",
+  "license": "Dominio público (grabación del gobierno de EE. UU.)",
+  "source": "https://commons.wikimedia.org/wiki/File:USAF_Band_Strauss_Waltz_Medley.ogg"
+ },
+ {
+  "id": "canon-en-re",
+  "src": "canon-en-re",
+  "name": "Canon de Pachelbel",
+  "mood": "Ceremonia",
+  "meter": 4,
+  "tags": [
+   "boda",
+   "ceremonia",
+   "entrada",
+   "real"
+  ],
+  "desc": "Cuerdas. La clásica para la entrada de la novia y la ceremonia.",
+  "credit": "Johann Pachelbel · Strolling Strings, Banda de la Fuerza Aérea de EE. UU.",
+  "license": "Dominio público (grabación del gobierno de EE. UU.)",
+  "source": "https://commons.wikimedia.org/wiki/File:Canon_(2004)_-_Strolling_Strings_-_United_States_Air_Force_Band.mp3"
+ },
+ {
+  "id": "aire-de-bach",
+  "src": "aire-de-bach",
+  "name": "Aire en sol",
+  "mood": "Ceremonia",
+  "meter": 4,
+  "tags": [
+   "boda",
+   "ceremonia",
+   "real"
+  ],
+  "desc": "Cuerdas, solemne y en calma. Para la ceremonia y los votos.",
+  "credit": "Johann Sebastian Bach · Cuerdas de la Banda de la Fuerza Aérea de EE. UU.",
+  "license": "Dominio público (grabación del gobierno de EE. UU.)",
+  "source": "https://commons.wikimedia.org/wiki/File:Air_-_Air_Force_Strings_-_United_States_Air_Force_Band.mp3"
+ },
+ {
+  "id": "jesus-alegria",
+  "src": "jesus-alegria",
+  "name": "Jesús, alegría de los hombres",
+  "mood": "Ceremonia",
+  "meter": 3,
+  "tags": [
+   "boda",
+   "bautizo",
+   "ceremonia",
+   "real"
+  ],
+  "desc": "Orquesta barroca, luminosa. Para bodas religiosas, bautizos y comuniones.",
+  "credit": "Johann Sebastian Bach · Orchestra Gli Armonici (Musopen)",
+  "license": "CC0 (dominio público)",
+  "source": "https://commons.wikimedia.org/wiki/File:Bach,_BWV_147,_10._Jesus_bleibet_meine_Freude.ogg"
+ },
+ {
+  "id": "ave-maria",
+  "src": "ave-maria",
+  "name": "Ave María",
+  "mood": "Chelo",
+  "meter": 4,
+  "tags": [
+   "boda",
+   "ceremonia",
+   "bautizo",
+   "real"
+  ],
+  "desc": "Chelo y piano. Para la ceremonia religiosa y momentos solemnes.",
+  "credit": "Bach y Gounod · John Michel, chelo",
+  "license": "Dominio público",
+  "source": "https://commons.wikimedia.org/wiki/File:JOHN_MICHEL_CELLO-BACH_AVE_MARIA.ogg"
+ },
+ {
+  "id": "marcha-nupcial",
+  "src": "marcha-nupcial-wagner",
+  "name": "Marcha nupcial",
+  "mood": "Entrada",
+  "meter": 4,
+  "tags": [
+   "boda",
+   "entrada",
+   "real"
+  ],
+  "desc": "El coro nupcial de Lohengrin (\"Aquí viene la novia\"). Corta, para la entrada.",
+  "credit": "Richard Wagner · Musopen",
+  "license": "CC0 (dominio público)",
+  "source": "https://commons.wikimedia.org/wiki/File:Richard_Wagner_-_Treulich_gef%C3%BChrt.ogg"
+ },
+ {
+  "id": "gymnopedie",
+  "src": "gymnopedie",
+  "name": "Gymnopédie n.º 1",
+  "mood": "Guitarra",
+  "meter": 3,
+  "tags": [
+   "acustica",
+   "recuerdos",
+   "tranquila",
+   "real"
+  ],
+  "desc": "Guitarra clásica, tranquila y cálida. Para sesiones, recuerdos y fotosecuencias.",
+  "credit": "Erik Satie · Michael Laucke, guitarra",
+  "license": "Dominio público",
+  "source": "https://commons.wikimedia.org/wiki/File:Satie_Gymnopedie_No_1_performed_by_Michael_Laucke.flac"
+ },
+ {
+  "id": "nocturno",
+  "src": "nocturno",
+  "name": "Nocturno",
+  "mood": "Piano",
+  "meter": 4,
+  "tags": [
+   "piano",
+   "romantica",
+   "boda",
+   "real"
+  ],
+  "desc": "Piano romántico. Para el primer baile, cartas y votos.",
+  "credit": "Frédéric Chopin · Frank Lévy, piano (Musopen)",
+  "license": "Dominio público",
+  "source": "https://commons.wikimedia.org/wiki/File:Chopin_-_Nocturne_No._2_in_E-flat_major,_Op._9_No._2_(Frank_Levy).flac"
+ },
+ {
+  "id": "amanecer",
+  "src": "amanecer",
+  "name": "La mañana",
+  "mood": "Orquesta",
+  "meter": 3,
+  "tags": [
+   "preparativos",
+   "llegada",
+   "tranquila",
+   "real"
+  ],
+  "desc": "Orquesta que despierta poco a poco. Para los preparativos y la llegada.",
+  "credit": "Edvard Grieg · Musopen Symphony",
+  "license": "Dominio público",
+  "source": "https://commons.wikimedia.org/wiki/File:Grieg_-_Peer_Gynt_Suite_No._1,_Op._46_-_I._Morning_Mood_(Musopen_Symphony).flac"
+ }
+]

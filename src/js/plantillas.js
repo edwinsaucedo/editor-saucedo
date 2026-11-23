@@ -123,8 +123,8 @@
       const list = SA.TEMPLATES.filter(t => this.cat === 'todas' || t.cats.includes(this.cat));
       const grid = this.q('grid');
       grid.innerHTML = list.map(t => `<button class="tcard" type="button" data-act="pick" data-id="${t.id}">
-        <canvas width="216" height="384" aria-hidden="true"></canvas>
-        <span class="tc-body"><span class="tc-top"><strong>${esc(t.name)}</strong>${t.nuevo ? '<span class="tc-lvl new">Nueva</span>' : ''}<span class="tc-lvl ${t.level === 'Pro' ? 'pro' : ''}">${LEVEL[t.level]}</span></span>
+        ${t.nuevo ? '<span class="tc-new">Nueva</span>' : ''}<canvas width="216" height="384" aria-hidden="true"></canvas>
+        <span class="tc-body"><span class="tc-top"><strong>${esc(t.name)}</strong><span class="tc-lvl ${t.level === 'Pro' ? 'pro' : ''}">${LEVEL[t.level]}</span></span>
         <span class="tc-desc">${esc(t.desc)}</span>${this.musicName(t) ? `<span class="tc-music">♪ ${esc(this.musicName(t))}</span>` : ''}</span></button>`).join('');
       $$('.tcard', grid).forEach((card, i) => {
         const t = SA.TEMPLATES.find(x => x.id === card.dataset.id), cv = card.querySelector('canvas');

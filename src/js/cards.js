@@ -5,10 +5,13 @@
   const { SCRIPT, CAPS, SERIF } = SA.FONTS;
 
   const THEMES = {
-    blanco: { name: 'Blanco', text: '#FFFFFF', accent: '#F1E3C6', soft: 'rgba(255,255,255,.8)' },
-    dorado: { name: 'Dorado', text: '#F8EBCB', accent: '#E2B866', soft: 'rgba(248,235,203,.82)' },
-    rosa: { name: 'Rosa', text: '#FFF2F4', accent: '#F0B3C2', soft: 'rgba(255,242,244,.82)' },
-    celeste: { name: 'Celeste', text: '#FFFFFF', accent: '#BFE3FF', soft: 'rgba(235,246,255,.85)' }
+    blanco: { name: 'Blanco', text: '#FFFFFF', accent: '#F1E3C6', soft: 'rgba(255,255,255,.8)', dark: '#A35A00' },
+    dorado: { name: 'Dorado', text: '#F8EBCB', accent: '#E2B866', soft: 'rgba(248,235,203,.82)', dark: '#9A6A12' },
+    rosa: { name: 'Rosa', text: '#FFF2F4', accent: '#F0B3C2', soft: 'rgba(255,242,244,.82)', dark: '#B0466A' },
+    celeste: { name: 'Celeste', text: '#FFFFFF', accent: '#BFE3FF', soft: 'rgba(235,246,255,.85)', dark: '#2D6CB0' },
+    // Para XV de hombre y eventos más sobrios
+    plata: { name: 'Plata', text: '#FFFFFF', accent: '#CDD5DE', soft: 'rgba(236,241,246,.86)', dark: '#3E4A58' },
+    azul: { name: 'Azul rey', text: '#FFFFFF', accent: '#7FB0FF', soft: 'rgba(226,236,255,.86)', dark: '#1F4FA8' }
   };
   const TEMPLATES = {
     std: { name: 'Save the Date', file: 'SaveTheDate' },

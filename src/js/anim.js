@@ -8,7 +8,10 @@
   const F = { script: '"SA Script","Brush Script MT",cursive', serif: '"SA Serif",Georgia,serif', caps: '"SA Caps","Arial Narrow",Arial,sans-serif',
     body: '"SA Body",Verdana,sans-serif', vhs: '"SA VHS","Courier New",monospace',
     // Plantillas elegantes: sans delgada moderna (Jost 300) y Garamond fina y cursiva (Cormorant Garamond).
-    fina: '"SA Fina","Century Gothic",sans-serif', garamond: '"SA Garamond",Georgia,serif' };
+    fina: '"SA Fina","Century Gothic",sans-serif', garamond: '"SA Garamond",Georgia,serif',
+    // Letras más legibles (v0.8): serif gruesa, sans moderna, manuscrita clara y mayúsculas fuertes.
+    playfair: '"SA Playfair",Georgia,serif', mont: '"SA Montserrat","Segoe UI",Arial,sans-serif', manus: '"SA Manuscrita","Segoe Script",cursive',
+    cinzel: '"SA Cinzel","Trajan Pro",Georgia,serif', bebas: '"SA Bebas","Arial Narrow",Impact,sans-serif' };
   A.F = F;
 
   /* ---------- Movimiento ---------- */

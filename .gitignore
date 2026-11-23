@@ -9,3 +9,6 @@ src-tauri/binaries/ffprobe-*
 # Música: archivos de trabajo
 tools/musica/.trabajo/
 __pycache__/
+
+# Descargas de música de dominio público (viven en la rama musica-pd)
+tools/musica/pd/out/

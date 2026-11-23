@@ -113,7 +113,7 @@
 
   // Dibuja src cubriendo (cover) o completo (contain) el rectángulo.
   function drawFit(ctx, src, W, H, mode, zoom) {
-    const sw = src.width, sh = src.height;
+    const sw = src.videoWidth || src.width, sh = src.videoHeight || src.height;   // también sirve con un <video>
     const s = (mode === 'contain' ? Math.min(W / sw, H / sh) : Math.max(W / sw, H / sh)) * (zoom || 1);
     const dw = sw * s, dh = sh * s;
     ctx.drawImage(src, (W - dw) / 2, (H - dh) / 2, dw, dh);

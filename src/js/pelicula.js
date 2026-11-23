@@ -1269,7 +1269,7 @@
     act_denoise() { this.p.denoise = !this.p.denoise; this.dirty(); this.syncStyle(); }
     act_wm() { S.wm = !S.wm; SA.brandChanged(); }
     async act_pSong() {
-      const s = await this.chooseSong({ title: 'Música de la portada y los créditos', forName: 'la película', suggest: ['eternamente', 'primer-baile', 'para-siempre', 'vals-de-la-luna', 'nuestra-historia'], current: this.p.music });
+      const s = await this.chooseSong({ title: 'Música de la portada y los créditos', forName: 'la película', suggest: ['amanecer', 'canon-en-re', 'nocturno', 'eternamente', 'primer-baile'], current: this.p.music });
       if (s) { this.p.music = Object.assign(s, { vol: .7 }); this.dirty(); this.syncStyle(); this.summary(); }
     }
     act_pSongOff() { this.p.music = null; this.dirty(); this.syncStyle(); this.summary(); }
@@ -1292,7 +1292,7 @@
       if (!this.busy) this.q('create').textContent = n === 1 ? { pelicula: 'Crear película', resumen: 'Crear resumen', reel: 'Crear reel' }[outs[0]] : `Crear ${n} videos`;
     }
     async act_hlSong() {
-      const s = await this.chooseSong({ title: 'Música del resumen y del reel', forName: 'el resumen y el reel', suggest: ['brillar', 'eternamente', 'primer-baile', 'dia-de-fiesta', 'nuestra-historia', 'noche-de-neon'], current: this.hl().music });
+      const s = await this.chooseSong({ title: 'Música del resumen y del reel', forName: 'el resumen y el reel', suggest: ['gran-vals-brillante', 'vals-de-las-flores', 'brillar', 'eternamente', 'dia-de-fiesta'], current: this.hl().music });
       if (s) { this.hl().music = s; this.dirty(); this.syncOutputs(); this.summary(); }
     }
     act_hlStart(b) { const m = this.hl().music; if (!m) return; m.start = Math.max(0, Math.min(Math.floor(m.duration - 20), (m.start || 0) + (+b.dataset.v))); this.dirty(); this.syncOutputs(); }

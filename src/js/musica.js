@@ -45,7 +45,11 @@
   // Si el programa se instaló en otra carpeta, la ruta guardada se actualiza.
   M.resolve = song => { if (song && song.builtin && M.get(song.builtin)) { song.path = M.path(song.builtin); song.beat = M.beat(song.builtin); } return song; };
   M.label = song => song ? (song.builtin ? `${song.name}` : song.name) : 'Sin música';
-  M.sub = song => song ? [song.builtin ? (M.get(song.builtin) || {}).mood : null, song.builtin ? 'música incluida' : 'de tu computadora', fmt(song.duration)].filter(Boolean).join(' · ') : '';
+  M.sub = song => {
+    if (!song) return '';
+    const t = song.builtin ? M.get(song.builtin) || {} : null;
+    return [t ? t.mood : null, t ? (t.real ? 'grabación real' : 'música incluida') : 'de tu computadora', fmt(song.duration)].filter(Boolean).join(' · ');
+  };
 
   /* ---------- Escuchar ---------- */
   let audio = null, playingId = null, stopT = 0, onStop = null;
@@ -79,20 +83,22 @@
   M.pick = (opts = {}) => new Promise(resolve => {
     const all = M.list(), sug = (opts.suggest || []).filter(id => M.get(id));
     const cur = opts.current && opts.current.builtin;
-    const others = all.filter(t => !sug.includes(t.id));
+    const others = all.filter(t => !sug.includes(t.id)), reales = others.filter(t => t.real), propias = others.filter(t => !t.real);
     const row = (t, i, rec) => `<div class="mrow${cur === t.id ? ' on' : ''}" data-id="${t.id}">
         <button class="mplay" type="button" data-mact="play" aria-label="Escuchar ${esc(t.name)}"><span class="ic">▶</span></button>
-        <div class="minfo"><div class="mname">${esc(t.name)}${rec && i === 0 ? '<span class="mstar">Recomendada</span>' : ''}</div>
-          <div class="mdesc"><span class="mmood">${esc(t.mood)}</span> · ${fmt(M.len(t))} · ${esc(t.desc)}</div><i class="mbar"><b></b></i></div>
+        <div class="minfo"><div class="mname">${esc(t.name)}${rec && i === 0 ? '<span class="mstar">Recomendada</span>' : ''}${t.real ? '<span class="mreal">Grabación real</span>' : ''}</div>
+          <div class="mdesc"><span class="mmood">${esc(t.mood)}</span> · ${fmt(M.len(t))} · ${esc(t.desc)}</div>
+          ${t.real ? `<div class="mcred">${esc(t.credit)} · ${esc(t.license)}</div>` : ''}<i class="mbar"><b></b></i></div>
         <button class="${cur === t.id ? 'btn' : 'primary small'}" type="button" data-mact="use">${cur === t.id ? 'En uso ✓' : 'Usar'}</button></div>`;
     const wrap = document.createElement('div');
     wrap.className = 'modal mpick'; wrap.setAttribute('role', 'dialog'); wrap.setAttribute('aria-modal', 'true'); wrap.setAttribute('aria-labelledby', 'mpTitle');
     wrap.innerHTML = `<div class="modal-card">
       <div class="mp-head"><h2 id="mpTitle">${esc(opts.title || 'Elige la música')}</h2><button class="mp-x" type="button" data-mact="close" aria-label="Cerrar">×</button></div>
-      <p class="hint">Toca ▶ para escuchar la mejor parte. Es música original del programa: puedes subir los videos a Facebook, Instagram, TikTok y YouTube sin problemas de derechos.</p>
+      <p class="hint">Toca ▶ para escuchar la mejor parte. Las grabaciones reales son de dominio público (orquestas, bandas y pianistas que las liberaron) y la demás música es original del programa: puedes subir los videos a Facebook, Instagram, TikTok y YouTube. Si YouTube llegara a marcar por error una pieza clásica, se puede disputar porque es de dominio público.</p>
       ${sug.length ? `<h3 class="mp-h">Recomendadas${opts.forName ? ` para «${esc(opts.forName)}»` : ''}</h3><div class="mlist">${sug.map((id, i) => row(M.get(id), i, true)).join('')}</div>` : ''}
-      <h3 class="mp-h">${sug.length ? 'Más música incluida' : 'Música incluida'}</h3>
-      <div class="mlist">${others.map((t, i) => row(t, i, false)).join('')}</div>
+      ${reales.length ? `<h3 class="mp-h">Grabaciones reales: orquesta, banda, piano y guitarra</h3><div class="mlist">${reales.map((t, i) => row(t, i, false)).join('')}</div>` : ''}
+      <h3 class="mp-h">Compuestas para el programa</h3>
+      <div class="mlist">${propias.map((t, i) => row(t, i, false)).join('')}</div>
       <div class="mp-foot"><button class="btn" type="button" data-mact="file">Usar una canción de mi computadora…</button>
         ${opts.allowNone ? `<button class="link" type="button" data-mact="none">${esc(opts.noneLabel || 'Sin música')}</button>` : ''}</div>
     </div>`;
@@ -134,9 +140,9 @@
 
   // Sugerencias por momento de la película.
   M.forMoment = key => ({
-    llegada: ['nuestro-momento', 'domingo-feliz', 'brillar'], ceremonia: ['promesa', 'para-siempre', 'eternamente'],
-    entrada: ['vals-de-las-rosas', 'eternamente', 'nuestra-historia'], vals: ['vals-de-la-luna', 'vals-de-quince', 'vals-de-las-rosas'],
-    brindis: ['primer-baile', 'para-siempre', 'nuestro-momento'], sorpresa: ['noche-de-neon', 'impacto', 'dia-de-fiesta'],
-    fiesta: ['fiesta-en-el-pueblo', 'dia-de-fiesta', 'noche-de-neon'], despedida: ['eternamente', 'promesa', 'para-siempre'],
+    llegada: ['amanecer', 'gymnopedie', 'nuestro-momento'], ceremonia: ['canon-en-re', 'aire-de-bach', 'ave-maria'],
+    entrada: ['marcha-nupcial', 'canon-en-re', 'gran-vals-brillante'], vals: ['danubio-azul', 'vals-de-las-flores', 'vals-del-adios'],
+    brindis: ['nocturno', 'vals-del-adios', 'primer-baile'], sorpresa: ['noche-de-neon', 'impacto', 'dia-de-fiesta'],
+    fiesta: ['fiesta-en-el-pueblo', 'dia-de-fiesta', 'noche-de-neon'], despedida: ['vals-melancolico', 'gymnopedie', 'nocturno'],
   }[key] || ['primer-baile', 'para-siempre', 'eternamente']);
 })();
